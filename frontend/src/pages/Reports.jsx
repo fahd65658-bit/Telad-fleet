@@ -140,7 +140,7 @@ export default function Reports() {
                 labels={monthLabels}
                 datasets={[{
                   label: 'رحلات',
-                  data: stats?.monthlyTrips || Array.from({ length: 6 }, () => Math.floor(Math.random() * 100 + 10)),
+                  data: stats?.monthlyTrips || Array(6).fill(0),
                 }]}
               />
             </div>

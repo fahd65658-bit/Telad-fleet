@@ -97,7 +97,7 @@ export default function Dashboard() {
             labels={activeMonths}
             datasets={[{
               label: 'رحلات',
-              data: stats?.monthlyTrips || Array.from({ length: 6 }, () => Math.floor(Math.random() * 80 + 20)),
+              data: stats?.monthlyTrips || Array(6).fill(0),
             }]}
           />
         </div>
