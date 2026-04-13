@@ -13,7 +13,7 @@ function audit(logs, action, username) {
 function list(auditLogs) {
   return (req, res) => {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || vehicles.length || 50));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
     const start = (page - 1) * limit;
     res.json({
       data:  vehicles.slice(start, start + limit),

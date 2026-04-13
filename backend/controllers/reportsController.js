@@ -1,9 +1,8 @@
 'use strict';
 
-function dashboard() {
+function dashboard(vehicles) {
   return (req, res) => {
     const { cities, projects, employees } = req.app.locals;
-    const { vehicles } = require('./vehicleController');
     res.json({
       cities:    cities.length,
       projects:  projects.length,
