@@ -11,7 +11,7 @@ function audit(logs, action, username) {
 }
 
 function list() {
-  return (req, res, next) => {
+  return (req, res) => {
     const { users } = req.app.locals;
     res.json(users.map(({ passwordHash: _, ...u }) => u));
   };
