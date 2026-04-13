@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>TELAD Logistics Operations System</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<div id="login">
+<h2>TELAD Logistics Operations System</h2>
+<input placeholder="اسم المستخدم / Username"><br>
+<input type="password" placeholder="كلمة المرور / Password"><br>
+<select id="lang">
+<option>العربية</option>
+<option>English</option>
+</select><br>
+<button onclick="login()">تسجيل الدخول</button>
+</div>
+
+<div id="dashboard" style="display:none">
+
+<div class="sidebar">
+<h3>TELAD</h3>
+<a>Dashboard</a>
+<a>Vehicles</a>
+<a>Maintenance</a>
+<a>Accidents</a>
+<a>Violations</a>
+<a>Financial Custody</a>
+<a>Reports</a>
+<a>AI System</a>
+</div>
+
+<div class="main">
+<h1>Fleet Command Center</h1>
+
+<div class="cards">
+<div class="card">Vehicles</div>
+<div class="card">Maintenance</div>
+<div class="card">Accidents</div>
+<div class="card">Violations</div>
+</div>
+
+<div class="map">
+Fleet Live Map (Prototype)
+</div>
+
+</div>
+
+</div>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>

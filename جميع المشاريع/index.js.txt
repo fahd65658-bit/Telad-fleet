@@ -1,0 +1,10 @@
+import Link from "next/link";
+
+export default function Home() {
+  return (
+    <div style={{direction:"rtl", padding:20}}>
+      <h1>🚗 Telad Fleet</h1>
+      <Link href="/dashboard">الدخول للنظام</Link>
+    </div>
+  );
+}
