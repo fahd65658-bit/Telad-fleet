@@ -2,33 +2,47 @@
 
 > **Domain:** https://fna.sa &nbsp;|&nbsp; **API:** https://api.fna.sa &nbsp;|&nbsp; **Version:** 2.0.0
 
+📖 [API Documentation](./API_DOCS.md) &nbsp;|&nbsp; 🚀 [Setup Guide](./SETUP_GUIDE.md)
+
 ---
 
 ## 📁 Project Structure
 
 ```
 telad-fleet/
-├── backend/                 ← Node.js + Express + Socket.io API
-│   ├── server.js            ← Main server (auth, GPS, CRUD, WebSocket)
+├── backend/
+│   ├── controllers/          ← Business logic (vehicles, users, maintenance…)
+│   ├── middleware/           ← Auth, error handler, rate limiting, validation
+│   ├── routes/               ← API route definitions
+│   ├── services/             ← PostgreSQL, Redis, Email, AI
+│   ├── utils/                ← Logger, validators, constants
+│   ├── server.js             ← App entry point
 │   ├── package.json
-│   └── .env.example         ← Copy to .env and fill values
+│   └── .env.example
 │
-├── frontend/                ← Dashboard Web App (SPA)
-│   ├── index.html           ← Login + full dashboard
+├── frontend/
+│   ├── index.html            ← Vanilla JS version (zero dependencies)
+│   ├── js/app.js
 │   ├── css/style.css
-│   └── js/app.js            ← Auth, navigation, CRUD logic
+│   └── src/                  ← React 18 version (Vite + Tailwind)
+│       ├── components/       ← Navigation, Sidebar, Map (Leaflet), Charts
+│       ├── pages/            ← Login, Dashboard, Vehicles, Users, Maintenance…
+│       ├── services/         ← API client, auth helpers, WebSocket
+│       ├── context/          ← AppContext (auth + dark mode + notifications)
+│       └── styles/
 │
 ├── database/
-│   └── schema.sql           ← PostgreSQL schema (production)
+│   └── schema.sql            ← PostgreSQL schema (production)
 │
 ├── deployment/
-│   ├── nginx.conf           ← nginx for fna.sa + api.fna.sa + SSL
-│   ├── docker-compose.yml   ← Full stack (backend + DB + nginx)
-│   ├── Dockerfile           ← Backend container
-│   ├── pm2.config.js        ← PM2 process manager
-│   └── deploy.sh            ← One-command VPS deploy
+│   ├── nginx.conf
+│   ├── docker-compose.yml    ← Full stack: API + PostgreSQL + nginx
+│   ├── Dockerfile
+│   ├── pm2.config.js
+│   └── deploy.sh
 │
-├── .gitignore
+├── API_DOCS.md               ← Full API reference
+├── SETUP_GUIDE.md            ← Step-by-step setup
 └── README.md
 ```
 
@@ -81,10 +95,17 @@ node server.js
 ```
 Backend running at → **http://localhost:5000**
 
-### 4. Open the dashboard
+### 4a. Open Vanilla Frontend (quick start)
 Open `frontend/index.html` in your browser, or:
 ```bash
 npx serve frontend -l 3000
+```
+
+### 4b. Run React Frontend (full features)
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173
 ```
 
 ### 5. Login
@@ -154,27 +175,58 @@ pm2 monit               # Dashboard
 
 Header required: `Authorization: Bearer <token>`
 
-| Method | Endpoint         | Auth   | Description           |
-|--------|-----------------|--------|-----------------------|
-| POST   | `/auth/login`   | ❌     | Login → JWT token     |
-| GET    | `/auth/me`      | ✅     | Current user          |
-| GET    | `/auth/users`   | admin  | List users            |
-| POST   | `/auth/users`   | admin  | Add user              |
-| PUT    | `/auth/users/:id` | admin | Update user/role    |
-| DELETE | `/auth/users/:id` | admin | Delete user         |
-| GET    | `/dashboard`    | all    | Stats summary         |
-| GET    | `/vehicles`     | all    | List vehicles         |
-| POST   | `/vehicles`     | operator+ | Add vehicle       |
-| DELETE | `/vehicles/:id` | supervisor+ | Delete vehicle |
-| GET    | `/logs`         | admin  | Audit log             |
-| GET    | `/health`       | ❌     | Health check          |
+| Method | Endpoint              | Auth        | Description                |
+|--------|-----------------------|-------------|----------------------------|
+| POST   | `/auth/login`         | ❌          | Login → JWT token          |
+| GET    | `/auth/me`            | ✅          | Current user               |
+| GET    | `/auth/users`         | admin       | List users                 |
+| POST   | `/auth/users`         | admin       | Add user                   |
+| PUT    | `/auth/users/:id`     | admin       | Update user/role           |
+| DELETE | `/auth/users/:id`     | admin       | Delete user                |
+| GET    | `/dashboard`          | all         | Stats summary              |
+| GET    | `/vehicles`           | all         | List vehicles (w/ filters) |
+| POST   | `/vehicles`           | operator+   | Add vehicle                |
+| DELETE | `/vehicles/:id`       | supervisor+ | Delete vehicle             |
+| GET    | `/maintenance`        | all         | Maintenance records        |
+| POST   | `/maintenance`        | operator+   | Add maintenance record     |
+| GET    | `/accidents`          | all         | Accidents list             |
+| POST   | `/accidents`          | operator+   | Report accident            |
+| GET    | `/ai/predict`         | supervisor+ | AI risk score              |
+| GET    | `/logs`               | admin       | Audit log                  |
+| GET    | `/health`             | ❌          | Health check               |
 
 ---
 
+## ✨ Features
+
+| Feature | Vanilla Frontend | React Frontend |
+|---------|:---:|:---:|
+| JWT Auth + Role-Based Access | ✅ | ✅ |
+| Vehicles CRUD | ✅ | ✅ |
+| User Management | ✅ | ✅ |
+| GPS Real-time (WebSocket) | ✅ | ✅ |
+| Live Fleet Map (Leaflet) | ✅ | ✅ |
+| Maintenance Records | ✅ | ✅ |
+| AI Risk Scoring | ✅ | ✅ |
+| Dark Mode | — | ✅ |
+| Charts & Analytics | — | ✅ |
+| PDF Export | — | ✅ |
+| Notifications | — | ✅ |
+| Advanced Search/Filter | — | ✅ |
+| PostgreSQL Support | ✅ | ✅ |
+| Redis Caching | ✅ | ✅ |
+| Email Notifications | ✅ | ✅ |
+| Rate Limiting | ✅ | ✅ |
+| Audit Logging | ✅ | ✅ |
+
 ## 📋 Roadmap
-- [ ] PostgreSQL integration (schema ready at `database/schema.sql`)
-- [ ] Live fleet map (Leaflet.js)
-- [ ] Maintenance scheduling & alerts
-- [ ] Reports with PDF export
-- [ ] AI risk scoring
+- [x] Backend restructured into controllers, routes, services, middleware
+- [x] React frontend with Tailwind CSS, Leaflet maps, Chart.js
+- [x] PostgreSQL integration (schema at `database/schema.sql`)
+- [x] Redis caching layer (optional)
+- [x] Email notifications (optional)
+- [x] PDF export for reports
+- [x] AI risk scoring
 - [ ] Mobile driver app (Expo)
+- [ ] Predictive maintenance AI
+- [ ] Swagger / OpenAPI docs UI
