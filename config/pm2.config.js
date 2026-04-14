@@ -3,12 +3,14 @@
 // Usage: pm2 start config/pm2.config.js
 // ═══════════════════════════════════════════════════════════════════════
 
+const path = require('path');
+
 module.exports = {
   apps: [
     {
       name:             'telad-fleet-backend',
       script:           './backend/server.js',
-      cwd:              __dirname.replace('/config', ''),
+      cwd:              path.resolve(__dirname, '..'),
       instances:        'max',
       exec_mode:        'cluster',
       env: {

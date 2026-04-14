@@ -24,8 +24,9 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 # Copy deps
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source
+# Copy source (backend server + optional src modules)
 COPY backend/server.js ./
+COPY src/ ./src/
 
 USER appuser
 
