@@ -10,9 +10,9 @@
 require('dotenv').config();
 
 const crypto      = require('crypto');
-const zlib        = require('zlib');
 const express     = require('express');
 const http        = require('http');
+const compression = require('compression');
 const cors        = require('cors');
 const helmet      = require('helmet');
 const bcrypt      = require('bcryptjs');
@@ -83,27 +83,8 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 
-// ─── Gzip compression ────────────────────────────────────────────────────────
-// Compress JSON/text responses for clients that send Accept-Encoding: gzip
-app.use((req, res, next) => {
-  const accept = req.headers['accept-encoding'] || '';
-  if (!accept.includes('gzip')) return next();
-
-  const _json = res.json.bind(res);
-  res.json = (body) => {
-    const buf = Buffer.from(JSON.stringify(body), 'utf8');
-    // Only compress payloads larger than 1 KB
-    if (buf.length < 1024) return _json(body);
-    zlib.gzip(buf, (err, compressed) => {
-      if (err) return _json(body);
-      res.setHeader('Content-Encoding', 'gzip');
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Content-Length', compressed.length);
-      res.end(compressed);
-    });
-  };
-  next();
-});
+// ─── Gzip / Brotli compression ───────────────────────────────────────────────
+app.use(compression({ threshold: 1024 })); // only compress responses >= 1 KB
 
 // ─── Per-request timeout ─────────────────────────────────────────────────────
 // Avoids hanging connections that would exhaust the thread pool
@@ -111,7 +92,9 @@ app.use((req, res, next) => {
   if (req.path === '/health') return next(); // health check is exempt
   const timer = setTimeout(() => {
     if (!res.headersSent) {
+      req.timedOut = true;
       res.status(503).json({ error: 'انتهت مهلة الطلب — حاول مرة أخرى' });
+      req.socket.destroy(); // forcefully close the connection
     }
   }, REQUEST_TIMEOUT);
   res.on('finish',  () => clearTimeout(timer));

@@ -184,16 +184,17 @@ const FETCH_TIMEOUT_MS = 15000;
  *  - automatic retry on transient network errors (up to maxRetries)
  */
 function apiFetch(path, options = {}, maxRetries = 1) {
-  const token      = localStorage.getItem('telad_token');
-  const controller = new AbortController();
-  const timer      = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const token = localStorage.getItem('telad_token');
 
-  const attempt = (retriesLeft) =>
-    fetch(API_BASE + path, {
+  const attempt = (retriesLeft) => {
+    const controller = new AbortController();
+    const timer      = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    return fetch(API_BASE + path, {
       ...options,
       signal: controller.signal,
       headers: {
-        'Content-Type':  'application/json',
+        'Content-Type':    'application/json',
         'Accept-Encoding': 'gzip',
         ...(token ? { Authorization: 'Bearer ' + token } : {}),
         ...(options.headers || {}),
@@ -201,14 +202,14 @@ function apiFetch(path, options = {}, maxRetries = 1) {
     })
     .then(res => { clearTimeout(timer); return res; })
     .catch(err => {
+      clearTimeout(timer);
       if (err.name === 'AbortError') {
-        clearTimeout(timer);
         throw new Error('انتهت مهلة الطلب — الخادم لا يستجيب');
       }
       if (retriesLeft > 0) return attempt(retriesLeft - 1);
-      clearTimeout(timer);
       throw err;
     });
+  };
 
   return attempt(maxRetries);
 }
