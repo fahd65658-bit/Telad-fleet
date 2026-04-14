@@ -71,7 +71,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
 
@@ -297,7 +297,8 @@ let cities    = [];
 let projects  = [];
 let vehicles  = [];
 let employees = [];
-let auditLogs = [];
+let auditLogs        = [];
+let conditionReports = [];
 
 function audit(action, username) {
   auditLogs.push({
@@ -366,7 +367,87 @@ app.get('/employees', authAll, (_req, res) => res.json(employees));
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));
 
-// ─── 404 fallback ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// VEHICLE CONDITION REPORTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /vehicle-condition — create a delivery or receipt inspection report
+app.post('/vehicle-condition', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
+  const {
+    vehicleId, vehicleName, type,
+    employeeName, driverName,
+    mileage, fuelLevel,
+    photos, conditionRating, notes,
+  } = req.body || {};
+
+  if (!vehicleId || !type)
+    return res.status(400).json({ error: 'معرف المركبة ونوع النموذج مطلوبان' });
+  if (!['delivery', 'receipt'].includes(type))
+    return res.status(400).json({ error: 'نوع النموذج يجب أن يكون delivery أو receipt' });
+
+  const report = {
+    id:             newId(),
+    vehicleId:      String(vehicleId),
+    vehicleName:    vehicleName    || '',
+    type,
+    employeeName:   employeeName   || '',
+    driverName:     driverName     || '',
+    mileage:        Number(mileage)       || 0,
+    fuelLevel:      Number(fuelLevel)     || 0,
+    photos:         Array.isArray(photos) ? photos : [],
+    conditionRating: Math.min(5, Math.max(1, Number(conditionRating) || 3)),
+    notes:          notes || '',
+    status:         'submitted',
+    createdAt:      new Date().toISOString(),
+    createdBy:      req.user.username,
+  };
+
+  conditionReports.push(report);
+  audit(
+    `تقرير حالة مركبة (${type === 'delivery' ? 'تسليم' : 'استلام'}): ${vehicleName || vehicleId}`,
+    req.user.username,
+  );
+  res.status(201).json(report);
+});
+
+// GET /vehicle-condition — all reports (authenticated users)
+app.get('/vehicle-condition', authAll, (_req, res) => {
+  res.json(
+    [...conditionReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+  );
+});
+
+// GET /vehicle-condition/report/:reportId — single report  (must be before /:vehicleId route)
+app.get('/vehicle-condition/report/:reportId', authAll, (req, res) => {
+  const report = conditionReports.find(r => r.id === req.params.reportId);
+  if (!report) return res.status(404).json({ error: 'التقرير غير موجود' });
+  res.json(report);
+});
+
+// GET /vehicle-condition/compare/:vehicleId — latest delivery vs latest receipt
+app.get('/vehicle-condition/compare/:vehicleId', authAll, (req, res) => {
+  const byVehicle = conditionReports.filter(r => r.vehicleId === req.params.vehicleId);
+  const latest    = type => byVehicle
+    .filter(r => r.type === type)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
+
+  const delivery = latest('delivery');
+  if (!delivery)
+    return res.status(404).json({ error: 'لا يوجد تقرير تسليم لهذه المركبة' });
+
+  res.json({ delivery, receipt: latest('receipt') });
+});
+
+// GET /vehicle-condition/:vehicleId/history — reports for one vehicle
+app.get('/vehicle-condition/:vehicleId/history', authAll, (req, res) => {
+  res.json(
+    conditionReports
+      .filter(r => r.vehicleId === req.params.vehicleId)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+  );
+});
+
+// ─── 404 fallback
 app.use((_req, res) => res.status(404).json({ error: 'المسار غير موجود' }));
 
 // ─── Global error handler ─────────────────────────────────────────────────────
