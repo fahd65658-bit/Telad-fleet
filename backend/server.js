@@ -330,7 +330,7 @@ app.get('/dashboard', authAll, (_req, res) =>
 
 // ─── Cities ───────────────────────────────────────────────────────────────────
 app.post('/cities', supervisorUp, (req, res) => {
-  const c = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
+  const c = { ...req.body, id: newId(), createdAt: new Date().toISOString() };
   cities.push(c);
   audit('إضافة مدينة', req.user.username);
   res.status(201).json(c);
@@ -339,7 +339,7 @@ app.get('/cities', authAll, (_req, res) => res.json(cities));
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 app.post('/projects', supervisorUp, (req, res) => {
-  const p = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
+  const p = { ...req.body, id: newId(), createdAt: new Date().toISOString() };
   projects.push(p);
   audit('إضافة مشروع', req.user.username);
   res.status(201).json(p);
@@ -348,7 +348,7 @@ app.get('/projects', authAll, (_req, res) => res.json(projects));
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
-  const v = { id: newId(), status: 'active', createdAt: new Date().toISOString(), ...req.body };
+  const v = { ...req.body, id: newId(), status: req.body.status || 'active', createdAt: new Date().toISOString() };
   vehicles.push(v);
   audit('إضافة مركبة', req.user.username);
   res.status(201).json(v);
@@ -362,7 +362,16 @@ app.get('/vehicles/:id', authAll, (req, res) => {
 app.put('/vehicles/:id', supervisorUp, (req, res) => {
   const idx = vehicles.findIndex(x => x.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
-  vehicles[idx] = { ...vehicles[idx], ...req.body, id: vehicles[idx].id, updatedAt: new Date().toISOString() };
+  const { name, plate, city, driver, status, model, year } = req.body;
+  const allowed = {};
+  if (name   !== undefined) allowed.name   = name;
+  if (plate  !== undefined) allowed.plate  = plate;
+  if (city   !== undefined) allowed.city   = city;
+  if (driver !== undefined) allowed.driver = driver;
+  if (status !== undefined) allowed.status = status;
+  if (model  !== undefined) allowed.model  = model;
+  if (year   !== undefined) allowed.year   = year;
+  vehicles[idx] = { ...vehicles[idx], ...allowed, id: vehicles[idx].id, updatedAt: new Date().toISOString() };
   audit(`تعديل مركبة: ${vehicles[idx].plate || vehicles[idx].name}`, req.user.username);
   res.json(vehicles[idx]);
 });
@@ -377,7 +386,7 @@ app.delete('/vehicles/:id', supervisorUp, (req, res) => {
 
 // ─── Employees ────────────────────────────────────────────────────────────────
 app.post('/employees', supervisorUp, (req, res) => {
-  const e = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
+  const e = { ...req.body, id: newId(), createdAt: new Date().toISOString() };
   employees.push(e);
   audit('إضافة موظف', req.user.username);
   res.status(201).json(e);
@@ -406,7 +415,15 @@ app.post('/drivers', supervisorUp, (req, res) => {
 app.put('/drivers/:id', supervisorUp, (req, res) => {
   const idx = drivers.findIndex(d => d.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'السائق غير موجود' });
-  drivers[idx] = { ...drivers[idx], ...req.body, id: drivers[idx].id, updatedAt: new Date().toISOString() };
+  const { name, phone, licenseNo, licenseExpiry, vehicleId, status } = req.body;
+  const allowed = {};
+  if (name          !== undefined) allowed.name          = name;
+  if (phone         !== undefined) allowed.phone         = phone;
+  if (licenseNo     !== undefined) allowed.licenseNo     = licenseNo;
+  if (licenseExpiry !== undefined) allowed.licenseExpiry = licenseExpiry;
+  if (vehicleId     !== undefined) allowed.vehicleId     = vehicleId;
+  if (status        !== undefined) allowed.status        = status;
+  drivers[idx] = { ...drivers[idx], ...allowed, id: drivers[idx].id, updatedAt: new Date().toISOString() };
   audit(`تعديل سائق: ${drivers[idx].name}`, req.user.username);
   res.json(drivers[idx]);
 });
@@ -443,7 +460,15 @@ app.post('/maintenance', requireAuth(['admin', 'supervisor', 'operator']), (req,
 app.put('/maintenance/:id', supervisorUp, (req, res) => {
   const idx = maintenanceJobs.findIndex(m => m.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'مهمة الصيانة غير موجودة' });
-  maintenanceJobs[idx] = { ...maintenanceJobs[idx], ...req.body, id: maintenanceJobs[idx].id, updatedAt: new Date().toISOString() };
+  const { vehicleId, type, description, scheduledDate, cost, status } = req.body;
+  const allowed = {};
+  if (vehicleId     !== undefined) allowed.vehicleId     = vehicleId;
+  if (type          !== undefined) allowed.type          = type;
+  if (description   !== undefined) allowed.description   = description;
+  if (scheduledDate !== undefined) allowed.scheduledDate = scheduledDate;
+  if (cost          !== undefined) allowed.cost          = cost;
+  if (status        !== undefined) allowed.status        = status;
+  maintenanceJobs[idx] = { ...maintenanceJobs[idx], ...allowed, id: maintenanceJobs[idx].id, updatedAt: new Date().toISOString() };
   audit(`تعديل مهمة صيانة: ${maintenanceJobs[idx].type}`, req.user.username);
   res.json(maintenanceJobs[idx]);
 });
@@ -488,7 +513,15 @@ app.post('/appointments', requireAuth(['admin', 'supervisor', 'operator']), (req
 app.put('/appointments/:id', supervisorUp, (req, res) => {
   const idx = appointments.findIndex(a => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'الموعد غير موجود' });
-  appointments[idx] = { ...appointments[idx], ...req.body, id: appointments[idx].id, updatedAt: new Date().toISOString() };
+  const { vehicleId, driverId, type, scheduledAt, notes, status } = req.body;
+  const allowed = {};
+  if (vehicleId   !== undefined) allowed.vehicleId   = vehicleId;
+  if (driverId    !== undefined) allowed.driverId    = driverId;
+  if (type        !== undefined) allowed.type        = type;
+  if (scheduledAt !== undefined) allowed.scheduledAt = scheduledAt;
+  if (notes       !== undefined) allowed.notes       = notes;
+  if (status      !== undefined) allowed.status      = status;
+  appointments[idx] = { ...appointments[idx], ...allowed, id: appointments[idx].id, updatedAt: new Date().toISOString() };
   audit(`تعديل موعد: ${appointments[idx].type}`, req.user.username);
   res.json(appointments[idx]);
 });
@@ -503,8 +536,8 @@ app.post('/appointments/:id/confirm', supervisorUp, (req, res) => {
 app.post('/appointments/:id/cancel', supervisorUp, (req, res) => {
   const idx = appointments.findIndex(a => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'الموعد غير موجود' });
-  appointments[idx].status     = 'cancelled';
-  appointments[idx].cancelledAt = new Date().toISOString();
+  appointments[idx].status      = 'cancelled';
+  appointments[idx].canceledAt  = new Date().toISOString();
   audit(`إلغاء موعد: ${appointments[idx].type}`, req.user.username);
   res.json(appointments[idx]);
 });
@@ -536,7 +569,12 @@ app.post('/regions', supervisorUp, (req, res) => {
 app.put('/regions/:id', supervisorUp, (req, res) => {
   const idx = regions.findIndex(r => r.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'المنطقة غير موجودة' });
-  regions[idx] = { ...regions[idx], ...req.body, id: regions[idx].id, updatedAt: new Date().toISOString() };
+  const { name, description, coordinates } = req.body;
+  const allowed = {};
+  if (name        !== undefined) allowed.name        = name;
+  if (description !== undefined) allowed.description = description;
+  if (coordinates !== undefined) allowed.coordinates = coordinates;
+  regions[idx] = { ...regions[idx], ...allowed, id: regions[idx].id, updatedAt: new Date().toISOString() };
   audit(`تعديل منطقة: ${regions[idx].name}`, req.user.username);
   res.json(regions[idx]);
 });

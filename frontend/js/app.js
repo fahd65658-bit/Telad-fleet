@@ -273,7 +273,7 @@ async function loadLogs() {
       ? '<tr><td colspan="3" class="tbl-empty">لا توجد سجلات بعد</td></tr>'
       : [...logs].reverse().map(l => `
           <tr>
-            <td>${new Date(l.time).toISOString().replace('T', ' ').slice(0, 16)}</td>
+            <td>${formatDateTime(l.time)}</td>
             <td>${escHtml(l.user)}</td>
             <td>${escHtml(l.action)}</td>
           </tr>`).join('');
@@ -362,7 +362,7 @@ async function loadDrivers() {
             <td>${escHtml(d.name || '—')}</td>
             <td>${escHtml(d.phone || '—')}</td>
             <td>${escHtml(d.licenseNo || '—')}</td>
-            <td>${d.licenseExpiry ? new Date(d.licenseExpiry).toISOString().split('T')[0] : '—'}</td>
+            <td>${formatDate(d.licenseExpiry)}</td>
             <td><span class="badge-${d.status === 'active' ? 'active' : 'inactive'}">${d.status === 'active' ? '✔ نشط' : '✘ غير نشط'}</span></td>
             <td>${canEdit
               ? `<button class="btn-sm btn-danger" data-action="delete-driver" data-id="${escHtml(String(d.id))}">حذف</button>`
@@ -415,7 +415,7 @@ async function loadMaintenance() {
             <td>${escHtml(j.vehicleId || '—')}</td>
             <td>${escHtml(j.type || '—')}</td>
             <td>${escHtml(j.description || '—')}</td>
-            <td>${j.scheduledDate ? new Date(j.scheduledDate).toISOString().split('T')[0] : '—'}</td>
+            <td>${formatDate(j.scheduledDate)}</td>
             <td>${j.cost != null ? j.cost + ' ر.س' : '—'}</td>
             <td>${statusLabel[j.status] || j.status}</td>
             <td>${canEdit && j.status !== 'completed'
@@ -476,7 +476,7 @@ async function loadAppointments() {
           <tr>
             <td>${escHtml(a.vehicleId || '—')}</td>
             <td>${escHtml(a.type || '—')}</td>
-            <td>${a.scheduledAt ? new Date(a.scheduledAt).toISOString().replace('T', ' ').slice(0, 16) : '—'}</td>
+            <td>${formatDateTime(a.scheduledAt)}</td>
             <td>${escHtml(a.notes || '—')}</td>
             <td>${statusLabel[a.status] || a.status}</td>
             <td>${canEdit && a.status === 'pending'
@@ -534,7 +534,7 @@ async function loadRegions() {
           <tr>
             <td>${escHtml(r.name || '—')}</td>
             <td>${escHtml(r.description || '—')}</td>
-            <td>${r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : '—'}</td>
+            <td>${formatDate(r.createdAt)}</td>
             <td>${canEdit
               ? `<button class="btn-sm btn-danger" data-action="delete-region" data-id="${escHtml(String(r.id))}">حذف</button>`
               : '—'
@@ -582,7 +582,7 @@ async function loadReports() {
             <td>${escHtml(r.title || '—')}</td>
             <td>${escHtml(r.type || '—')}</td>
             <td>${escHtml(r.createdBy || '—')}</td>
-            <td>${r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').slice(0, 16) : '—'}</td>
+            <td>${formatDateTime(r.createdAt)}</td>
           </tr>`).join('');
   } catch {
     tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
@@ -636,6 +636,16 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toISOString().split('T')[0];
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toISOString().replace('T', ' ').slice(0, 16);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
