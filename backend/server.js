@@ -293,11 +293,17 @@ app.get('/ai/predict', supervisorUp, (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 // CRUD DATA  (in-memory — replace with PostgreSQL using schema in /database/schema.sql)
 // ═══════════════════════════════════════════════════════════════════════════
-let cities    = [];
-let projects  = [];
-let vehicles  = [];
-let employees = [];
-let auditLogs = [];
+let cities        = [];
+let projects      = [];
+let vehicles      = [];
+let employees     = [];
+let drivers       = [];
+let maintenanceJobs = [];
+let appointments  = [];
+let regions       = [];
+let reports       = [];
+let notifications = [];
+let auditLogs     = [];
 
 function audit(action, username) {
   auditLogs.push({
@@ -308,45 +314,60 @@ function audit(action, username) {
   });
 }
 
-// Dashboard summary
+// ─── Dashboard summary ────────────────────────────────────────────────────────
 app.get('/dashboard', authAll, (_req, res) =>
   res.json({
-    cities:    cities.length,
-    projects:  projects.length,
-    vehicles:  vehicles.length,
-    employees: employees.length,
+    cities:       cities.length,
+    projects:     projects.length,
+    vehicles:     vehicles.length,
+    employees:    employees.length,
+    drivers:      drivers.length,
+    maintenance:  maintenanceJobs.filter(m => m.status !== 'completed').length,
+    appointments: appointments.filter(a => a.status === 'pending').length,
+    regions:      regions.length,
   })
 );
 
-// Cities
+// ─── Cities ───────────────────────────────────────────────────────────────────
 app.post('/cities', supervisorUp, (req, res) => {
-  const c = { id: newId(), ...req.body };
+  const c = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
   cities.push(c);
   audit('إضافة مدينة', req.user.username);
   res.status(201).json(c);
 });
 app.get('/cities', authAll, (_req, res) => res.json(cities));
 
-// Projects
+// ─── Projects ─────────────────────────────────────────────────────────────────
 app.post('/projects', supervisorUp, (req, res) => {
-  const p = { id: newId(), ...req.body };
+  const p = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
   projects.push(p);
   audit('إضافة مشروع', req.user.username);
   res.status(201).json(p);
 });
 app.get('/projects', authAll, (_req, res) => res.json(projects));
 
-// Vehicles
+// ─── Vehicles ─────────────────────────────────────────────────────────────────
 app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
-  const v = { id: newId(), ...req.body };
+  const v = { id: newId(), status: 'active', createdAt: new Date().toISOString(), ...req.body };
   vehicles.push(v);
   audit('إضافة مركبة', req.user.username);
   res.status(201).json(v);
 });
 app.get('/vehicles', authAll, (_req, res) => res.json(vehicles));
+app.get('/vehicles/:id', authAll, (req, res) => {
+  const v = vehicles.find(x => x.id === req.params.id);
+  if (!v) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  res.json(v);
+});
+app.put('/vehicles/:id', supervisorUp, (req, res) => {
+  const idx = vehicles.findIndex(x => x.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  vehicles[idx] = { ...vehicles[idx], ...req.body, id: vehicles[idx].id, updatedAt: new Date().toISOString() };
+  audit(`تعديل مركبة: ${vehicles[idx].plate || vehicles[idx].name}`, req.user.username);
+  res.json(vehicles[idx]);
+});
 app.delete('/vehicles/:id', supervisorUp, (req, res) => {
-  const id  = req.params.id;
-  const idx = vehicles.findIndex(v => v.id === id);
+  const idx = vehicles.findIndex(v => v.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
   const plate = vehicles[idx].plate || vehicles[idx].name;
   vehicles.splice(idx, 1);
@@ -354,14 +375,231 @@ app.delete('/vehicles/:id', supervisorUp, (req, res) => {
   res.json({ ok: true });
 });
 
-// Employees
+// ─── Employees ────────────────────────────────────────────────────────────────
 app.post('/employees', supervisorUp, (req, res) => {
-  const e = { id: newId(), ...req.body };
+  const e = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
   employees.push(e);
   audit('إضافة موظف', req.user.username);
   res.status(201).json(e);
 });
 app.get('/employees', authAll, (_req, res) => res.json(employees));
+
+// ─── Drivers ──────────────────────────────────────────────────────────────────
+app.get('/drivers', authAll, (_req, res) => res.json(drivers));
+app.post('/drivers', supervisorUp, (req, res) => {
+  const { name, phone, licenseNo, licenseExpiry, vehicleId, status = 'active' } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'اسم السائق مطلوب' });
+  const d = {
+    id: newId(),
+    name,
+    phone:         phone         || '',
+    licenseNo:     licenseNo     || '',
+    licenseExpiry: licenseExpiry || null,
+    vehicleId:     vehicleId     || null,
+    status,
+    createdAt: new Date().toISOString(),
+  };
+  drivers.push(d);
+  audit(`إضافة سائق: ${name}`, req.user.username);
+  res.status(201).json(d);
+});
+app.put('/drivers/:id', supervisorUp, (req, res) => {
+  const idx = drivers.findIndex(d => d.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'السائق غير موجود' });
+  drivers[idx] = { ...drivers[idx], ...req.body, id: drivers[idx].id, updatedAt: new Date().toISOString() };
+  audit(`تعديل سائق: ${drivers[idx].name}`, req.user.username);
+  res.json(drivers[idx]);
+});
+app.delete('/drivers/:id', supervisorUp, (req, res) => {
+  const idx = drivers.findIndex(d => d.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'السائق غير موجود' });
+  const name = drivers[idx].name;
+  drivers.splice(idx, 1);
+  audit(`حذف سائق: ${name}`, req.user.username);
+  res.json({ ok: true });
+});
+
+// ─── Maintenance ──────────────────────────────────────────────────────────────
+app.get('/maintenance', authAll, (_req, res) => res.json(maintenanceJobs));
+app.post('/maintenance', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
+  const { vehicleId, type, description, scheduledDate, cost } = req.body || {};
+  if (!vehicleId || !type) return res.status(400).json({ error: 'معرّف المركبة ونوع الصيانة مطلوبان' });
+  const job = {
+    id: newId(),
+    vehicleId,
+    type,
+    description:   description   || '',
+    scheduledDate: scheduledDate || null,
+    cost:          cost          ?? null,
+    status:        'pending',
+    completedDate: null,
+    createdAt:     new Date().toISOString(),
+    createdBy:     req.user.username,
+  };
+  maintenanceJobs.push(job);
+  audit(`إضافة مهمة صيانة: ${type}`, req.user.username);
+  res.status(201).json(job);
+});
+app.put('/maintenance/:id', supervisorUp, (req, res) => {
+  const idx = maintenanceJobs.findIndex(m => m.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'مهمة الصيانة غير موجودة' });
+  maintenanceJobs[idx] = { ...maintenanceJobs[idx], ...req.body, id: maintenanceJobs[idx].id, updatedAt: new Date().toISOString() };
+  audit(`تعديل مهمة صيانة: ${maintenanceJobs[idx].type}`, req.user.username);
+  res.json(maintenanceJobs[idx]);
+});
+app.post('/maintenance/:id/complete', supervisorUp, (req, res) => {
+  const idx = maintenanceJobs.findIndex(m => m.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'مهمة الصيانة غير موجودة' });
+  maintenanceJobs[idx].status        = 'completed';
+  maintenanceJobs[idx].completedDate = new Date().toISOString();
+  if (req.body.cost !== undefined) maintenanceJobs[idx].cost = req.body.cost;
+  audit(`إتمام مهمة صيانة: ${maintenanceJobs[idx].type}`, req.user.username);
+  res.json(maintenanceJobs[idx]);
+});
+app.delete('/maintenance/:id', supervisorUp, (req, res) => {
+  const idx = maintenanceJobs.findIndex(m => m.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'مهمة الصيانة غير موجودة' });
+  maintenanceJobs.splice(idx, 1);
+  audit('حذف مهمة صيانة', req.user.username);
+  res.json({ ok: true });
+});
+
+// ─── Appointments ─────────────────────────────────────────────────────────────
+app.get('/appointments', authAll, (_req, res) => res.json(appointments));
+app.post('/appointments', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
+  const { vehicleId, driverId, type, scheduledAt, notes } = req.body || {};
+  if (!vehicleId || !type || !scheduledAt)
+    return res.status(400).json({ error: 'معرّف المركبة والنوع والموعد مطلوبة' });
+  const appt = {
+    id: newId(),
+    vehicleId,
+    driverId:    driverId || null,
+    type,
+    scheduledAt,
+    notes:       notes || '',
+    status:      'pending',
+    createdAt:   new Date().toISOString(),
+    createdBy:   req.user.username,
+  };
+  appointments.push(appt);
+  audit(`إضافة موعد: ${type}`, req.user.username);
+  res.status(201).json(appt);
+});
+app.put('/appointments/:id', supervisorUp, (req, res) => {
+  const idx = appointments.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الموعد غير موجود' });
+  appointments[idx] = { ...appointments[idx], ...req.body, id: appointments[idx].id, updatedAt: new Date().toISOString() };
+  audit(`تعديل موعد: ${appointments[idx].type}`, req.user.username);
+  res.json(appointments[idx]);
+});
+app.post('/appointments/:id/confirm', supervisorUp, (req, res) => {
+  const idx = appointments.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الموعد غير موجود' });
+  appointments[idx].status      = 'confirmed';
+  appointments[idx].confirmedAt = new Date().toISOString();
+  audit(`تأكيد موعد: ${appointments[idx].type}`, req.user.username);
+  res.json(appointments[idx]);
+});
+app.post('/appointments/:id/cancel', supervisorUp, (req, res) => {
+  const idx = appointments.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الموعد غير موجود' });
+  appointments[idx].status     = 'cancelled';
+  appointments[idx].cancelledAt = new Date().toISOString();
+  audit(`إلغاء موعد: ${appointments[idx].type}`, req.user.username);
+  res.json(appointments[idx]);
+});
+app.delete('/appointments/:id', supervisorUp, (req, res) => {
+  const idx = appointments.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الموعد غير موجود' });
+  appointments.splice(idx, 1);
+  audit('حذف موعد', req.user.username);
+  res.json({ ok: true });
+});
+
+// ─── Regions ──────────────────────────────────────────────────────────────────
+app.get('/regions', authAll, (_req, res) => res.json(regions));
+app.post('/regions', supervisorUp, (req, res) => {
+  const { name, description, coordinates } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'اسم المنطقة مطلوب' });
+  const r = {
+    id: newId(),
+    name,
+    description:  description  || '',
+    coordinates:  coordinates  || null,
+    createdAt:    new Date().toISOString(),
+    createdBy:    req.user.username,
+  };
+  regions.push(r);
+  audit(`إضافة منطقة: ${name}`, req.user.username);
+  res.status(201).json(r);
+});
+app.put('/regions/:id', supervisorUp, (req, res) => {
+  const idx = regions.findIndex(r => r.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المنطقة غير موجودة' });
+  regions[idx] = { ...regions[idx], ...req.body, id: regions[idx].id, updatedAt: new Date().toISOString() };
+  audit(`تعديل منطقة: ${regions[idx].name}`, req.user.username);
+  res.json(regions[idx]);
+});
+app.delete('/regions/:id', supervisorUp, (req, res) => {
+  const idx = regions.findIndex(r => r.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المنطقة غير موجودة' });
+  const name = regions[idx].name;
+  regions.splice(idx, 1);
+  audit(`حذف منطقة: ${name}`, req.user.username);
+  res.json({ ok: true });
+});
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+app.get('/reports', authAll, (_req, res) => res.json(reports));
+app.post('/reports/generate', supervisorUp, (req, res) => {
+  const { title, type } = req.body || {};
+  if (!title || !type) return res.status(400).json({ error: 'عنوان التقرير ونوعه مطلوبان' });
+
+  const data = (() => {
+    switch (type) {
+      case 'vehicles':    return { count: vehicles.length,      items: vehicles };
+      case 'drivers':     return { count: drivers.length,       items: drivers };
+      case 'maintenance': return { count: maintenanceJobs.length, pending: maintenanceJobs.filter(m => m.status !== 'completed').length, items: maintenanceJobs };
+      case 'appointments':return { count: appointments.length,  items: appointments };
+      default:            return { vehicles: vehicles.length, drivers: drivers.length, maintenance: maintenanceJobs.length, appointments: appointments.length };
+    }
+  })();
+
+  const report = {
+    id:        newId(),
+    title,
+    type,
+    data,
+    createdBy: req.user.username,
+    createdAt: new Date().toISOString(),
+  };
+  reports.push(report);
+  audit(`إنشاء تقرير: ${title}`, req.user.username);
+  res.status(201).json(report);
+});
+app.get('/reports/analytics', authAll, (_req, res) => {
+  res.json({
+    summary: {
+      vehicles:           vehicles.length,
+      drivers:            drivers.length,
+      maintenancePending: maintenanceJobs.filter(m => m.status !== 'completed').length,
+      maintenanceDone:    maintenanceJobs.filter(m => m.status === 'completed').length,
+      appointmentsPending:appointments.filter(a => a.status === 'pending').length,
+      appointmentsConfirmed: appointments.filter(a => a.status === 'confirmed').length,
+      regions:            regions.length,
+    },
+    vehiclesByStatus: {
+      active:      vehicles.filter(v => v.status === 'active').length,
+      maintenance: vehicles.filter(v => v.status === 'maintenance').length,
+      inactive:    vehicles.filter(v => v.status === 'inactive').length,
+    },
+    driversByStatus: {
+      active:   drivers.filter(d => d.status === 'active').length,
+      inactive: drivers.filter(d => d.status !== 'active').length,
+    },
+    generatedAt: new Date().toISOString(),
+  });
+});
 
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));

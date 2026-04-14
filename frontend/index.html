@@ -61,31 +61,40 @@
       <a class="nav-link" data-section="map"         onclick="navigateTo('map')">
         <span class="nav-icon">🗺️</span> خريطة الأسطول
       </a>
-      <a class="nav-link" data-section="vehicles"    onclick="navigateTo('vehicles')">
+      <a class="nav-link" data-section="vehicles"     onclick="navigateTo('vehicles')">
         <span class="nav-icon">🚗</span> المركبات
       </a>
-      <a class="nav-link" data-section="maintenance" onclick="navigateTo('maintenance')">
+      <a class="nav-link" data-section="drivers"      onclick="navigateTo('drivers')">
+        <span class="nav-icon">🧑‍✈️</span> السائقون
+      </a>
+      <a class="nav-link" data-section="maintenance"  onclick="navigateTo('maintenance')">
         <span class="nav-icon">🔧</span> الصيانة
       </a>
-      <a class="nav-link" data-section="accidents"   onclick="navigateTo('accidents')">
+      <a class="nav-link" data-section="appointments" onclick="navigateTo('appointments')">
+        <span class="nav-icon">📅</span> المواعيد
+      </a>
+      <a class="nav-link" data-section="regions"      onclick="navigateTo('regions')">
+        <span class="nav-icon">🗺️</span> المناطق
+      </a>
+      <a class="nav-link" data-section="accidents"    onclick="navigateTo('accidents')">
         <span class="nav-icon">⚠️</span> الحوادث
       </a>
-      <a class="nav-link" data-section="violations"  onclick="navigateTo('violations')">
+      <a class="nav-link" data-section="violations"   onclick="navigateTo('violations')">
         <span class="nav-icon">🚦</span> المخالفات
       </a>
-      <a class="nav-link" data-section="financial"   onclick="navigateTo('financial')">
+      <a class="nav-link" data-section="financial"    onclick="navigateTo('financial')">
         <span class="nav-icon">💰</span> العهد المالية
       </a>
-      <a class="nav-link" data-section="reports"     onclick="navigateTo('reports')">
+      <a class="nav-link" data-section="reports"      onclick="navigateTo('reports')">
         <span class="nav-icon">📈</span> التقارير
       </a>
-      <a class="nav-link" data-section="ai"          onclick="navigateTo('ai')">
+      <a class="nav-link" data-section="ai"           onclick="navigateTo('ai')">
         <span class="nav-icon">🧠</span> الذكاء الاصطناعي
       </a>
-      <a class="nav-link" data-section="logs"        onclick="navigateTo('logs')">
+      <a class="nav-link" data-section="logs"         onclick="navigateTo('logs')">
         <span class="nav-icon">📜</span> سجل العمليات
       </a>
-      <a class="nav-link" data-section="users"       onclick="navigateTo('users')">
+      <a class="nav-link" data-section="users"        onclick="navigateTo('users')">
         <span class="nav-icon">👥</span> إدارة المستخدمين
       </a>
     </div>
@@ -121,9 +130,24 @@
           <div class="card-value" id="stat-vehicles">—</div>
         </div>
         <div class="card">
+          <div class="card-icon">🧑‍✈️</div>
+          <div class="card-label">السائقون</div>
+          <div class="card-value" id="stat-drivers">—</div>
+        </div>
+        <div class="card">
           <div class="card-icon">👤</div>
           <div class="card-label">الموظفون</div>
           <div class="card-value" id="stat-employees">—</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔧</div>
+          <div class="card-label">الصيانة المعلقة</div>
+          <div class="card-value" id="stat-maintenance">—</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">📅</div>
+          <div class="card-label">المواعيد المنتظرة</div>
+          <div class="card-value" id="stat-appointments">—</div>
         </div>
         <div class="card">
           <div class="card-icon">🏙️</div>
@@ -134,6 +158,11 @@
           <div class="card-icon">🏗️</div>
           <div class="card-label">المشاريع</div>
           <div class="card-value" id="stat-projects">—</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🗺️</div>
+          <div class="card-label">المناطق</div>
+          <div class="card-value" id="stat-regions">—</div>
         </div>
       </div>
       <div class="map-placeholder">
@@ -194,14 +223,160 @@
 
     <!-- ── الصيانة ───────────────────────────────────── -->
     <div id="sec-maintenance" class="section" style="display:none">
-      <h2 class="sec-title">الصيانة</h2>
-      <div class="coming-soon">🔧 قيد التطوير</div>
+      <h2 class="sec-title">إدارة الصيانة</h2>
+
+      <div id="maintenance-form-wrap">
+        <form id="form-maintenance" class="data-form" onsubmit="addMaintenance(event)">
+          <h3>إضافة مهمة صيانة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>معرّف المركبة</label>
+              <input id="m-vehicleId" required placeholder="Vehicle ID">
+            </div>
+            <div class="form-group">
+              <label>نوع الصيانة</label>
+              <input id="m-type" required placeholder="مثال: تغيير زيت">
+            </div>
+            <div class="form-group">
+              <label>الوصف</label>
+              <input id="m-description" placeholder="وصف اختياري">
+            </div>
+            <div class="form-group">
+              <label>تاريخ الجدولة</label>
+              <input id="m-scheduledDate" type="date">
+            </div>
+            <div class="form-group">
+              <label>التكلفة (ر.س)</label>
+              <input id="m-cost" type="number" min="0" step="0.01">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>المركبة</th><th>النوع</th><th>الوصف</th><th>الموعد</th><th>التكلفة</th><th>الحالة</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="maintenance-tbody">
+          <tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- ── الحوادث ───────────────────────────────────── -->
     <div id="sec-accidents" class="section" style="display:none">
       <h2 class="sec-title">الحوادث</h2>
       <div class="coming-soon">⚠️ قيد التطوير</div>
+    </div>
+
+    <!-- ── السائقون ──────────────────────────────────── -->
+    <div id="sec-drivers" class="section" style="display:none">
+      <h2 class="sec-title">إدارة السائقين</h2>
+
+      <div id="driver-form-wrap">
+        <form id="form-driver" class="data-form" onsubmit="addDriver(event)">
+          <h3>إضافة سائق جديد</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>الاسم</label>
+              <input id="d-name" required>
+            </div>
+            <div class="form-group">
+              <label>رقم الهاتف</label>
+              <input id="d-phone">
+            </div>
+            <div class="form-group">
+              <label>رقم الرخصة</label>
+              <input id="d-licenseNo">
+            </div>
+            <div class="form-group">
+              <label>انتهاء الرخصة</label>
+              <input id="d-licenseExpiry" type="date">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>الاسم</th><th>الهاتف</th><th>رقم الرخصة</th><th>انتهاء الرخصة</th><th>الحالة</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="drivers-tbody">
+          <tr><td colspan="6" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── المواعيد ──────────────────────────────────── -->
+    <div id="sec-appointments" class="section" style="display:none">
+      <h2 class="sec-title">إدارة المواعيد</h2>
+
+      <div id="appointment-form-wrap">
+        <form id="form-appointment" class="data-form" onsubmit="addAppointment(event)">
+          <h3>إضافة موعد جديد</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>معرّف المركبة</label>
+              <input id="a-vehicleId" required placeholder="Vehicle ID">
+            </div>
+            <div class="form-group">
+              <label>النوع</label>
+              <input id="a-type" required placeholder="مثال: فحص دوري">
+            </div>
+            <div class="form-group">
+              <label>الموعد</label>
+              <input id="a-scheduledAt" type="datetime-local" required>
+            </div>
+            <div class="form-group">
+              <label>ملاحظات</label>
+              <input id="a-notes" placeholder="ملاحظات اختيارية">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>المركبة</th><th>النوع</th><th>الموعد</th><th>الملاحظات</th><th>الحالة</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="appointments-tbody">
+          <tr><td colspan="6" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── المناطق ───────────────────────────────────── -->
+    <div id="sec-regions" class="section" style="display:none">
+      <h2 class="sec-title">إدارة المناطق</h2>
+
+      <div id="region-form-wrap">
+        <form id="form-region" class="data-form" onsubmit="addRegion(event)">
+          <h3>إضافة منطقة جديدة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم المنطقة</label>
+              <input id="r-name" required>
+            </div>
+            <div class="form-group">
+              <label>الوصف</label>
+              <input id="r-description">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>الاسم</th><th>الوصف</th><th>تاريخ الإنشاء</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="regions-tbody">
+          <tr><td colspan="4" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- ── المخالفات ─────────────────────────────────── -->
@@ -218,8 +393,44 @@
 
     <!-- ── التقارير ──────────────────────────────────── -->
     <div id="sec-reports" class="section" style="display:none">
-      <h2 class="sec-title">التقارير</h2>
-      <div class="coming-soon">📈 قيد التطوير</div>
+      <h2 class="sec-title">التقارير والتحليلات</h2>
+
+      <div class="data-form" style="margin-bottom:24px">
+        <h3>إنشاء تقرير</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>عنوان التقرير</label>
+            <input id="rep-title" placeholder="مثال: تقرير المركبات الشهري">
+          </div>
+          <div class="form-group">
+            <label>نوع التقرير</label>
+            <select id="rep-type">
+              <option value="summary">ملخص عام</option>
+              <option value="vehicles">المركبات</option>
+              <option value="drivers">السائقون</option>
+              <option value="maintenance">الصيانة</option>
+              <option value="appointments">المواعيد</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="generateReport()">📊 إنشاء تقرير</button>
+        <button class="btn-primary" onclick="loadAnalytics()" style="margin-right:8px">📈 عرض التحليلات</button>
+      </div>
+
+      <div id="analytics-panel" style="display:none;margin-bottom:24px">
+        <h3 class="sub-title">ملخص التحليلات</h3>
+        <div class="cards" id="analytics-cards"></div>
+      </div>
+
+      <h3 class="sub-title">التقارير المحفوظة</h3>
+      <table class="data-table">
+        <thead>
+          <tr><th>العنوان</th><th>النوع</th><th>أنشئ بواسطة</th><th>التاريخ</th></tr>
+        </thead>
+        <tbody id="reports-tbody">
+          <tr><td colspan="4" class="tbl-empty">لا توجد تقارير بعد</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- ── الذكاء الاصطناعي ──────────────────────────── -->

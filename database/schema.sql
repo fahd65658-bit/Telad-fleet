@@ -164,3 +164,94 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at DESC);
+
+-- ─── DRIVERS ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS drivers (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            TEXT        NOT NULL,
+  phone           TEXT,
+  license_no      TEXT,
+  license_expiry  DATE,
+  vehicle_id      INTEGER     REFERENCES vehicles(id) ON DELETE SET NULL,
+  status          TEXT        NOT NULL DEFAULT 'active'
+                              CHECK (status IN ('active','inactive','suspended')),
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_drivers_status ON drivers(status);
+
+-- ─── MAINTENANCE JOBS ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS maintenance_jobs (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id      INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  type            TEXT        NOT NULL,
+  description     TEXT,
+  status          TEXT        NOT NULL DEFAULT 'pending'
+                              CHECK (status IN ('pending','in_progress','completed','cancelled')),
+  scheduled_date  DATE,
+  completed_date  TIMESTAMPTZ,
+  cost            NUMERIC(12,2),
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON maintenance_jobs(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_status  ON maintenance_jobs(status);
+
+-- ─── APPOINTMENTS ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS appointments (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id      INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  driver_id       UUID        REFERENCES drivers(id) ON DELETE SET NULL,
+  type            TEXT        NOT NULL,
+  scheduled_at    TIMESTAMPTZ NOT NULL,
+  status          TEXT        NOT NULL DEFAULT 'pending'
+                              CHECK (status IN ('pending','confirmed','cancelled','completed')),
+  notes           TEXT,
+  confirmed_at    TIMESTAMPTZ,
+  cancelled_at    TIMESTAMPTZ,
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_appointments_vehicle ON appointments(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_status  ON appointments(status);
+CREATE INDEX IF NOT EXISTS idx_appointments_date    ON appointments(scheduled_at);
+
+-- ─── REGIONS ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS regions (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         TEXT        NOT NULL,
+  description  TEXT,
+  coordinates  JSONB,
+  created_by   TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── REPORTS ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS reports (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  title        TEXT        NOT NULL,
+  type         TEXT        NOT NULL,
+  data         JSONB,
+  created_by   TEXT        NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
+CREATE INDEX IF NOT EXISTS idx_reports_time ON reports(created_at DESC);
+
+-- ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notifications (
+  id           BIGSERIAL   PRIMARY KEY,
+  user_id      INTEGER     REFERENCES users(id) ON DELETE CASCADE,
+  title        TEXT        NOT NULL,
+  body         TEXT,
+  type         TEXT        NOT NULL DEFAULT 'info'
+                           CHECK (type IN ('info','warning','error','success')),
+  read         BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, read);
