@@ -560,7 +560,10 @@ app.post('/reports/generate', supervisorUp, (req, res) => {
       case 'vehicles':    return { count: vehicles.length,      items: vehicles };
       case 'drivers':     return { count: drivers.length,       items: drivers };
       case 'maintenance': return { count: maintenanceJobs.length, pending: maintenanceJobs.filter(m => m.status !== 'completed').length, items: maintenanceJobs };
-      case 'appointments':return { count: appointments.length,  items: appointments };
+      case 'appointments': {
+        const pending = appointments.filter(a => a.status === 'pending');
+        return { count: appointments.length, pending: pending.length, items: appointments };
+      }
       default:            return { vehicles: vehicles.length, drivers: drivers.length, maintenance: maintenanceJobs.length, appointments: appointments.length };
     }
   })();

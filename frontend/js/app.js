@@ -614,7 +614,7 @@ async function loadAnalytics() {
       { icon: '🧑‍✈️', label: 'السائقون',         val: s.drivers            ?? 0 },
       { icon: '🔧', label: 'صيانة معلّقة',       val: s.maintenancePending ?? 0 },
       { icon: '✅', label: 'صيانة مكتملة',       val: s.maintenanceDone    ?? 0 },
-      { icon: '📅', label: 'مواعيد معلّقة',      val: s.appointmentsPending?? 0 },
+      { icon: '📅', label: 'مواعيد معلّقة',      val: s.appointmentsPending ?? 0 },
       { icon: '🗺️', label: 'المناطق',           val: s.regions            ?? 0 },
     ].map(c => `
       <div class="card">
