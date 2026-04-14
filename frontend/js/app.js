@@ -228,7 +228,7 @@ async function loadVehicles() {
             <td>${escHtml(v.city   || '—')}</td>
             <td>${escHtml(v.driver || '—')}</td>
             <td>${canEdit
-              ? `<button class="btn-sm btn-danger" onclick="deleteVehicle('${escHtml(String(v.id))}')">حذف</button>`
+              ? `<button class="btn-sm btn-danger" data-action="delete-vehicle" data-id="${escHtml(String(v.id))}">حذف</button>`
               : '—'
             }</td>
           </tr>`).join('');
@@ -273,7 +273,7 @@ async function loadLogs() {
       ? '<tr><td colspan="3" class="tbl-empty">لا توجد سجلات بعد</td></tr>'
       : [...logs].reverse().map(l => `
           <tr>
-            <td>${new Date(l.time).toLocaleString('ar-SA')}</td>
+            <td>${new Date(l.time).toISOString().replace('T', ' ').slice(0, 16)}</td>
             <td>${escHtml(l.user)}</td>
             <td>${escHtml(l.action)}</td>
           </tr>`).join('');
@@ -304,8 +304,8 @@ async function loadUsers() {
         }</td>
         <td>
           ${u.id !== 1
-            ? `<button class="btn-sm btn-warn"   onclick="toggleUser('${escHtml(String(u.id))}', ${!u.active})">${u.active ? 'تعطيل' : 'تفعيل'}</button>
-               <button class="btn-sm btn-danger" onclick="deleteUser('${escHtml(String(u.id))}')">حذف</button>`
+            ? `<button class="btn-sm btn-warn"   data-action="toggle-user"  data-id="${escHtml(String(u.id))}" data-active="${!u.active}">${u.active ? 'تعطيل' : 'تفعيل'}</button>
+               <button class="btn-sm btn-danger" data-action="delete-user"  data-id="${escHtml(String(u.id))}">حذف</button>`
             : '<span style="color:#475569;font-size:12px">محمي</span>'
           }
         </td>
@@ -362,10 +362,10 @@ async function loadDrivers() {
             <td>${escHtml(d.name || '—')}</td>
             <td>${escHtml(d.phone || '—')}</td>
             <td>${escHtml(d.licenseNo || '—')}</td>
-            <td>${d.licenseExpiry ? new Date(d.licenseExpiry).toLocaleDateString('ar-SA') : '—'}</td>
+            <td>${d.licenseExpiry ? new Date(d.licenseExpiry).toISOString().split('T')[0] : '—'}</td>
             <td><span class="badge-${d.status === 'active' ? 'active' : 'inactive'}">${d.status === 'active' ? '✔ نشط' : '✘ غير نشط'}</span></td>
             <td>${canEdit
-              ? `<button class="btn-sm btn-danger" onclick="deleteDriver('${escHtml(String(d.id))}')">حذف</button>`
+              ? `<button class="btn-sm btn-danger" data-action="delete-driver" data-id="${escHtml(String(d.id))}">حذف</button>`
               : '—'
             }</td>
           </tr>`).join('');
@@ -415,12 +415,12 @@ async function loadMaintenance() {
             <td>${escHtml(j.vehicleId || '—')}</td>
             <td>${escHtml(j.type || '—')}</td>
             <td>${escHtml(j.description || '—')}</td>
-            <td>${j.scheduledDate ? new Date(j.scheduledDate).toLocaleDateString('ar-SA') : '—'}</td>
+            <td>${j.scheduledDate ? new Date(j.scheduledDate).toISOString().split('T')[0] : '—'}</td>
             <td>${j.cost != null ? j.cost + ' ر.س' : '—'}</td>
             <td>${statusLabel[j.status] || j.status}</td>
             <td>${canEdit && j.status !== 'completed'
-              ? `<button class="btn-sm btn-warn" onclick="completeMaintenance('${escHtml(String(j.id))}')">إتمام</button>
-                 <button class="btn-sm btn-danger" onclick="deleteMaintenance('${escHtml(String(j.id))}')">حذف</button>`
+              ? `<button class="btn-sm btn-warn" data-action="complete-maintenance" data-id="${escHtml(String(j.id))}">إتمام</button>
+                 <button class="btn-sm btn-danger" data-action="delete-maintenance" data-id="${escHtml(String(j.id))}">حذف</button>`
               : '—'
             }</td>
           </tr>`).join('');
@@ -476,12 +476,12 @@ async function loadAppointments() {
           <tr>
             <td>${escHtml(a.vehicleId || '—')}</td>
             <td>${escHtml(a.type || '—')}</td>
-            <td>${a.scheduledAt ? new Date(a.scheduledAt).toLocaleString('ar-SA') : '—'}</td>
+            <td>${a.scheduledAt ? new Date(a.scheduledAt).toISOString().replace('T', ' ').slice(0, 16) : '—'}</td>
             <td>${escHtml(a.notes || '—')}</td>
             <td>${statusLabel[a.status] || a.status}</td>
             <td>${canEdit && a.status === 'pending'
-              ? `<button class="btn-sm btn-warn" onclick="confirmAppointment('${escHtml(String(a.id))}')">تأكيد</button>
-                 <button class="btn-sm btn-danger" onclick="cancelAppointment('${escHtml(String(a.id))}')">إلغاء</button>`
+              ? `<button class="btn-sm btn-warn" data-action="confirm-appointment" data-id="${escHtml(String(a.id))}">تأكيد</button>
+                 <button class="btn-sm btn-danger" data-action="cancel-appointment" data-id="${escHtml(String(a.id))}">إلغاء</button>`
               : '—'
             }</td>
           </tr>`).join('');
@@ -534,9 +534,9 @@ async function loadRegions() {
           <tr>
             <td>${escHtml(r.name || '—')}</td>
             <td>${escHtml(r.description || '—')}</td>
-            <td>${r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar-SA') : '—'}</td>
+            <td>${r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : '—'}</td>
             <td>${canEdit
-              ? `<button class="btn-sm btn-danger" onclick="deleteRegion('${escHtml(String(r.id))}')">حذف</button>`
+              ? `<button class="btn-sm btn-danger" data-action="delete-region" data-id="${escHtml(String(r.id))}">حذف</button>`
               : '—'
             }</td>
           </tr>`).join('');
@@ -582,7 +582,7 @@ async function loadReports() {
             <td>${escHtml(r.title || '—')}</td>
             <td>${escHtml(r.type || '—')}</td>
             <td>${escHtml(r.createdBy || '—')}</td>
-            <td>${r.createdAt ? new Date(r.createdAt).toLocaleString('ar-SA') : '—'}</td>
+            <td>${r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').slice(0, 16) : '—'}</td>
           </tr>`).join('');
   } catch {
     tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
@@ -634,5 +634,47 @@ function escHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT DELEGATION — handles all data-action buttons in tables
+// ═══════════════════════════════════════════════════════════════════════════
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const id     = btn.dataset.id;
+
+  switch (action) {
+    case 'delete-vehicle':
+      await deleteVehicle(id);
+      break;
+    case 'delete-driver':
+      await deleteDriver(id);
+      break;
+    case 'complete-maintenance':
+      await completeMaintenance(id);
+      break;
+    case 'delete-maintenance':
+      await deleteMaintenance(id);
+      break;
+    case 'confirm-appointment':
+      await confirmAppointment(id);
+      break;
+    case 'cancel-appointment':
+      await cancelAppointment(id);
+      break;
+    case 'delete-region':
+      await deleteRegion(id);
+      break;
+    case 'toggle-user':
+      await toggleUser(id, btn.dataset.active === 'true');
+      break;
+    case 'delete-user':
+      await deleteUser(id);
+      break;
+  }
+});
