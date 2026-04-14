@@ -1,0 +1,73 @@
+# ═══════════════════════════════════════════════════════════════════════
+# TELAD FLEET – Docker Compose (development + production)
+# ═══════════════════════════════════════════════════════════════════════
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: telad-fleet-backend:latest
+    container_name: telad-fleet-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=5000
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-telad_fleet}
+      - DB_USER=${DB_USER:-telad_user}
+      - DB_PASS=${DB_PASS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - telad-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: telad-fleet-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-telad_fleet}
+      - POSTGRES_USER=${DB_USER:-telad_user}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../database/seeds.sql:/docker-entrypoint-initdb.d/02-seeds.sql:ro
+    networks:
+      - telad-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-telad_user} -d ${DB_NAME:-telad_fleet}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: telad-fleet-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - telad-net
+
+networks:
+  telad-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
