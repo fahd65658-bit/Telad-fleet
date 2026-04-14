@@ -87,14 +87,17 @@ app.use(express.json({ limit: '1mb' }));
 app.use(compression({ threshold: 1024 })); // only compress responses >= 1 KB
 
 // ─── Per-request timeout ─────────────────────────────────────────────────────
-// Avoids hanging connections that would exhaust the thread pool
+// Avoids hanging connections that would exhaust the thread pool.
+// Backend timeout (30 s) < nginx proxy_read_timeout (35 s) so Node responds
+// with a 503 before nginx cuts the connection itself.
 app.use((req, res, next) => {
   if (req.path === '/health') return next(); // health check is exempt
   const timer = setTimeout(() => {
     if (!res.headersSent) {
       req.timedOut = true;
+      // Let the 503 response flush before closing the socket
       res.status(503).json({ error: 'انتهت مهلة الطلب — حاول مرة أخرى' });
-      req.socket.destroy(); // forcefully close the connection
+      res.on('finish', () => req.socket.destroy());
     }
   }, REQUEST_TIMEOUT);
   res.on('finish',  () => clearTimeout(timer));

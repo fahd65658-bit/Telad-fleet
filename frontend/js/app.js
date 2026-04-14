@@ -174,7 +174,9 @@ function navigateTo(section) {
 // API HELPER
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Default fetch timeout in milliseconds (15 s — matches nginx proxy_read_timeout)
+// Default fetch timeout in milliseconds.
+// Intentionally shorter than the backend (30 s) so the client shows a
+// friendly message quickly rather than waiting for the full server timeout.
 const FETCH_TIMEOUT_MS = 15000;
 
 /**
