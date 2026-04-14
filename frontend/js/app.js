@@ -351,6 +351,12 @@ function escHtml(str) {
 // VEHICLE CONDITION INSPECTION SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ─── Tuning constants ─────────────────────────────────────────────────────────
+const PHOTO_CAPTURE_QUALITY     = 0.78;   // JPEG quality for initial photo compression
+const PHOTO_ANNOTATION_QUALITY  = 0.88;   // JPEG quality for annotated composite (slightly higher)
+const AI_ANALYSIS_DELAY_MS      = 2200;   // Simulated AI processing time
+const HISTORY_NAV_DELAY_MS      = 1600;   // Delay before switching to history tab after save
+
 const PHOTO_POSITIONS = [
   { key: 'front',     label: 'أمامية',       icon: '🚘' },
   { key: 'rear',      label: 'خلفية',         icon: '🔄' },
@@ -479,7 +485,7 @@ function compressAndStore(prefix, posKey, dataUrl) {
     cv.width  = w;
     cv.height = h;
     cv.getContext('2d').drawImage(img, 0, 0, w, h);
-    const compressed = cv.toDataURL('image/jpeg', 0.78);
+    const compressed = cv.toDataURL('image/jpeg', PHOTO_CAPTURE_QUALITY);
     condState[prefix].photos[posKey] = { dataUrl: compressed, annotationDataUrl: null, notes: '' };
     updatePhotoSlotUI(prefix, posKey);
     updatePhotoCount(prefix);
@@ -730,7 +736,7 @@ function saveAnnotation() {
   ctx.drawImage(imgEl, 0, 0, cv.width, cv.height);
   ctx.drawImage(annot, 0, 0, cv.width, cv.height);
 
-  condState[prefix].photos[posKey].annotationDataUrl = cv.toDataURL('image/jpeg', 0.88);
+  condState[prefix].photos[posKey].annotationDataUrl = cv.toDataURL('image/jpeg', PHOTO_ANNOTATION_QUALITY);
   condState[prefix].photos[posKey].notes             = noteEl.value.trim();
 
   updatePhotoSlotUI(prefix, posKey);
@@ -746,7 +752,7 @@ async function runAiAnalysis() {
   panel.style.display = '';
   panel.innerHTML     = '<div class="ai-loading">🤖 يقوم الذكاء الاصطناعي بتحليل الصور ومقارنتها…<br><small>يرجى الانتظار</small></div>';
 
-  await new Promise(r => setTimeout(r, 2200));   // simulate processing delay
+  await new Promise(r => setTimeout(r, AI_ANALYSIS_DELAY_MS));   // simulate processing delay
 
   // Collect manually annotated photos as "detected damages"
   const damages = PHOTO_POSITIONS.reduce((acc, pos) => {
@@ -844,7 +850,7 @@ async function submitConditionReport(type) {
       statusEl.className   = 'status-msg status-ok';
     }
     resetConditionForm(prefix);
-    setTimeout(() => switchCondTab('history'), 1600);
+    setTimeout(() => switchCondTab('history'), HISTORY_NAV_DELAY_MS);
   } catch {
     if (statusEl) { statusEl.textContent = '❌ تعذّر الاتصال بالخادم'; statusEl.className = 'status-msg status-error'; }
   }

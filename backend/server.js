@@ -417,7 +417,7 @@ app.get('/vehicle-condition', authAll, (_req, res) => {
   );
 });
 
-// GET /vehicle-condition/report/:reportId — single report  (must be before /:vehicleId route)
+// GET /vehicle-condition/report/:reportId — single report (must be before /:vehicleId route)
 app.get('/vehicle-condition/report/:reportId', authAll, (req, res) => {
   const report = conditionReports.find(r => r.id === req.params.reportId);
   if (!report) return res.status(404).json({ error: 'التقرير غير موجود' });
