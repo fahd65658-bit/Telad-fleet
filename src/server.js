@@ -4,7 +4,7 @@ const { PORT, CORS_ORIGINS } = require('./config/environment');
 const { loginLimiter, apiLimiter } = require('./config/security');
 const { notFound, errorHandler } = require('./middleware/error');
 const { requireAuth, VALID_ROLES } = require('./middleware/auth');
-const { newId }  = require('./utils/helpers');
+const { newId, audit }  = require('./utils/helpers');
 const { store }  = require('./config/database');
 const logger     = require('./utils/logger');
 const { healthCheck } = require('./controllers/health');
@@ -55,7 +55,7 @@ app.get('/health', healthCheck);
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 function auditLog(action, username) {
-  store.auditLogs.push({ id: newId(), action, user: username, time: new Date().toISOString() });
+  audit(store.auditLogs, action, username);
 }
 
 app.post('/auth/login', loginLimiter, (req, res) => {
@@ -98,7 +98,7 @@ app.post('/auth/users', requireAuth(['admin']), (req, res) => {
 app.put('/auth/users/:id', requireAuth(['admin']), (req, res) => {
   const idx = store.users.findIndex(u => String(u.id) === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
-  if (store.users[idx].id === 1) {
+  if (String(store.users[idx].id) === '1') {
     if (req.body.role && req.body.role !== 'admin') return res.status(400).json({ error: 'لا يمكن تغيير دور المدير الرئيسي' });
     if (req.body.active === false) return res.status(400).json({ error: 'لا يمكن تعطيل المدير الرئيسي' });
   }
@@ -116,7 +116,7 @@ app.put('/auth/users/:id', requireAuth(['admin']), (req, res) => {
 app.delete('/auth/users/:id', requireAuth(['admin']), (req, res) => {
   const idx = store.users.findIndex(u => String(u.id) === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
-  if (store.users[idx].id === 1) return res.status(400).json({ error: 'لا يمكن حذف المدير الرئيسي' });
+  if (String(store.users[idx].id) === '1') return res.status(400).json({ error: 'لا يمكن حذف المدير الرئيسي' });
   const username = store.users[idx].username;
   store.users.splice(idx, 1);
   auditLog(`حذف مستخدم: ${username}`, req.user.username);

@@ -16,4 +16,14 @@ function paginate(arr, page = 1, limit = 20) {
   };
 }
 
-module.exports = { newId, paginate };
+/**
+ * Append an audit entry to the given store.
+ * @param {object[]} auditLogs - reference to store.auditLogs array
+ * @param {string} action
+ * @param {string} username
+ */
+function audit(auditLogs, action, username) {
+  auditLogs.push({ id: newId(), action, user: username, time: new Date().toISOString() });
+}
+
+module.exports = { newId, paginate, audit };

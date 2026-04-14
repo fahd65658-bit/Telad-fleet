@@ -3,19 +3,15 @@
 const express = require('express');
 const router  = express.Router();
 const { requireAuth } = require('../middleware/auth');
-const { newId }       = require('../utils/helpers');
-const { store }       = require('../config/database');
-
-function audit(action, username) {
-  store.auditLogs.push({ id: newId(), action, user: username, time: new Date().toISOString() });
-}
+const { newId, audit } = require('../utils/helpers');
+const { store }        = require('../config/database');
 
 router.get('/', requireAuth(), (_req, res) => res.json(store.maintenance));
 
 router.post('/', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
   const m = { id: newId(), createdAt: new Date().toISOString(), ...req.body };
   store.maintenance.push(m);
-  audit('إضافة صيانة للمركبة: ' + (m.vehicleId || ''), req.user.username);
+  audit(store.auditLogs, 'إضافة صيانة للمركبة: ' + (m.vehicleId || ''), req.user.username);
   res.status(201).json(m);
 });
 
