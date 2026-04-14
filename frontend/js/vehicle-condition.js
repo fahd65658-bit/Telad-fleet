@@ -73,7 +73,7 @@ async function vcFetchReports() {
       tbody.innerHTML = '<tr><td colspan="6" class="tbl-empty">لا توجد تقارير بعد</td></tr>';
       return;
     }
-    tbody.innerHTML = [...reports].slice().reverse().map(r => `
+    tbody.innerHTML = [...reports].reverse().map(r => `
       <tr>
         <td>${new Date(r.createdAt).toLocaleString('ar-SA')}</td>
         <td>${escHtml(r.vehiclePlate)}</td>
@@ -243,6 +243,8 @@ function vcSetTool(tool) {
   _vcTool = tool;
   document.querySelectorAll('.vc-tool-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.vc-tool-btn[data-tool="${tool}"]`)?.classList.add('active');
+  const textGroup = document.getElementById('vc-text-input-group');
+  if (textGroup) textGroup.style.display = tool === 'text' ? 'flex' : 'none';
 }
 
 function vcSetColor(color) {
@@ -266,7 +268,8 @@ function vcAnnotMouseDown(e) {
   _vcStartX = x; _vcStartY = y;
 
   if (_vcTool === 'text') {
-    const text = prompt('أدخل النص:');
+    const textInput = document.getElementById('vc-annot-text-input');
+    const text = textInput ? textInput.value.trim() : '';
     if (text) {
       _vcCtx.globalCompositeOperation = 'source-over';
       _vcCtx.font      = 'bold 22px sans-serif';

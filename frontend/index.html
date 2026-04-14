@@ -514,6 +514,11 @@
         <button class="vc-color-btn"        data-color="#000000" onclick="vcSetColor('#000000')" style="background:#000000"></button>
         <button class="vc-color-btn"        data-color="#ffffff" onclick="vcSetColor('#ffffff')" style="background:#ffffff;border:1px solid #475569"></button>
       </div>
+      <!-- Text input (shown when text tool is active) -->
+      <div class="vc-toolbar-group" id="vc-text-input-group" style="display:none">
+        <input id="vc-annot-text-input" type="text" placeholder="اكتب نصاً ثم اضغط على الصورة"
+               style="background:#0f172a;border:1px solid #475569;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-family:inherit;font-size:13px;width:200px">
+      </div>
       <!-- Actions -->
       <div class="vc-toolbar-group">
         <button class="vc-action-btn" onclick="vcAnnotUndo()">↩ تراجع</button>

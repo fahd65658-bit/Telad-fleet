@@ -484,7 +484,7 @@ app.post('/vehicle-condition/delivery', vcAuth, async (req, res) => {
     });
   });
 
-  // Limit to 4 photos: OpenAI vision API max images per request to control cost and token usage
+  // Limit to 4 photos per AI request to control token usage and cost (not an API constraint)
   const photoData = photos.slice(0, 4).map(p => p.data).filter(Boolean);
   if (photoData.length) {
     report.aiAnalysis = await analyzeImagesWithAI(photoData, `تسليم مركبة ${vehiclePlate}`);
