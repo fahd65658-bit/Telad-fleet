@@ -164,3 +164,135 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at DESC);
+
+-- ─── VEHICLE CONDITION REPORTS ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_condition_reports (
+  id            SERIAL      PRIMARY KEY,
+  vehicle_id    INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  report_type   TEXT        NOT NULL CHECK (report_type IN ('delivery','receipt')),
+  mileage       INTEGER,
+  fuel_level    INTEGER     CHECK (fuel_level BETWEEN 0 AND 100),
+  tires_status  TEXT,
+  oil_status    TEXT,
+  battery_status TEXT,
+  glass_status  TEXT,
+  lights_status TEXT,
+  overall_condition TEXT    CHECK (overall_condition IN ('excellent','good','fair','poor')),
+  notes         TEXT,
+  ai_analysis   JSONB,
+  created_by    TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_vcr_vehicle ON vehicle_condition_reports(vehicle_id, created_at DESC);
+
+-- ─── VEHICLE DAMAGES ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_damages (
+  id            SERIAL      PRIMARY KEY,
+  report_id     INTEGER     NOT NULL REFERENCES vehicle_condition_reports(id) ON DELETE CASCADE,
+  vehicle_id    INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  damage_type   TEXT        NOT NULL,
+  severity      TEXT        NOT NULL CHECK (severity IN ('minor','moderate','severe')),
+  location      TEXT,
+  description   TEXT,
+  repair_cost   NUMERIC(12,2),
+  repaired      BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_damages_vehicle ON vehicle_damages(vehicle_id);
+
+-- ─── VEHICLE PHOTO HISTORY ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_photo_history (
+  id            SERIAL      PRIMARY KEY,
+  report_id     INTEGER     REFERENCES vehicle_condition_reports(id) ON DELETE CASCADE,
+  vehicle_id    INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  photo_type    TEXT        NOT NULL,
+  photo_url     TEXT        NOT NULL,
+  annotations   JSONB,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_photos_vehicle ON vehicle_photo_history(vehicle_id, created_at DESC);
+
+-- ─── PETROMIN SERVICES ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS petromin_services (
+  id              SERIAL      PRIMARY KEY,
+  vehicle_id      INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  service_type    TEXT        NOT NULL,
+  service_date    DATE        NOT NULL,
+  mileage_at_service INTEGER,
+  next_service_mileage INTEGER,
+  next_service_date DATE,
+  cost            NUMERIC(12,2),
+  oil_type        TEXT,
+  oil_brand       TEXT,
+  workshop_name   TEXT,
+  workshop_city   TEXT,
+  invoice_number  TEXT,
+  notes           TEXT,
+  synced_from_api BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_petromin_vehicle ON petromin_services(vehicle_id, service_date DESC);
+
+-- ─── FUEL LOGS (AL-DREES) ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS fuel_logs (
+  id              SERIAL      PRIMARY KEY,
+  vehicle_id      INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  fill_date       DATE        NOT NULL DEFAULT CURRENT_DATE,
+  liters          NUMERIC(8,2) NOT NULL,
+  cost_per_liter  NUMERIC(6,3),
+  total_cost      NUMERIC(12,2),
+  mileage         INTEGER,
+  fuel_card_number TEXT,
+  station_name    TEXT,
+  station_city    TEXT,
+  driver          TEXT,
+  notes           TEXT,
+  synced_from_api BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_fuel_vehicle ON fuel_logs(vehicle_id, fill_date DESC);
+
+-- ─── INTEGRATION CREDENTIALS ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS integration_credentials (
+  id              SERIAL      PRIMARY KEY,
+  service         TEXT        NOT NULL CHECK (service IN ('petromin','aldrees')),
+  username        TEXT,
+  api_key_hash    TEXT,
+  account_number  TEXT,
+  card_number     TEXT,
+  last_sync_at    TIMESTAMPTZ,
+  sync_status     TEXT        NOT NULL DEFAULT 'idle' CHECK (sync_status IN ('idle','syncing','ok','error')),
+  error_message   TEXT,
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (service)
+);
+
+-- ─── SYNC LOGS ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sync_logs (
+  id              SERIAL      PRIMARY KEY,
+  service         TEXT        NOT NULL,
+  records_synced  INTEGER     NOT NULL DEFAULT 0,
+  status          TEXT        NOT NULL CHECK (status IN ('ok','error','partial')),
+  error_message   TEXT,
+  synced_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sync_service ON sync_logs(service, synced_at DESC);
+
+-- ─── MAINTENANCE ALERTS ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS maintenance_alerts (
+  id              SERIAL      PRIMARY KEY,
+  vehicle_id      INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  alert_type      TEXT        NOT NULL,
+  message         TEXT        NOT NULL,
+  severity        TEXT        NOT NULL CHECK (severity IN ('info','warning','critical')),
+  due_date        DATE,
+  due_mileage     INTEGER,
+  resolved        BOOLEAN     NOT NULL DEFAULT FALSE,
+  resolved_at     TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_alerts_vehicle ON maintenance_alerts(vehicle_id, resolved, created_at DESC);
