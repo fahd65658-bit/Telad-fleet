@@ -14,7 +14,10 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy source
-COPY server.js .
+COPY server.js db.js ./
+
+# Reference environment template
+COPY .env.example .
 
 # Owned by the non-root user
 RUN chown -R telad:telad /app
