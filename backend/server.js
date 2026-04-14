@@ -74,7 +74,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
 
@@ -302,6 +302,10 @@ let vehicles  = [];
 let employees = [];
 let auditLogs = [];
 
+let vehicleConditionReports = [];
+let vehicleDamages          = [];
+let vehiclePhotosHistory     = [];
+
 function audit(action, username) {
   auditLogs.push({
     id:     newId(),
@@ -369,9 +373,245 @@ app.get('/employees', authAll, (_req, res) => res.json(employees));
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));
 
+// ═══════════════════════════════════════════════════════════════════════════
+// AI IMAGE ANALYSIS  (OpenAI gpt-4o-mini vision)
+// ═══════════════════════════════════════════════════════════════════════════
+async function analyzeImagesWithAI(photos, context = '') {
+  const MOCK = {
+    mock: true,
+    overallCondition: 'good',
+    conditionScore: 85,
+    summary: 'تحليل تجريبي — لم يتم تكوين مفتاح OpenAI API',
+    damages: [],
+    recommendations: ['قم بتكوين OPENAI_API_KEY للحصول على تحليل حقيقي بالذكاء الاصطناعي'],
+    estimatedRepairCost: 0,
+  };
+
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return MOCK;
+
+  try {
+    const imageMessages = photos.slice(0, 4).map(photo => ({
+      type: 'image_url',
+      image_url: {
+        url: photo.startsWith('data:') ? photo : `data:image/jpeg;base64,${photo}`,
+        detail: 'low',
+      },
+    }));
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `حلل حالة المركبة في هذه الصور${context ? ' - ' + context : ''}. أجب بـ JSON فقط بهذا الشكل:
+{"overallCondition":"good|fair|poor","conditionScore":0,"summary":"وصف موجز","damages":[{"type":"نوع","location":"موقع","severity":"low|medium|high","estimatedCost":0}],"recommendations":["توصية"],"estimatedRepairCost":0}`,
+              },
+              ...imageMessages,
+            ],
+          },
+        ],
+        max_tokens: 800,
+      }),
+    });
+
+    if (!response.ok) return MOCK;
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return MOCK;
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return MOCK;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VEHICLE CONDITION REPORTS
+// ═══════════════════════════════════════════════════════════════════════════
+const vcAuth = requireAuth(['admin', 'supervisor', 'operator']);
+
+// POST /vehicle-condition/delivery
+app.post('/vehicle-condition/delivery', vcAuth, async (req, res) => {
+  const {
+    vehiclePlate, employeeName, driverName, mileage, fuelLevel,
+    tireCondition, oilLevel, batteryCondition, glassCondition,
+    lightsCondition, mirrorsCondition, notes, photos = [],
+  } = req.body || {};
+
+  if (!vehiclePlate) return res.status(400).json({ error: 'رقم اللوحة مطلوب' });
+
+  const report = {
+    id:               newId(),
+    type:             'delivery',
+    vehiclePlate,
+    employeeName:     employeeName     || '',
+    driverName:       driverName       || '',
+    mileage:          mileage          || 0,
+    fuelLevel:        fuelLevel        || 0,
+    tireCondition:    tireCondition    || '',
+    oilLevel:         oilLevel         || '',
+    batteryCondition: batteryCondition || '',
+    glassCondition:   glassCondition   || '',
+    lightsCondition:  lightsCondition  || '',
+    mirrorsCondition: mirrorsCondition || '',
+    notes:            notes            || '',
+    aiAnalysis:       null,
+    status:           'pending_analysis',
+    createdBy:        req.user.username,
+    createdAt:        new Date().toISOString(),
+  };
+
+  photos.forEach(p => {
+    vehiclePhotosHistory.push({
+      id:          newId(),
+      vehiclePlate,
+      reportId:    report.id,
+      photoData:   p.data,
+      direction:   p.direction || '',
+      type:        'delivery',
+      aiData:      null,
+      createdAt:   new Date().toISOString(),
+    });
+  });
+
+  // Limit to 4 photos: OpenAI vision API max images per request to control cost and token usage
+  const photoData = photos.slice(0, 4).map(p => p.data).filter(Boolean);
+  if (photoData.length) {
+    report.aiAnalysis = await analyzeImagesWithAI(photoData, `تسليم مركبة ${vehiclePlate}`);
+    report.status = 'analyzed';
+  } else {
+    report.status = 'completed';
+  }
+
+  vehicleConditionReports.push(report);
+  audit(`تقرير تسليم مركبة: ${vehiclePlate}`, req.user.username);
+  res.status(201).json(report);
+});
+
+// POST /vehicle-condition/receipt
+app.post('/vehicle-condition/receipt', vcAuth, async (req, res) => {
+  const {
+    vehiclePlate, employeeName, driverName, finalMileage,
+    daysUsed, currentCondition, notes, photos = [],
+  } = req.body || {};
+
+  if (!vehiclePlate) return res.status(400).json({ error: 'رقم اللوحة مطلوب' });
+
+  const report = {
+    id:               newId(),
+    type:             'receipt',
+    vehiclePlate,
+    employeeName:     employeeName     || '',
+    driverName:       driverName       || '',
+    finalMileage:     finalMileage     || 0,
+    daysUsed:         daysUsed         || 0,
+    currentCondition: currentCondition || '',
+    notes:            notes            || '',
+    aiAnalysis:       null,
+    status:           'pending_analysis',
+    createdBy:        req.user.username,
+    createdAt:        new Date().toISOString(),
+  };
+
+  photos.forEach(p => {
+    vehiclePhotosHistory.push({
+      id:          newId(),
+      vehiclePlate,
+      reportId:    report.id,
+      photoData:   p.data,
+      direction:   p.direction || '',
+      type:        'receipt',
+      aiData:      null,
+      createdAt:   new Date().toISOString(),
+    });
+  });
+
+  const photoData = photos.slice(0, 4).map(p => p.data).filter(Boolean);
+  if (photoData.length) {
+    report.aiAnalysis = await analyzeImagesWithAI(photoData, `استلام مركبة ${vehiclePlate}`);
+    report.status = 'analyzed';
+  } else {
+    report.status = 'completed';
+  }
+
+  vehicleConditionReports.push(report);
+  audit(`تقرير استلام مركبة: ${vehiclePlate}`, req.user.username);
+  res.status(201).json(report);
+});
+
+// POST /vehicle-condition/analyze-images
+app.post('/vehicle-condition/analyze-images', vcAuth, async (req, res) => {
+  const { photos = [], context = '', reportId } = req.body || {};
+  if (!photos.length) return res.status(400).json({ error: 'لا توجد صور للتحليل' });
+
+  const photoData = photos.slice(0, 4)
+    .map(p => (typeof p === 'string' ? p : p.data))
+    .filter(Boolean);
+
+  const analysis = await analyzeImagesWithAI(photoData, context);
+
+  if (reportId) {
+    const report = vehicleConditionReports.find(r => r.id === reportId);
+    if (report) { report.aiAnalysis = analysis; report.status = 'analyzed'; }
+  }
+
+  res.json({ analysis });
+});
+
+// POST /vehicle-condition/compare
+app.post('/vehicle-condition/compare', vcAuth, async (req, res) => {
+  const { vehiclePlate, photos = [] } = req.body || {};
+  if (!vehiclePlate) return res.status(400).json({ error: 'رقم اللوحة مطلوب' });
+
+  const lastDelivery = [...vehicleConditionReports]
+    .reverse()
+    .find(r => r.vehiclePlate === vehiclePlate && r.type === 'delivery');
+
+  const photoData = photos.slice(0, 4)
+    .map(p => (typeof p === 'string' ? p : p.data))
+    .filter(Boolean);
+
+  const analysis = await analyzeImagesWithAI(
+    photoData, `مقارنة حالة مركبة ${vehiclePlate}`
+  );
+
+  res.json({
+    lastDelivery:    lastDelivery || null,
+    currentAnalysis: analysis,
+    hasComparison:   !!lastDelivery,
+  });
+});
+
+// GET /vehicle-condition/reports
+app.get('/vehicle-condition/reports', vcAuth, (_req, res) => {
+  res.json(vehicleConditionReports);
+});
+
+// GET /vehicle-condition/:vehicleId/history
+app.get('/vehicle-condition/:vehicleId/history', authAll, (req, res) => {
+  const key = req.params.vehicleId;
+  res.json(vehicleConditionReports.filter(
+    r => r.vehiclePlate === key || r.id === key
+  ));
+});
+
+// GET /vehicle-condition/:reportId/damages
+app.get('/vehicle-condition/:reportId/damages', authAll, (req, res) => {
+  res.json(vehicleDamages.filter(d => d.reportId === req.params.reportId));
+});
+
 // ─── 404 fallback ─────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'المسار غير موجود' }));
-
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
   console.error('[TELAD FLEET ERROR]', err.message);

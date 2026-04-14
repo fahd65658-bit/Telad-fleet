@@ -164,3 +164,59 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at DESC);
+
+-- ─── VEHICLE CONDITION REPORTS ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_condition_reports (
+  id              BIGSERIAL   PRIMARY KEY,
+  type            TEXT        NOT NULL CHECK (type IN ('delivery','receipt')),
+  vehicle_id      INTEGER     REFERENCES vehicles(id) ON DELETE SET NULL,
+  vehicle_plate   TEXT        NOT NULL,
+  employee_name   TEXT,
+  driver_name     TEXT,
+  mileage         INTEGER,
+  final_mileage   INTEGER,
+  fuel_level      INTEGER,
+  tire_condition  TEXT,
+  oil_level       TEXT,
+  battery_condition TEXT,
+  glass_condition TEXT,
+  lights_condition TEXT,
+  mirrors_condition TEXT,
+  current_condition TEXT,
+  days_used       INTEGER,
+  notes           TEXT,
+  ai_analysis     JSONB,
+  status          TEXT        NOT NULL DEFAULT 'pending_analysis',
+  created_by      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── VEHICLE DAMAGES ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_damages (
+  id              BIGSERIAL   PRIMARY KEY,
+  report_id       BIGINT      NOT NULL REFERENCES vehicle_condition_reports(id) ON DELETE CASCADE,
+  damage_type     TEXT        NOT NULL,
+  location        TEXT,
+  severity        TEXT        CHECK (severity IN ('low','medium','high')),
+  photo_url       TEXT,
+  estimated_cost  NUMERIC(10,2),
+  notes           TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── VEHICLE PHOTOS HISTORY ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_photos_history (
+  id              BIGSERIAL   PRIMARY KEY,
+  vehicle_id      INTEGER     REFERENCES vehicles(id) ON DELETE SET NULL,
+  vehicle_plate   TEXT,
+  report_id       BIGINT      REFERENCES vehicle_condition_reports(id) ON DELETE CASCADE,
+  photo_data      TEXT,
+  direction       TEXT,
+  type            TEXT        CHECK (type IN ('delivery','receipt')),
+  ai_data         JSONB,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vcr_vehicle_plate ON vehicle_condition_reports(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_vcr_type ON vehicle_condition_reports(type);
+CREATE INDEX IF NOT EXISTS idx_vph_vehicle_plate ON vehicle_photos_history(vehicle_plate);
