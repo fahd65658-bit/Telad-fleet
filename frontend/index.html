@@ -377,7 +377,7 @@
 
       <div class="integration-status-bar" id="petromin-status-bar">
         <span id="petromin-conn-badge" class="badge-inactive">⚪ غير مربوط</span>
-        <button class="btn-sm btn-primary" onclick="openPetromingConnect()">🔗 ربط حساب بترومين</button>
+        <button class="btn-sm btn-primary" onclick="openPetrominConnect()">🔗 ربط حساب بترومين</button>
       </div>
 
       <!-- Connect modal trigger / inline form -->
@@ -399,7 +399,7 @@
         </div>
         <div class="form-row">
           <button class="btn-primary" onclick="connectPetromin()">🔗 ربط الآن</button>
-          <button class="btn-secondary" onclick="closePetromingConnect()">إلغاء</button>
+          <button class="btn-secondary" onclick="closePetrominConnect()">إلغاء</button>
         </div>
         <p id="pm-connect-error" class="error-msg"></p>
         <div class="info-note">
@@ -412,14 +412,14 @@
 
       <!-- Tab bar -->
       <div class="tab-bar" style="margin-top:16px">
-        <button class="tab-btn active" onclick="switchPetromintab('add')">➕ إضافة خدمة</button>
-        <button class="tab-btn"        onclick="switchPetromintab('list')">📋 سجل الخدمات</button>
-        <button class="tab-btn"        onclick="switchPetromintab('sync')">🔄 مزامنة تلقائية</button>
+        <button class="tab-btn active" onclick="switchPetrominTab('add')">➕ إضافة خدمة</button>
+        <button class="tab-btn"        onclick="switchPetrominTab('list')">📋 سجل الخدمات</button>
+        <button class="tab-btn"        onclick="switchPetrominTab('sync')">🔄 مزامنة تلقائية</button>
       </div>
 
       <!-- Add service form -->
       <div id="pm-tab-add">
-        <form id="form-petromin" class="data-form" onsubmit="addPetromingService(event)">
+        <form id="form-petromin" class="data-form" onsubmit="addPetrominService(event)">
           <h3>إضافة خدمة صيانة / تغيير زيت</h3>
           <div class="form-row">
             <div class="form-group">
@@ -498,12 +498,12 @@
         <div class="form-row" style="margin-bottom:16px">
           <div class="form-group">
             <label>تصفية بالمركبة</label>
-            <select id="pm-filter-vehicle" onchange="loadPetromingServices()">
+            <select id="pm-filter-vehicle" onchange="loadPetrominServices()">
               <option value="">جميع المركبات</option>
             </select>
           </div>
           <div class="form-group" style="display:flex;align-items:flex-end">
-            <button class="btn-primary" onclick="loadPetromingServices()">🔄 تحديث</button>
+            <button class="btn-primary" onclick="loadPetrominServices()">🔄 تحديث</button>
           </div>
         </div>
         <div id="pm-oil-summary"></div>

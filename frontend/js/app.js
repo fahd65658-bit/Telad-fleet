@@ -160,7 +160,7 @@ function navigateTo(section) {
     dashboard: loadDashboardStats,
     vehicles:  loadVehicles,
     condition: initConditionSection,
-    petromin:  initPetromingSection,
+    petromin:  initPetrominSection,
     aldrees:   initAldreesSection,
     users:     loadUsers,
     logs:      loadLogs,
@@ -456,7 +456,7 @@ function conditionLabel(val) {
 // PETROMIN SECTION
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function initPetromingSection() {
+async function initPetrominSection() {
   populateVehicleSelect('pm-vehicle');
   populateVehicleSelect('pm-filter-vehicle', true);
   populateVehicleSelect('pm-sync-vehicle');
@@ -477,7 +477,7 @@ async function initPetromingSection() {
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
 }
 
-function switchPetromintab(tab) {
+function switchPetrominTab(tab) {
   ['add', 'list', 'sync'].forEach(t => {
     const el = document.getElementById('pm-tab-' + t);
     if (el) el.style.display = t === tab ? 'block' : 'none';
@@ -486,14 +486,14 @@ function switchPetromintab(tab) {
     const tabs = ['add', 'list', 'sync'];
     btn.classList.toggle('active', tabs[i] === tab);
   });
-  if (tab === 'list')  loadPetromingServices();
+  if (tab === 'list')  loadPetrominServices();
   if (tab === 'sync')  loadSyncLogs('petromin');
 }
 
-function openPetromingConnect() {
+function openPetrominConnect() {
   document.getElementById('petromin-connect-form').style.display = 'block';
 }
-function closePetromingConnect() {
+function closePetrominConnect() {
   document.getElementById('petromin-connect-form').style.display = 'none';
 }
 
@@ -511,10 +511,10 @@ async function connectPetromin() {
   if (!res.ok) { errEl.textContent = data.error || 'حدث خطأ في الربط'; return; }
   document.getElementById('petromin-conn-badge').textContent = `🟢 مربوط — ${escHtml(body.username)}`;
   document.getElementById('petromin-conn-badge').className = 'badge-active';
-  closePetromingConnect();
+  closePetrominConnect();
 }
 
-async function addPetromingService(e) {
+async function addPetrominService(e) {
   e.preventDefault();
   const errEl = document.getElementById('pm-form-error');
   errEl.textContent = '';
@@ -545,7 +545,7 @@ async function addPetromingService(e) {
   alert('✅ تم حفظ خدمة بترومين بنجاح');
 }
 
-async function loadPetromingServices() {
+async function loadPetrominServices() {
   const tbody    = document.getElementById('pm-services-tbody');
   const summaryEl = document.getElementById('pm-oil-summary');
   const vehicleId = document.getElementById('pm-filter-vehicle').value;

@@ -300,7 +300,7 @@ let employees           = [];
 let auditLogs           = [];
 let conditionReports    = [];
 let vehicleDamages      = [];
-let petromingServices   = [];
+let petrominServices   = [];
 let fuelLogs            = [];
 let integrationCreds    = [];
 let syncLogs            = [];
@@ -417,7 +417,7 @@ app.get('/vehicles/:id', authAll, (req, res) => {
   const v = vehicles.find(v => v.id === req.params.id);
   if (!v) return res.status(404).json({ error: 'المركبة غير موجودة' });
   // Attach last Petromin and Al-Drees data
-  const lastOil = aiOilPrediction(petromingServices.filter(s => s.vehicleId === req.params.id));
+  const lastOil = aiOilPrediction(petrominServices.filter(s => s.vehicleId === req.params.id));
   const fuelTrend = aiFuelTrend(fuelLogs.filter(l => l.vehicleId === req.params.id));
   res.json({ ...v, petromin: lastOil, aldrees: fuelTrend });
 });
@@ -572,7 +572,7 @@ app.post('/petromin/services', supervisorUp, (req, res) => {
     createdBy: req.user.username,
     createdAt: new Date().toISOString(),
   };
-  petromingServices.push(svc);
+  petrominServices.push(svc);
 
   // Auto-alert if next service is within 500 km or 30 days
   if (nextServiceMileage && mileageAtService) {
@@ -595,7 +595,7 @@ app.post('/petromin/services', supervisorUp, (req, res) => {
 
 // GET /petromin/services/:vehicleId  — list services for vehicle
 app.get('/petromin/services/:vehicleId', authAll, (req, res) => {
-  const services = petromingServices
+  const services = petrominServices
     .filter(s => s.vehicleId === req.params.vehicleId)
     .sort((a, b) => new Date(b.serviceDate) - new Date(a.serviceDate));
   const prediction = aiOilPrediction(services);
@@ -604,7 +604,7 @@ app.get('/petromin/services/:vehicleId', authAll, (req, res) => {
 
 // GET /petromin/services  — all services (admin/supervisor)
 app.get('/petromin/services', supervisorUp, (_req, res) => {
-  res.json(petromingServices.sort((a, b) => new Date(b.serviceDate) - new Date(a.serviceDate)));
+  res.json(petrominServices.sort((a, b) => new Date(b.serviceDate) - new Date(a.serviceDate)));
 });
 
 // POST /petromin/sync  — simulate API sync with Petromin portal
@@ -714,7 +714,7 @@ app.post('/integrations/connect', adminOnly, (req, res) => {
     existing.username      = username || existing.username;
     existing.accountNumber = accountNumber || existing.accountNumber;
     existing.cardNumber    = cardNumber || existing.cardNumber;
-    if (apiKey) existing.apiKeyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+    if (apiKey) existing.apiKeyHash = bcrypt.hashSync(apiKey, 10);
     existing.syncStatus  = 'idle';
     existing.updatedAt   = new Date().toISOString();
     audit(`تحديث بيانات ربط ${service}`, req.user.username);
@@ -724,7 +724,7 @@ app.post('/integrations/connect', adminOnly, (req, res) => {
     id:            newId(),
     service,
     username:      username || null,
-    apiKeyHash:    apiKey ? crypto.createHash('sha256').update(apiKey).digest('hex') : null,
+    apiKeyHash:    apiKey ? bcrypt.hashSync(apiKey, 10) : null,
     accountNumber: accountNumber || null,
     cardNumber:    cardNumber || null,
     syncStatus:    'idle',
