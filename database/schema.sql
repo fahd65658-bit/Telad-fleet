@@ -66,6 +66,17 @@ CREATE TABLE IF NOT EXISTS vehicles (
   driver       TEXT,
   status       TEXT        NOT NULL DEFAULT 'active'
                            CHECK (status IN ('active','maintenance','inactive')),
+
+  -- أعمدة الفحص الفني الدوري
+  inspection_status TEXT    NOT NULL DEFAULT 'unknown'
+                            CHECK (inspection_status IN ('valid','expired','unknown')),
+  inspection_expiry DATE,
+
+  -- أعمدة التأمين
+  insurance_status  TEXT    NOT NULL DEFAULT 'unknown'
+                            CHECK (insurance_status IN ('valid','expired','unknown')),
+  insurance_expiry  DATE,
+
   created_by   TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()

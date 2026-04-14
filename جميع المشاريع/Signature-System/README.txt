@@ -1,1 +1,0 @@
-This is the Signature-System module of Telad Fleet system.
