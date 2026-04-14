@@ -421,3 +421,205 @@ body {
 
 .btn-warn   { background: #78350f; color: #fcd34d; }
 .btn-danger { background: #7f1d1d; color: #fca5a5; }
+
+/* ─── DRIVER PORTAL LINK (on login page) ───────────────────────────────── */
+.driver-portal-link {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #334155;
+  text-align: center;
+}
+
+.driver-portal-link p {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.btn-driver-switch {
+  width: 100%;
+  padding: 11px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  color: #c9a227;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .2s;
+}
+
+.btn-driver-switch:hover {
+  background: #334155;
+  border-color: #c9a227;
+}
+
+.btn-back-link {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+}
+
+.btn-back-link:hover { color: #e2e8f0; }
+
+/* ─── DRIVER PORTAL PAGE ────────────────────────────────────────────────── */
+#page-driver-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1a2744 100%);
+}
+
+#page-driver-portal {
+  min-height: 100vh;
+  flex-direction: column;
+  background: #0f172a;
+}
+
+.driver-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 28px;
+  background: #020617;
+  border-bottom: 1px solid #1e293b;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.driver-portal {
+  padding: 32px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.dp-section { padding-top: 8px; }
+
+.btn-dp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 7px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  margin-bottom: 20px;
+  transition: all .2s;
+}
+
+.btn-dp-back:hover { color: #e2e8f0; background: #334155; }
+
+/* ─── SERVICE CARDS ─────────────────────────────────────────────────────── */
+.service-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 600px) {
+  .service-cards-grid { grid-template-columns: 1fr; }
+}
+
+.service-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 32px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .22s;
+}
+
+.service-card:hover {
+  border-color: #c9a227;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+
+.sc-icon  { font-size: 44px; margin-bottom: 14px; }
+.sc-title { font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; }
+.sc-desc  { font-size: 13px; color: #94a3b8; line-height: 1.6; }
+
+/* ─── PHOTO GRID ────────────────────────────────────────────────────────── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+  .photo-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.photo-slot {
+  aspect-ratio: 1;
+  border: 2px dashed #334155;
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+
+.photo-slot:hover        { border-color: #c9a227; }
+.photo-slot.required-photo { border-color: #f59e0b; }
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #475569;
+  gap: 4px;
+}
+
+.photo-preview small { font-size: 11px; }
+
+/* ─── VEHICLE STATUS GRID ───────────────────────────────────────────────── */
+.vehicle-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 700px) {
+  .vehicle-status-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.vs-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px 18px;
+}
+
+.vs-label { font-size: 13px; color: #94a3b8; margin-bottom: 8px; }
+.vs-value { font-size: 18px; font-weight: 700; color: #f8fafc; }
+
+/* ─── REQUEST STATUS ────────────────────────────────────────────────────── */
+.request-status-pending  { color: #f59e0b; font-weight: 600; }
+.request-status-approved { color: #22c55e; font-weight: 600; }
+.request-status-rejected { color: #ef4444; font-weight: 600; }
+.request-status-held     { color: #94a3b8; font-weight: 600; }
+
+/* ─── REQUESTS TABLE EXTRA BUTTONS ─────────────────────────────────────── */
+.btn-approve { background: #14532d; color: #86efac; }
+.btn-reject  { background: #7f1d1d; color: #fca5a5; }
+.btn-hold    { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
