@@ -1,7 +1,7 @@
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TELAD FLEET – Frontend Application
-// Domain: fna.sa  |  Version: 2.0.0
+// Domain: fna.sa  |  Version: 2.0.1
 // ═══════════════════════════════════════════════════════════════════════════
 
 'use strict';
@@ -108,6 +108,7 @@ async function login(e) {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ username, password }),
+      signal:  AbortSignal.timeout(15000),
     });
     const data = await res.json();
 
@@ -119,8 +120,12 @@ async function login(e) {
     localStorage.setItem('telad_token', data.token);
     currentUser = data.user;
     renderDashboard();
-  } catch {
-    errEl.textContent = 'تعذّر الاتصال بالخادم — تحقق من تشغيل الـ Backend';
+  } catch (err) {
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      errEl.textContent = 'انتهت مهلة الاتصال — الخادم لا يستجيب، حاول مرة أخرى';
+    } else {
+      errEl.textContent = 'تعذّر الاتصال بالخادم — تحقق من الاتصال بالإنترنت';
+    }
   } finally {
     btn.disabled    = false;
     btn.textContent = 'تسجيل الدخول';
@@ -168,16 +173,44 @@ function navigateTo(section) {
 // ═══════════════════════════════════════════════════════════════════════════
 // API HELPER
 // ═══════════════════════════════════════════════════════════════════════════
-function apiFetch(path, options = {}) {
-  const token = localStorage.getItem('telad_token');
-  return fetch(API_BASE + path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {}),
-    },
-  });
+
+// Default fetch timeout in milliseconds (15 s — matches nginx proxy_read_timeout)
+const FETCH_TIMEOUT_MS = 15000;
+
+/**
+ * Wraps fetch with:
+ *  - automatic Authorization header injection
+ *  - AbortController-based timeout to avoid hanging requests
+ *  - automatic retry on transient network errors (up to maxRetries)
+ */
+function apiFetch(path, options = {}, maxRetries = 1) {
+  const token      = localStorage.getItem('telad_token');
+  const controller = new AbortController();
+  const timer      = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  const attempt = (retriesLeft) =>
+    fetch(API_BASE + path, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type':  'application/json',
+        'Accept-Encoding': 'gzip',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...(options.headers || {}),
+      },
+    })
+    .then(res => { clearTimeout(timer); return res; })
+    .catch(err => {
+      if (err.name === 'AbortError') {
+        clearTimeout(timer);
+        throw new Error('انتهت مهلة الطلب — الخادم لا يستجيب');
+      }
+      if (retriesLeft > 0) return attempt(retriesLeft - 1);
+      clearTimeout(timer);
+      throw err;
+    });
+
+  return attempt(maxRetries);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

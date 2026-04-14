@@ -2,26 +2,28 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // TELAD FLEET – Production Backend
 // Domain : fna.sa   |   API : https://api.fna.sa
-// Version: 2.0.0
+// Version: 2.0.1
 // ═══════════════════════════════════════════════════════════════════════════
 
 'use strict';
 
 require('dotenv').config();
 
-const crypto    = require('crypto');
-const express   = require('express');
-const http      = require('http');
-const cors      = require('cors');
-const helmet    = require('helmet');
-const bcrypt    = require('bcryptjs');
-const jwt       = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-const { Server } = require('socket.io');
+const crypto      = require('crypto');
+const zlib        = require('zlib');
+const express     = require('express');
+const http        = require('http');
+const cors        = require('cors');
+const helmet      = require('helmet');
+const bcrypt      = require('bcryptjs');
+const jwt         = require('jsonwebtoken');
+const rateLimit   = require('express-rate-limit');
+const { Server }  = require('socket.io');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const PORT     = process.env.PORT || 5000;
-const IS_PROD  = process.env.NODE_ENV === 'production';
+const PORT            = process.env.PORT || 5000;
+const IS_PROD         = process.env.NODE_ENV === 'production';
+const REQUEST_TIMEOUT = parseInt(process.env.REQUEST_TIMEOUT_MS || '30000', 10); // 30 s
 
 // Fail fast in production if JWT_SECRET is not set
 if (IS_PROD && !process.env.JWT_SECRET) {
@@ -44,8 +46,16 @@ const CORS_ORIGINS = [
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
-  cors: { origin: CORS_ORIGINS, methods: ['GET', 'POST'] },
+  cors:              { origin: CORS_ORIGINS, methods: ['GET', 'POST'] },
+  pingTimeout:       20000,
+  pingInterval:      25000,
+  transports:        ['websocket', 'polling'],
+  allowEIO3:         true,
 });
+
+// Keep-alive: allow long-lived connections and recycle them promptly
+server.keepAliveTimeout = 65000;   // slightly longer than typical LB idle timeout
+server.headersTimeout   = 66000;   // must be > keepAliveTimeout
 
 app.set('trust proxy', 1);
 
@@ -72,6 +82,42 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' }));
+
+// ─── Gzip compression ────────────────────────────────────────────────────────
+// Compress JSON/text responses for clients that send Accept-Encoding: gzip
+app.use((req, res, next) => {
+  const accept = req.headers['accept-encoding'] || '';
+  if (!accept.includes('gzip')) return next();
+
+  const _json = res.json.bind(res);
+  res.json = (body) => {
+    const buf = Buffer.from(JSON.stringify(body), 'utf8');
+    // Only compress payloads larger than 1 KB
+    if (buf.length < 1024) return _json(body);
+    zlib.gzip(buf, (err, compressed) => {
+      if (err) return _json(body);
+      res.setHeader('Content-Encoding', 'gzip');
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Length', compressed.length);
+      res.end(compressed);
+    });
+  };
+  next();
+});
+
+// ─── Per-request timeout ─────────────────────────────────────────────────────
+// Avoids hanging connections that would exhaust the thread pool
+app.use((req, res, next) => {
+  if (req.path === '/health') return next(); // health check is exempt
+  const timer = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(503).json({ error: 'انتهت مهلة الطلب — حاول مرة أخرى' });
+    }
+  }, REQUEST_TIMEOUT);
+  res.on('finish',  () => clearTimeout(timer));
+  res.on('close',   () => clearTimeout(timer));
+  next();
+});
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
 
@@ -152,12 +198,19 @@ app.use(apiLimiter);
 // HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════════════════
 app.get('/health', (_req, res) => {
+  const mem = process.memoryUsage();
   res.json({
-    status: 'ok',
-    system: 'TELAD FLEET',
-    domain: 'fna.sa',
+    status:    'ok',
+    system:    'TELAD FLEET',
+    domain:    'fna.sa',
     timestamp: new Date().toISOString(),
-    version: '2.0.0',
+    version:   '2.0.1',
+    uptime:    Math.floor(process.uptime()),
+    memory: {
+      rss:        Math.round(mem.rss        / 1024 / 1024) + ' MB',
+      heapUsed:   Math.round(mem.heapUsed   / 1024 / 1024) + ' MB',
+      heapTotal:  Math.round(mem.heapTotal  / 1024 / 1024) + ' MB',
+    },
   });
 });
 
@@ -389,3 +442,25 @@ server.listen(PORT, () => {
   console.log(`  Health:       http://localhost:${PORT}/health`);
   console.log('');
 });
+
+// ─── Graceful shutdown ────────────────────────────────────────────────────────
+function gracefulShutdown(signal) {
+  console.log(`\n[TELAD FLEET] Received ${signal} — shutting down gracefully…`);
+  server.close((err) => {
+    if (err) {
+      console.error('[TELAD FLEET] Error during shutdown:', err.message);
+      process.exit(1);
+    }
+    console.log('[TELAD FLEET] All connections closed. Goodbye.');
+    process.exit(0);
+  });
+
+  // Force-kill after 10 s if connections don't drain
+  setTimeout(() => {
+    console.error('[TELAD FLEET] Forced shutdown after timeout.');
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
