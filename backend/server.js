@@ -378,7 +378,7 @@ app.post('/driver/login', loginLimiter, (req, res) => {
   if (!plate || !national_id)
     return res.status(400).json({ error: 'رقم اللوحة ورقم الهوية مطلوبان' });
 
-  const vehicle  = vehicles.find(v => v.plate && v.plate.trim() === plate.trim());
+  const vehicle  = vehicles.find(v => v.plate && v.plate.trim().toUpperCase() === plate.trim().toUpperCase());
   if (!vehicle)
     return res.status(404).json({ error: 'رقم اللوحة غير موجود في النظام' });
 
@@ -498,9 +498,9 @@ app.post('/monthly-reports', driverOrAdmin, (req, res) => {
   res.status(201).json({ id: report.id, createdAt: report.createdAt });
 });
 
-// GET /monthly-reports — all reports (admin/supervisor)
+// GET /monthly-reports — all reports (admin/supervisor), photos omitted for bandwidth
 app.get('/monthly-reports', supervisorUp, (_req, res) =>
-  res.json(monthlyReports.map(({ photos: _p, ...r }) => r))
+  res.json(monthlyReports.map(({ photos: _omittedPhotos, ...r }) => r))
 );
 
 // GET /monthly-reports/:vehicleId — reports for a specific vehicle

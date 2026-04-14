@@ -30,6 +30,7 @@ const ROLE_SECTIONS = {
   supervisor: ['dashboard', 'map', 'vehicles', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai', 'employees', 'requests', 'monthly-reports'],
   operator:   ['dashboard', 'map', 'vehicles', 'maintenance', 'employees'],
   viewer:     ['dashboard', 'map'],
+  driver:     [],  // drivers use the dedicated driver portal, not the admin dashboard
 };
 
 // ─── State ───────────────────────────────────────────────────────────────────

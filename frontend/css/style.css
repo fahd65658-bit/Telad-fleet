@@ -258,6 +258,7 @@ body {
 .role-supervisor { background: #14532d; color: #86efac; }
 .role-operator   { background: #431407; color: #fdba74; }
 .role-viewer     { background: #1e293b; color: #94a3b8; }
+.role-driver     { background: #312e81; color: #c4b5fd; }
 
 /* ─── SECTIONS ──────────────────────────────────────────────────────────── */
 .section { padding: 28px 32px; }
