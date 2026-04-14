@@ -1,8 +1,9 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET_FALLBACK } = require('../utils/constants');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+const JWT_SECRET = process.env.JWT_SECRET || JWT_SECRET_FALLBACK;
 
 function requireAuth(roles = []) {
   return (req, res, next) => {

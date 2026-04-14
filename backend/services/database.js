@@ -9,8 +9,13 @@ if (process.env.DATABASE_URL || process.env.DB_HOST) {
   try {
     const { Pool } = require('pg');
     const config = process.env.DATABASE_URL
-      ? { connectionString: process.env.DATABASE_URL, ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false }
-      // rejectUnauthorized:false is needed for hosted DBs (e.g. Heroku/Render) with self-signed certs; only active when DB_SSL=true
+      ? {
+          connectionString: process.env.DATABASE_URL,
+          // DB_SSL=true enables SSL; use DB_SSL_REJECT_UNAUTHORIZED=true in production with valid certs
+          ssl: process.env.DB_SSL === 'true'
+            ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+            : false,
+        }
       : {
           host:     process.env.DB_HOST     || 'localhost',
           port:     Number(process.env.DB_PORT) || 5432,

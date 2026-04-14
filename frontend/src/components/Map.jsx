@@ -17,13 +17,17 @@ export default function Map({ vehicles = [], center = [24.7136, 46.6753], zoom =
 
       if (!isMounted || !containerRef.current || mapRef.current) return;
 
-      // Fix default icon paths
-      delete L.Icon.Default.prototype._getIconUrl;
-      L.Icon.Default.mergeOptions({
+      // Create a custom icon instead of modifying the default prototype
+      const defaultIcon = L.icon({
         iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize:      [25, 41],
+        iconAnchor:    [12, 41],
+        popupAnchor:   [1, -34],
+        shadowSize:    [41, 41],
       });
+      L.Marker.prototype.options.icon = defaultIcon;
 
       mapRef.current = L.map(containerRef.current).setView(center, zoom);
 

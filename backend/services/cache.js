@@ -26,14 +26,19 @@ async function get(key) {
   try {
     const val = await client.get(key);
     return val ? JSON.parse(val) : null;
-  } catch { return null; }
+  } catch (err) {
+    logger.warn('Cache get error for key', key, ':', err.message);
+    return null;
+  }
 }
 
 async function set(key, value, ttl = 60) {
   if (!client) return;
   try {
     await client.set(key, JSON.stringify(value), { EX: ttl });
-  } catch { /* silent */ }
+  } catch (err) {
+    logger.warn('Cache set error for key', key, ':', err.message);
+  }
 }
 
 async function del(key) {

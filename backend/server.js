@@ -18,6 +18,7 @@ const jwt        = require('jsonwebtoken');
 const { Server } = require('socket.io');
 
 const logger     = require('./utils/logger');
+const { JWT_SECRET_FALLBACK } = require('./utils/constants');
 const { requireAuth }                  = require('./middleware/auth');
 const { notFound, globalErrorHandler } = require('./middleware/errorHandler');
 const { loginLimiter, apiLimiter }     = require('./middleware/rateLimit');
@@ -40,7 +41,7 @@ if (IS_PROD && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+const JWT_SECRET = process.env.JWT_SECRET || JWT_SECRET_FALLBACK;
 
 const CORS_ORIGINS = [
   'https://fna.sa',

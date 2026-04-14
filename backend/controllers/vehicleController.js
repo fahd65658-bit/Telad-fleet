@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const { PAGINATION } = require('../utils/constants');
 
 const vehicles = [];
 
@@ -13,7 +14,7 @@ function audit(logs, action, username) {
 function list(auditLogs) {
   return (req, res) => {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const limit = Math.min(PAGINATION.MAX_LIMIT, Math.max(1, parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT));
     const start = (page - 1) * limit;
     res.json({
       data:  vehicles.slice(start, start + limit),
