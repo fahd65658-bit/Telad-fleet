@@ -94,7 +94,7 @@ function formatArabicTime(value) {
 }
 
 async function loadDashboard(refresh = false) {
-  const endpoint = refresh ? '/api/dashboard?refresh=1' : '/api/dashboard';
+  const endpoint = refresh ? '/api/fleet?refresh=1' : '/api/fleet';
   setMetaStatus('جاري الاتصال بالخادم...');
   setSyncStatus('يتم التحقق من آخر تحديث متاح.');
   toggleRefreshButton(true);

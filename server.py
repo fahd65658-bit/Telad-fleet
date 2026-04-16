@@ -250,7 +250,7 @@ class FleetHandler(BaseHTTPRequestHandler):
             )
             return
 
-        if route == "/api/dashboard":
+        if route in {"/api/dashboard", "/api/fleet"}:
             params = parse_qs(parsed.query)
             refresh = params.get("refresh", ["0"])[0] == "1"
             self._send_json(build_dashboard_payload(refresh=refresh))

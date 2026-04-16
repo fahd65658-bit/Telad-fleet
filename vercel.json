@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/healthz",
@@ -10,20 +12,20 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/css/(.*)",
-      "destination": "/frontend/css/$1"
+      "source": "/styles.css",
+      "destination": "/styles.css"
     },
     {
-      "source": "/js/(.*)",
-      "destination": "/frontend/js/$1"
+      "source": "/app.js",
+      "destination": "/app.js"
     },
     {
       "source": "/",
-      "destination": "/frontend/index.html"
+      "destination": "/index.html"
     },
     {
       "source": "/(.*)",
-      "destination": "/frontend/index.html"
+      "destination": "/index.html"
     }
   ]
 }
