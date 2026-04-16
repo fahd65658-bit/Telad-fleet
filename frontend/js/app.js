@@ -8,11 +8,22 @@
 
 // ─── API Base URL (auto-detects environment) ─────────────────────────────────
 const API_BASE = (() => {
-  const h = window.location.hostname;
-  if (h === 'fna.sa' || h === 'www.fna.sa' || h === 'fleet.fna.sa') {
-    return 'https://api.fna.sa';
+  const host = window.location.hostname;
+  const override = new URLSearchParams(window.location.search).get('api');
+
+  if (override) {
+    return override.replace(/\/$/, '');
   }
-  return 'http://localhost:5000';
+
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+
+  if (host.endsWith('.github.io')) {
+    return 'https://fna.sa/api';
+  }
+
+  return `${window.location.origin}/api`;
 })();
 
 // ─── Role definitions ────────────────────────────────────────────────────────
