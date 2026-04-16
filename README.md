@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🚗 TELAD FLEET — نظام إدارة الأسطول المتكامل
 
 > **Domain:** https://fna.sa &nbsp;|&nbsp; **API:** https://api.fna.sa &nbsp;|&nbsp; **Version:** 2.0.0
@@ -187,3 +188,5 @@ Header required: `Authorization: Bearer <token>`
 - [ ] Reports with PDF export
 - [ ] AI risk scoring
 - [ ] Mobile driver app (Expo)
+=======
+>>>>>>> c34fdb6 (start)
