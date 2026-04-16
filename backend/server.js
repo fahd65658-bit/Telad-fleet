@@ -11,6 +11,7 @@ require('dotenv').config();
 
 const crypto    = require('crypto');
 const express   = require('express');
+const { pool }  = require('./db');
 const http      = require('http');
 const cors      = require('cors');
 const helmet    = require('helmet');
@@ -308,6 +309,17 @@ function audit(action, username) {
   });
 }
 
+// محاولة تنفيذ استعلام - إذا فشل يرجع null
+async function dbQuery(text, params) {
+  try {
+    const result = await pool.query(text, params);
+    return result;
+  } catch (err) {
+    console.warn('[DB] استعلام فشل — الرجوع للذاكرة المؤقتة:', err.message);
+    return null;
+  }
+}
+
 // Dashboard summary
 app.get('/dashboard', authAll, (_req, res) =>
   res.json({
@@ -319,34 +331,144 @@ app.get('/dashboard', authAll, (_req, res) =>
 );
 
 // Cities
-app.post('/cities', supervisorUp, (req, res) => {
-  const c = { id: newId(), ...req.body };
-  cities.push(c);
+app.post('/cities', supervisorUp, async (req, res) => {
+  const { name, region } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'اسم المدينة مطلوب' });
+  const dbRes = await dbQuery(
+    'INSERT INTO cities (name, region, created_by) VALUES ($1,$2,$3) RETURNING *',
+    [name, region || null, req.user.username]
+  );
+  const c = dbRes ? dbRes.rows[0] : { id: newId(), name, region, created_by: req.user.username };
+  if (!dbRes) cities.push(c);
   audit('إضافة مدينة', req.user.username);
   res.status(201).json(c);
 });
-app.get('/cities', authAll, (_req, res) => res.json(cities));
+app.get('/cities', authAll, async (_req, res) => {
+  const dbRes = await dbQuery('SELECT * FROM cities ORDER BY created_at DESC');
+  res.json(dbRes ? dbRes.rows : cities);
+});
 
 // Projects
-app.post('/projects', supervisorUp, (req, res) => {
-  const p = { id: newId(), ...req.body };
-  projects.push(p);
+app.post('/projects', supervisorUp, async (req, res) => {
+  const { name, city_id, status, start_date, end_date } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'اسم المشروع مطلوب' });
+  const dbRes = await dbQuery(
+    'INSERT INTO projects (name, city_id, status, start_date, end_date, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+    [name, city_id || null, status || 'active', start_date || null, end_date || null, req.user.username]
+  );
+  const p = dbRes ? dbRes.rows[0] : { id: newId(), ...req.body };
+  if (!dbRes) projects.push(p);
   audit('إضافة مشروع', req.user.username);
   res.status(201).json(p);
 });
-app.get('/projects', authAll, (_req, res) => res.json(projects));
+app.get('/projects', authAll, async (_req, res) => {
+  const dbRes = await dbQuery('SELECT * FROM projects ORDER BY created_at DESC');
+  res.json(dbRes ? dbRes.rows : projects);
+});
 
 // Vehicles
-app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
-  const v = { id: newId(), ...req.body };
-  vehicles.push(v);
+app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), async (req, res) => {
+  const {
+    name, plate, model, year, city, project_id, driver, status,
+    inspection_status, inspection_expiry,
+    insurance_status,   insurance_expiry,
+  } = req.body || {};
+  if (!plate) return res.status(400).json({ error: 'رقم اللوحة مطلوب' });
+  const dbRes = await dbQuery(
+    `INSERT INTO vehicles
+       (name, plate, model, year, city, project_id, driver, status,
+        inspection_status, inspection_expiry, insurance_status, insurance_expiry,
+        created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+     RETURNING *`,
+    [
+      name || null, plate, model || null, year || null, city || null,
+      project_id || null, driver || null, status || 'active',
+      inspection_status || 'unknown', inspection_expiry || null,
+      insurance_status  || 'unknown', insurance_expiry  || null,
+      req.user.username,
+    ]
+  );
+  const v = dbRes ? dbRes.rows[0] : { id: newId(), ...req.body };
+  if (!dbRes) vehicles.push(v);
   audit('إضافة مركبة', req.user.username);
   res.status(201).json(v);
 });
-app.get('/vehicles', authAll, (_req, res) => res.json(vehicles));
-app.delete('/vehicles/:id', supervisorUp, (req, res) => {
-  const id  = req.params.id;
-  const idx = vehicles.findIndex(v => v.id === id);
+
+app.get('/vehicles', authAll, async (_req, res) => {
+  const dbRes = await dbQuery('SELECT * FROM vehicles ORDER BY created_at DESC');
+  res.json(dbRes ? dbRes.rows : vehicles);
+});
+
+// GET /vehicles/expiring — مركبات فحصها أو تأمينها ينتهي خلال 30 يوماً
+// تاريخ 9999-12-31 يُستخدم كقيمة افتراضية للفرز عند غياب التاريخ (أكبر تاريخ ممكن)
+app.get('/vehicles/expiring', authAll, async (_req, res) => {
+  const dbRes = await dbQuery(
+    `SELECT * FROM vehicles
+     WHERE (inspection_expiry IS NOT NULL AND inspection_expiry <= CURRENT_DATE + INTERVAL '30 days' AND inspection_expiry >= CURRENT_DATE)
+        OR (insurance_expiry  IS NOT NULL AND insurance_expiry  <= CURRENT_DATE + INTERVAL '30 days' AND insurance_expiry  >= CURRENT_DATE)
+     ORDER BY LEAST(
+       COALESCE(inspection_expiry, '9999-12-31'::date),
+       COALESCE(insurance_expiry,  '9999-12-31'::date)
+     )`
+  );
+  if (dbRes) return res.json(dbRes.rows);
+  // fallback: filter in-memory
+  const now  = new Date();
+  const soon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const expiring = vehicles.filter(v => {
+    const ie = v.inspection_expiry ? new Date(v.inspection_expiry) : null;
+    const ins = v.insurance_expiry  ? new Date(v.insurance_expiry)  : null;
+    return (ie && ie >= now && ie <= soon) || (ins && ins >= now && ins <= soon);
+  });
+  res.json(expiring);
+});
+
+app.put('/vehicles/:id', supervisorUp, async (req, res) => {
+  const id = req.params.id;
+  const {
+    name, plate, model, year, city, project_id, driver, status,
+    inspection_status, inspection_expiry,
+    insurance_status,   insurance_expiry,
+  } = req.body || {};
+  const dbRes = await dbQuery(
+    `UPDATE vehicles SET
+       name=$1, plate=$2, model=$3, year=$4, city=$5, project_id=$6, driver=$7, status=$8,
+       inspection_status=$9,  inspection_expiry=$10,
+       insurance_status=$11,  insurance_expiry=$12,
+       updated_at=NOW()
+     WHERE id=$13 RETURNING *`,
+    [
+      name || null, plate, model || null, year || null, city || null,
+      project_id || null, driver || null, status || 'active',
+      inspection_status || 'unknown', inspection_expiry || null,
+      insurance_status  || 'unknown', insurance_expiry  || null,
+      id,
+    ]
+  );
+  if (dbRes) {
+    if (dbRes.rows.length === 0) return res.status(404).json({ error: 'المركبة غير موجودة' });
+    audit(`تعديل مركبة: ${dbRes.rows[0].plate}`, req.user.username);
+    return res.json(dbRes.rows[0]);
+  }
+  // fallback in-memory
+  const idx = vehicles.findIndex(v => String(v.id) === id);
+  if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  vehicles[idx] = { ...vehicles[idx], ...req.body };
+  audit(`تعديل مركبة: ${vehicles[idx].plate || vehicles[idx].name}`, req.user.username);
+  res.json(vehicles[idx]);
+});
+
+app.delete('/vehicles/:id', supervisorUp, async (req, res) => {
+  const id = req.params.id;
+  const dbRes = await dbQuery('DELETE FROM vehicles WHERE id=$1 RETURNING plate, name', [id]);
+  if (dbRes) {
+    if (dbRes.rows.length === 0) return res.status(404).json({ error: 'المركبة غير موجودة' });
+    audit(`حذف مركبة: ${dbRes.rows[0].plate || dbRes.rows[0].name}`, req.user.username);
+    return res.json({ ok: true });
+  }
+  // fallback in-memory
+  const idx = vehicles.findIndex(v => String(v.id) === id);
   if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
   const plate = vehicles[idx].plate || vehicles[idx].name;
   vehicles.splice(idx, 1);
@@ -355,13 +477,24 @@ app.delete('/vehicles/:id', supervisorUp, (req, res) => {
 });
 
 // Employees
-app.post('/employees', supervisorUp, (req, res) => {
-  const e = { id: newId(), ...req.body };
-  employees.push(e);
+app.post('/employees', supervisorUp, async (req, res) => {
+  const { name, role, phone, national_id, city, project_id, vehicle_id, status } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'اسم الموظف مطلوب' });
+  const dbRes = await dbQuery(
+    `INSERT INTO employees (name, role, phone, national_id, city, project_id, vehicle_id, status, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [name, role || null, phone || null, national_id || null, city || null,
+     project_id || null, vehicle_id || null, status || 'active', req.user.username]
+  );
+  const e = dbRes ? dbRes.rows[0] : { id: newId(), ...req.body };
+  if (!dbRes) employees.push(e);
   audit('إضافة موظف', req.user.username);
   res.status(201).json(e);
 });
-app.get('/employees', authAll, (_req, res) => res.json(employees));
+app.get('/employees', authAll, async (_req, res) => {
+  const dbRes = await dbQuery('SELECT * FROM employees ORDER BY created_at DESC');
+  res.json(dbRes ? dbRes.rows : employees);
+});
 
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));

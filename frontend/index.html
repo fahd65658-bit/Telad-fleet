@@ -153,6 +153,7 @@
     <!-- ── المركبات ──────────────────────────────────── -->
     <div id="sec-vehicles" class="section" style="display:none">
       <h2 class="sec-title">إدارة المركبات</h2>
+      <div id="expiring-banner" class="expiring-banner" style="display:none"></div>
 
       <div id="vehicle-form-wrap">
         <form id="form-vehicle" class="data-form" onsubmit="addVehicle(event)">
@@ -175,6 +176,32 @@
               <input id="v-driver">
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>حالة الفحص الفني</label>
+              <select id="v-inspection-status">
+                <option value="unknown">غير محدد</option>
+                <option value="valid">ساري</option>
+                <option value="expired">منتهي</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>تاريخ انتهاء الفحص</label>
+              <input id="v-inspection-expiry" type="date">
+            </div>
+            <div class="form-group">
+              <label>حالة التأمين</label>
+              <select id="v-insurance-status">
+                <option value="unknown">غير محدد</option>
+                <option value="valid">ساري</option>
+                <option value="expired">منتهي</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>تاريخ انتهاء التأمين</label>
+              <input id="v-insurance-expiry" type="date">
+            </div>
+          </div>
           <button type="submit" class="btn-primary">➕ إضافة</button>
         </form>
       </div>
@@ -183,11 +210,13 @@
         <thead>
           <tr>
             <th>المركبة</th><th>رقم اللوحة</th>
-            <th>المدينة</th><th>السائق</th><th>إجراءات</th>
+            <th>المدينة</th><th>السائق</th>
+            <th>الفحص الفني</th><th>التأمين</th>
+            <th>إجراءات</th>
           </tr>
         </thead>
         <tbody id="vehicles-tbody">
-          <tr><td colspan="5" class="tbl-empty">جارٍ التحميل…</td></tr>
+          <tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>
         </tbody>
       </table>
     </div>

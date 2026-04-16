@@ -1,1 +1,0 @@
-This is the Backend module of Telad Fleet system.

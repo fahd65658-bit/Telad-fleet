@@ -202,6 +202,34 @@ async function loadDashboardStats() {
 // ═══════════════════════════════════════════════════════════════════════════
 // VEHICLES
 // ═══════════════════════════════════════════════════════════════════════════
+
+// مدة التنبيه المسبق بالميلي ثانية (30 يوماً)
+const EXPIRY_WARNING_MS = 30 * 24 * 60 * 60 * 1000;
+
+// إنشاء badge ملون للحالة مع التاريخ
+function getStatusBadge(status, expiry) {
+  const dateStr = expiry ? new Date(expiry).toLocaleDateString('ar-SA') : '';
+  const now = new Date();
+  const exp = expiry ? new Date(expiry) : null;
+  const soon = exp && (exp - now) <= EXPIRY_WARNING_MS && exp >= now;
+
+  let cls, label;
+  if (status === 'valid' && soon) {
+    cls   = 'status-warning';
+    label = `⚠️ ينتهي قريباً${dateStr ? ' — ' + dateStr : ''}`;
+  } else if (status === 'valid') {
+    cls   = 'status-valid';
+    label = `✔ ساري${dateStr ? ' — ' + dateStr : ''}`;
+  } else if (status === 'expired') {
+    cls   = 'status-expired';
+    label = `✘ منتهي${dateStr ? ' — ' + dateStr : ''}`;
+  } else {
+    cls   = 'status-unknown';
+    label = 'غير محدد';
+  }
+  return `<span class="${cls}">${label}</span>`;
+}
+
 async function loadVehicles() {
   const tbody = document.getElementById('vehicles-tbody');
   if (!tbody) return;
@@ -211,30 +239,37 @@ async function loadVehicles() {
     const vehicles = await res.json();
     const canEdit  = ['admin', 'supervisor'].includes(currentUser?.role);
     tbody.innerHTML = vehicles.length === 0
-      ? '<tr><td colspan="5" class="tbl-empty">لا توجد مركبات مضافة بعد</td></tr>'
+      ? '<tr><td colspan="7" class="tbl-empty">لا توجد مركبات مضافة بعد</td></tr>'
       : vehicles.map(v => `
           <tr>
             <td>${escHtml(v.name   || '—')}</td>
             <td>${escHtml(v.plate  || '—')}</td>
             <td>${escHtml(v.city   || '—')}</td>
             <td>${escHtml(v.driver || '—')}</td>
+            <td>${getStatusBadge(v.inspection_status || 'unknown', v.inspection_expiry)}</td>
+            <td>${getStatusBadge(v.insurance_status  || 'unknown', v.insurance_expiry)}</td>
             <td>${canEdit
               ? `<button class="btn-sm btn-danger" onclick="deleteVehicle('${escHtml(String(v.id))}')">حذف</button>`
               : '—'
             }</td>
           </tr>`).join('');
+    checkExpiringVehicles(vehicles);
   } catch {
-    tbody.innerHTML = '<tr><td colspan="5" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
   }
 }
 
 async function addVehicle(e) {
   e.preventDefault();
   const body = {
-    name:   document.getElementById('v-name').value.trim(),
-    plate:  document.getElementById('v-plate').value.trim(),
-    city:   document.getElementById('v-city').value.trim(),
-    driver: document.getElementById('v-driver').value.trim(),
+    name:               document.getElementById('v-name').value.trim(),
+    plate:              document.getElementById('v-plate').value.trim(),
+    city:               document.getElementById('v-city').value.trim(),
+    driver:             document.getElementById('v-driver').value.trim(),
+    inspection_status:  document.getElementById('v-inspection-status').value,
+    inspection_expiry:  document.getElementById('v-inspection-expiry').value || null,
+    insurance_status:   document.getElementById('v-insurance-status').value,
+    insurance_expiry:   document.getElementById('v-insurance-expiry').value || null,
   };
   const res = await apiFetch('/vehicles', { method: 'POST', body: JSON.stringify(body) });
   if (res.ok) {
@@ -248,6 +283,25 @@ async function deleteVehicle(id) {
   if (!confirm('هل تريد حذف هذه المركبة؟')) return;
   const res = await apiFetch('/vehicles/' + id, { method: 'DELETE' });
   if (res.ok) { loadVehicles(); loadDashboardStats(); }
+}
+
+// تحقق من المركبات القريبة من الانتهاء وعرض تنبيه
+function checkExpiringVehicles(vehicles) {
+  const now  = new Date();
+  const soon = new Date(now.getTime() + EXPIRY_WARNING_MS);
+  const expiring = vehicles.filter(v => {
+    const ie  = v.inspection_expiry ? new Date(v.inspection_expiry) : null;
+    const ins = v.insurance_expiry  ? new Date(v.insurance_expiry)  : null;
+    return (ie  && ie  >= now && ie  <= soon) ||
+           (ins && ins >= now && ins <= soon);
+  });
+  if (expiring.length === 0) return;
+  const names = expiring.map(v => v.plate || v.name).join('، ');
+  const banner = document.getElementById('expiring-banner');
+  if (banner) {
+    banner.textContent = `⚠️ ${expiring.length} مركبة لديها فحص أو تأمين ينتهي خلال 30 يوم: ${names}`;
+    banner.style.display = 'block';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

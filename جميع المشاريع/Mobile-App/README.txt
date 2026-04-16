@@ -1,1 +1,0 @@
-This is the Mobile-App module of Telad Fleet system.

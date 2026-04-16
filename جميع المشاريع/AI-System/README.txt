@@ -1,1 +1,0 @@
-This is the AI-System module of Telad Fleet system.
