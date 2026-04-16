@@ -1,7 +1,11 @@
-const backend = require('./backend/server');
+const http = require('http');
+const handler = require('./api/index.js');
 
-if (require.main === module && typeof backend.startServer === 'function') {
-  backend.startServer(process.env.PORT || 5000);
+if (require.main === module) {
+  const port = Number(process.env.PORT || 3000);
+  http.createServer((req, res) => handler(req, res)).listen(port, '0.0.0.0', () => {
+    console.log(`Telad Fleet is running on http://localhost:${port}`);
+  });
 }
 
-module.exports = backend.app || backend;
+module.exports = handler;

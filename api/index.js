@@ -1,5 +1,10 @@
 'use strict';
 
+const fs = require('fs');
+const pathModule = require('path');
+
+const BASE_DIR = pathModule.join(__dirname, '..');
+
 const STATUS_LABELS = {
   active: 'نشطة',
   charging: 'شحن',
@@ -47,15 +52,31 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function sendJson(res, statusCode, payload) {
-  const body = JSON.stringify(payload);
-  res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+function applyCommonHeaders(res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+}
+
+function sendJson(res, statusCode, payload) {
+  const body = JSON.stringify(payload);
+  res.statusCode = statusCode;
+  applyCommonHeaders(res);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(body);
+}
+
+function sendFile(res, fileName, contentType) {
+  const filePath = pathModule.join(BASE_DIR, fileName);
+  if (!fs.existsSync(filePath)) {
+    return sendJson(res, 404, { error: 'File not found', file: fileName });
+  }
+
+  res.statusCode = 200;
+  applyCommonHeaders(res);
+  res.setHeader('Content-Type', contentType);
+  res.end(fs.readFileSync(filePath));
 }
 
 function sanitizeUser(user) {
@@ -224,7 +245,19 @@ module.exports = async (req, res) => {
 
   const { url, path } = normalizeRequest(req.url || '/');
 
-  if (req.method === 'GET' && (path === '/' || path === '/status')) {
+  if (req.method === 'GET' && (path === '/' || path === '/index.html')) {
+    return sendFile(res, 'index.html', 'text/html; charset=utf-8');
+  }
+
+  if (req.method === 'GET' && path === '/styles.css') {
+    return sendFile(res, 'styles.css', 'text/css; charset=utf-8');
+  }
+
+  if (req.method === 'GET' && path === '/app.js') {
+    return sendFile(res, 'app.js', 'application/javascript; charset=utf-8');
+  }
+
+  if (req.method === 'GET' && path === '/status') {
     return sendJson(res, 200, {
       project: 'Telad Fleet',
       status: 'running',
