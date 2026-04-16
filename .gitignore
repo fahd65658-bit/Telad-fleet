@@ -38,3 +38,22 @@ Thumbs.db
 
 # PM2
 .pm2/
+
+# Production env files
+.env.production
+.env.staging
+.env.*.local
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Test artifacts
+test-results/
+
+# Docker
+docker/data/
+
+# Temp
+tmp/
+temp/

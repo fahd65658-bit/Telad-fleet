@@ -232,7 +232,7 @@ app.put('/auth/users/:id', adminOnly, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
   // Protect the original super-admin (numeric id=1)
-  if (users[idx].id === 1) {
+  if (String(users[idx].id) === '1') {
     if (req.body.role   && req.body.role !== 'admin')
       return res.status(400).json({ error: 'لا يمكن تغيير دور المدير الرئيسي للنظام' });
     if (req.body.active === false)
@@ -257,7 +257,7 @@ app.delete('/auth/users/:id', adminOnly, (req, res) => {
   const idx = users.findIndex(u => String(u.id) === id);
   if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
   // Protect original super-admin (numeric id=1)
-  if (users[idx].id === 1) return res.status(400).json({ error: 'لا يمكن حذف المدير الرئيسي للنظام' });
+  if (String(users[idx].id) === '1') return res.status(400).json({ error: 'لا يمكن حذف المدير الرئيسي للنظام' });
   const username = users[idx].username;
   users.splice(idx, 1);
   audit(`حذف مستخدم: ${username}`, req.user.username);
