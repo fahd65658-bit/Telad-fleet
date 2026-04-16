@@ -1,7 +1,11 @@
+import json
 import sqlite3
 import tempfile
+import threading
 import unittest
+from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.request import urlopen
 
 import server
 
@@ -24,6 +28,31 @@ class TestTeladFleet(unittest.TestCase):
                 self.assertGreater(len(alerts), 0)
                 self.assertTrue(any("المركبة" in alert or "تحديث" in alert for alert in alerts))
             finally:
+                if original_db_path is not None:
+                    server.DB_PATH = original_db_path
+
+    def test_alerts_endpoint_returns_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "fleet.db"
+            original_db_path = getattr(server, "DB_PATH", None)
+            try:
+                server.DB_PATH = db_path
+                server.init_db()
+                httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.FleetHandler)
+                thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+                thread.start()
+                port = httpd.server_address[1]
+
+                response = urlopen(f"http://127.0.0.1:{port}/api/alerts")
+                payload = json.loads(response.read().decode("utf-8"))
+
+                self.assertEqual(response.status, 200)
+                self.assertIn("alerts", payload)
+                self.assertGreater(len(payload["alerts"]), 0)
+            finally:
+                if 'httpd' in locals():
+                    httpd.shutdown()
+                    httpd.server_close()
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 

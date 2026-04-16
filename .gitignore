@@ -1,49 +1,9 @@
-<<<<<<< HEAD
-# Dependencies
-node_modules/
-*/node_modules/
-
-# Environment files — NEVER commit real .env files
-.env
-backend/.env
-*.local
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# Runtime
-*.pid
-*.seed
-pids/
-
-# Build artifacts
-dist/
-build/
-.next/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# SQLite dev DB
-*.db
-*.sqlite
-
-# PM2
-.pm2/
-=======
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
 fleet.db
->>>>>>> aefe944 (feat: complete Telad Fleet services)
+*.sqlite
+.env
+node_modules/
