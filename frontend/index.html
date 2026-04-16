@@ -64,6 +64,15 @@
       <a class="nav-link" data-section="vehicles"    onclick="navigateTo('vehicles')">
         <span class="nav-icon">🚗</span> المركبات
       </a>
+      <a class="nav-link" data-section="condition"   onclick="navigateTo('condition')">
+        <span class="nav-icon">📋</span> حالة المركبات
+      </a>
+      <a class="nav-link" data-section="petromin"    onclick="navigateTo('petromin')">
+        <span class="nav-icon">⛽</span> بترومين
+      </a>
+      <a class="nav-link" data-section="aldrees"     onclick="navigateTo('aldrees')">
+        <span class="nav-icon">🛢️</span> الدريس
+      </a>
       <a class="nav-link" data-section="maintenance" onclick="navigateTo('maintenance')">
         <span class="nav-icon">🔧</span> الصيانة
       </a>
@@ -197,6 +206,497 @@
       <h2 class="sec-title">الصيانة</h2>
       <div class="coming-soon">🔧 قيد التطوير</div>
     </div>
+
+    <!-- ── حالة المركبات ─────────────────────────────── -->
+    <div id="sec-condition" class="section" style="display:none">
+      <h2 class="sec-title">📋 نظام تسجيل حالة المركبات</h2>
+
+      <!-- Tab switcher -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchConditionTab('delivery')">🚗 نموذج التسليم</button>
+        <button class="tab-btn"        onclick="switchConditionTab('receipt')">📥 نموذج الاستلام</button>
+        <button class="tab-btn"        onclick="switchConditionTab('history')">📜 سجل الحالة</button>
+      </div>
+
+      <!-- Delivery form -->
+      <div id="cond-tab-delivery">
+        <form id="form-condition-delivery" class="data-form" onsubmit="submitConditionReport(event,'delivery')">
+          <h3>نموذج تسليم المركبة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="cd-vehicle" required></select>
+            </div>
+            <div class="form-group">
+              <label>الممشى الحالي (كم)</label>
+              <input id="cd-mileage" type="number" min="0" required>
+            </div>
+            <div class="form-group">
+              <label>مستوى الوقود (%)</label>
+              <input id="cd-fuel" type="number" min="0" max="100" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>حالة الإطارات</label>
+              <select id="cd-tires">
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">تحتاج تغيير</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة الزيت</label>
+              <select id="cd-oil">
+                <option value="good">جيد</option>
+                <option value="fair">متوسط</option>
+                <option value="poor">يحتاج تغيير</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة البطارية</label>
+              <select id="cd-battery">
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">ضعيفة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة الزجاج</label>
+              <select id="cd-glass">
+                <option value="good">سليم</option>
+                <option value="fair">خدوش بسيطة</option>
+                <option value="poor">تالف</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>الحالة العامة</label>
+              <select id="cd-overall" required>
+                <option value="excellent">ممتازة</option>
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">سيئة</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:2">
+              <label>ملاحظات</label>
+              <input id="cd-notes" placeholder="أي ملاحظات إضافية…">
+            </div>
+          </div>
+          <p id="cond-delivery-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">✅ إرسال تقرير التسليم + تحليل AI</button>
+        </form>
+        <div id="cond-delivery-result" class="ai-result-box" style="display:none"></div>
+      </div>
+
+      <!-- Receipt form -->
+      <div id="cond-tab-receipt" style="display:none">
+        <form id="form-condition-receipt" class="data-form" onsubmit="submitConditionReport(event,'receipt')">
+          <h3>نموذج استلام المركبة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="cr-vehicle" required></select>
+            </div>
+            <div class="form-group">
+              <label>الممشى الحالي (كم)</label>
+              <input id="cr-mileage" type="number" min="0" required>
+            </div>
+            <div class="form-group">
+              <label>مستوى الوقود (%)</label>
+              <input id="cr-fuel" type="number" min="0" max="100" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>حالة الإطارات</label>
+              <select id="cr-tires">
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">تحتاج تغيير</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة الزيت</label>
+              <select id="cr-oil">
+                <option value="good">جيد</option>
+                <option value="fair">متوسط</option>
+                <option value="poor">يحتاج تغيير</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة البطارية</label>
+              <select id="cr-battery">
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">ضعيفة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الحالة العامة</label>
+              <select id="cr-overall" required>
+                <option value="excellent">ممتازة</option>
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">سيئة</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex:2">
+              <label>ملاحظات الاستلام</label>
+              <input id="cr-notes" placeholder="وصف أي أضرار جديدة أو ملاحظات…">
+            </div>
+          </div>
+          <p id="cond-receipt-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">✅ إرسال تقرير الاستلام + تحليل AI</button>
+        </form>
+        <div id="cond-receipt-result" class="ai-result-box" style="display:none"></div>
+      </div>
+
+      <!-- History tab -->
+      <div id="cond-tab-history" style="display:none">
+        <div class="form-row" style="margin-bottom:16px">
+          <div class="form-group">
+            <label>اختر المركبة</label>
+            <select id="cond-hist-vehicle" onchange="loadConditionHistory()"></select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end">
+            <button class="btn-primary" onclick="loadConditionHistory()">عرض السجل</button>
+          </div>
+        </div>
+        <div id="condition-history-list"></div>
+      </div>
+    </div><!-- /#sec-condition -->
+
+    <!-- ── بترومين ─────────────────────────────────────── -->
+    <div id="sec-petromin" class="section" style="display:none">
+      <h2 class="sec-title">⛽ بترومين — خدمات الصيانة وتغيير الزيت</h2>
+
+      <div class="integration-status-bar" id="petromin-status-bar">
+        <span id="petromin-conn-badge" class="badge-inactive">⚪ غير مربوط</span>
+        <button class="btn-sm btn-primary" onclick="openPetrominConnect()">🔗 ربط حساب بترومين</button>
+      </div>
+
+      <!-- Connect modal trigger / inline form -->
+      <div id="petromin-connect-form" class="data-form" style="display:none">
+        <h3>🔗 ربط بوابة بترومين</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>اسم المستخدم (بترومين)</label>
+            <input id="pm-username" placeholder="اسم المستخدم في بوابة بترومين">
+          </div>
+          <div class="form-group">
+            <label>كلمة المرور / مفتاح API</label>
+            <input id="pm-password" type="password" placeholder="كلمة المرور أو API Key">
+          </div>
+          <div class="form-group">
+            <label>رقم الحساب</label>
+            <input id="pm-account" placeholder="رقم حساب بترومين">
+          </div>
+        </div>
+        <div class="form-row">
+          <button class="btn-primary" onclick="connectPetromin()">🔗 ربط الآن</button>
+          <button class="btn-secondary" onclick="closePetrominConnect()">إلغاء</button>
+        </div>
+        <p id="pm-connect-error" class="error-msg"></p>
+        <div class="info-note">
+          💡 يمكنك الوصول مباشرة إلى بوابة بترومين:
+          <a href="https://www.petromin.com" target="_blank" rel="noopener noreferrer" class="external-link">
+            🌐 فتح بوابة بترومين
+          </a>
+        </div>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar" style="margin-top:16px">
+        <button class="tab-btn active" onclick="switchPetrominTab('add')">➕ إضافة خدمة</button>
+        <button class="tab-btn"        onclick="switchPetrominTab('list')">📋 سجل الخدمات</button>
+        <button class="tab-btn"        onclick="switchPetrominTab('sync')">🔄 مزامنة تلقائية</button>
+      </div>
+
+      <!-- Add service form -->
+      <div id="pm-tab-add">
+        <form id="form-petromin" class="data-form" onsubmit="addPetrominService(event)">
+          <h3>إضافة خدمة صيانة / تغيير زيت</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="pm-vehicle" required></select>
+            </div>
+            <div class="form-group">
+              <label>نوع الخدمة</label>
+              <select id="pm-type" required>
+                <option value="oil_change">تغيير زيت</option>
+                <option value="filter_change">تغيير فلتر</option>
+                <option value="inspection">فحص دوري</option>
+                <option value="tire_rotation">تدوير إطارات</option>
+                <option value="brake_service">صيانة فرامل</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>تاريخ الخدمة</label>
+              <input id="pm-date" type="date" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>الممشى عند الخدمة (كم)</label>
+              <input id="pm-mileage" type="number" min="0">
+            </div>
+            <div class="form-group">
+              <label>الممشى للخدمة القادمة (كم)</label>
+              <input id="pm-next-mileage" type="number" min="0">
+            </div>
+            <div class="form-group">
+              <label>تاريخ الخدمة القادمة</label>
+              <input id="pm-next-date" type="date">
+            </div>
+            <div class="form-group">
+              <label>التكلفة (ريال)</label>
+              <input id="pm-cost" type="number" min="0" step="0.01">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>نوع الزيت</label>
+              <input id="pm-oil-type" placeholder="مثال: 5W-30 Full Synthetic">
+            </div>
+            <div class="form-group">
+              <label>ماركة الزيت</label>
+              <input id="pm-oil-brand" placeholder="مثال: Mobil 1, Castrol...">
+            </div>
+            <div class="form-group">
+              <label>اسم الورشة</label>
+              <input id="pm-workshop" placeholder="اسم مركز بترومين">
+            </div>
+            <div class="form-group">
+              <label>المدينة</label>
+              <input id="pm-city" placeholder="مدينة الورشة">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>رقم الفاتورة</label>
+              <input id="pm-invoice">
+            </div>
+            <div class="form-group" style="flex:2">
+              <label>ملاحظات</label>
+              <input id="pm-notes" placeholder="ملاحظات إضافية…">
+            </div>
+          </div>
+          <p id="pm-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">💾 حفظ الخدمة</button>
+        </form>
+      </div>
+
+      <!-- Services list -->
+      <div id="pm-tab-list" style="display:none">
+        <div class="form-row" style="margin-bottom:16px">
+          <div class="form-group">
+            <label>تصفية بالمركبة</label>
+            <select id="pm-filter-vehicle" onchange="loadPetrominServices()">
+              <option value="">جميع المركبات</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end">
+            <button class="btn-primary" onclick="loadPetrominServices()">🔄 تحديث</button>
+          </div>
+        </div>
+        <div id="pm-oil-summary"></div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>المركبة</th><th>نوع الخدمة</th><th>تاريخ الخدمة</th>
+              <th>الممشى</th><th>التكلفة</th><th>نوع الزيت</th>
+              <th>الخدمة القادمة</th><th>الورشة</th>
+            </tr>
+          </thead>
+          <tbody id="pm-services-tbody">
+            <tr><td colspan="8" class="tbl-empty">لا توجد خدمات مسجلة</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sync tab -->
+      <div id="pm-tab-sync" style="display:none">
+        <div class="data-form">
+          <h3>🔄 مزامنة تلقائية مع بترومين</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="pm-sync-vehicle"></select>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="syncPetromin()">🔄 مزامنة الآن</button>
+          <div id="pm-sync-result" class="ai-result-box" style="display:none;margin-top:12px"></div>
+          <div class="info-note" style="margin-top:16px">
+            ℹ️ المزامنة التلقائية تجلب آخر سجلات الصيانة من بوابة بترومين وتحدث بيانات المركبة تلقائياً.
+          </div>
+        </div>
+        <h3 class="sub-title">سجل المزامنات السابقة</h3>
+        <div id="pm-sync-logs"></div>
+      </div>
+    </div><!-- /#sec-petromin -->
+
+    <!-- ── الدريس ───────────────────────────────────────── -->
+    <div id="sec-aldrees" class="section" style="display:none">
+      <h2 class="sec-title">🛢️ الدريس — إدارة الوقود والبطاقات</h2>
+
+      <div class="integration-status-bar" id="aldrees-status-bar">
+        <span id="aldrees-conn-badge" class="badge-inactive">⚪ غير مربوط</span>
+        <button class="btn-sm btn-primary" onclick="openAldreesConnect()">🔗 ربط بطاقة الدريس</button>
+      </div>
+
+      <!-- Connect form -->
+      <div id="aldrees-connect-form" class="data-form" style="display:none">
+        <h3>🔗 ربط بوابة الدريس</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>رقم البطاقة / الحساب</label>
+            <input id="ad-card" placeholder="رقم بطاقة الوقود">
+          </div>
+          <div class="form-group">
+            <label>كلمة المرور</label>
+            <input id="ad-password" type="password" placeholder="كلمة مرور بوابة الدريس">
+          </div>
+          <div class="form-group">
+            <label>رقم الحساب</label>
+            <input id="ad-account" placeholder="رقم حساب الدريس">
+          </div>
+        </div>
+        <div class="form-row">
+          <button class="btn-primary" onclick="connectAldrees()">🔗 ربط الآن</button>
+          <button class="btn-secondary" onclick="closeAldreesConnect()">إلغاء</button>
+        </div>
+        <p id="ad-connect-error" class="error-msg"></p>
+        <div class="info-note">
+          💡 يمكنك الوصول مباشرة إلى بوابة الدريس:
+          <a href="https://www.aldrees.com.sa" target="_blank" rel="noopener noreferrer" class="external-link">
+            🌐 فتح بوابة الدريس
+          </a>
+        </div>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar" style="margin-top:16px">
+        <button class="tab-btn active" onclick="switchAldreesTab('add')">➕ تسجيل تعبئة</button>
+        <button class="tab-btn"        onclick="switchAldreesTab('list')">📋 سجل الوقود</button>
+        <button class="tab-btn"        onclick="switchAldreesTab('sync')">🔄 مزامنة تلقائية</button>
+      </div>
+
+      <!-- Add fuel log form -->
+      <div id="ad-tab-add">
+        <form id="form-aldrees" class="data-form" onsubmit="addFuelLog(event)">
+          <h3>تسجيل تعبئة وقود</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="ad-vehicle" required></select>
+            </div>
+            <div class="form-group">
+              <label>تاريخ التعبئة</label>
+              <input id="ad-date" type="date" required>
+            </div>
+            <div class="form-group">
+              <label>عدد اللترات</label>
+              <input id="ad-liters" type="number" min="0" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>سعر اللتر (ريال)</label>
+              <input id="ad-cost-per-liter" type="number" min="0" step="0.001" oninput="calcFuelTotal()">
+            </div>
+            <div class="form-group">
+              <label>إجمالي التكلفة (ريال)</label>
+              <input id="ad-total-cost" type="number" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+              <label>الممشى عند التعبئة (كم)</label>
+              <input id="ad-mileage" type="number" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>رقم بطاقة الوقود</label>
+              <input id="ad-card-num" placeholder="رقم البطاقة">
+            </div>
+            <div class="form-group">
+              <label>اسم المحطة</label>
+              <input id="ad-station" placeholder="اسم محطة الدريس">
+            </div>
+            <div class="form-group">
+              <label>المدينة</label>
+              <input id="ad-station-city" placeholder="مدينة المحطة">
+            </div>
+            <div class="form-group">
+              <label>السائق</label>
+              <input id="ad-driver" placeholder="اسم السائق">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex:2">
+              <label>ملاحظات</label>
+              <input id="ad-notes" placeholder="ملاحظات إضافية…">
+            </div>
+          </div>
+          <p id="ad-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">💾 حفظ سجل الوقود</button>
+        </form>
+      </div>
+
+      <!-- Fuel logs list -->
+      <div id="ad-tab-list" style="display:none">
+        <div class="form-row" style="margin-bottom:16px">
+          <div class="form-group">
+            <label>تصفية بالمركبة</label>
+            <select id="ad-filter-vehicle" onchange="loadFuelLogs()">
+              <option value="">جميع المركبات</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end">
+            <button class="btn-primary" onclick="loadFuelLogs()">🔄 تحديث</button>
+          </div>
+        </div>
+        <div id="ad-fuel-summary"></div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>المركبة</th><th>التاريخ</th><th>اللترات</th>
+              <th>سعر اللتر</th><th>إجمالي التكلفة</th>
+              <th>الممشى</th><th>المحطة</th><th>السائق</th>
+            </tr>
+          </thead>
+          <tbody id="ad-fuel-tbody">
+            <tr><td colspan="8" class="tbl-empty">لا توجد سجلات وقود</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sync tab -->
+      <div id="ad-tab-sync" style="display:none">
+        <div class="data-form">
+          <h3>🔄 مزامنة تلقائية مع الدريس</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="ad-sync-vehicle"></select>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="syncAldrees()">🔄 مزامنة الآن</button>
+          <div id="ad-sync-result" class="ai-result-box" style="display:none;margin-top:12px"></div>
+          <div class="info-note" style="margin-top:16px">
+            ℹ️ المزامنة التلقائية تجلب سجل الوقود من بوابة الدريس وتحدث بيانات المركبة بمساعدة الذكاء الاصطناعي.
+          </div>
+        </div>
+        <h3 class="sub-title">سجل المزامنات السابقة</h3>
+        <div id="ad-sync-logs"></div>
+      </div>
+    </div><!-- /#sec-aldrees -->
 
     <!-- ── الحوادث ───────────────────────────────────── -->
     <div id="sec-accidents" class="section" style="display:none">
