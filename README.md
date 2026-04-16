@@ -133,6 +133,15 @@ curl https://api.fna.sa/health
 
 ---
 
+## 📄 GitHub Pages Deployment (Frontend Only)
+
+- Workflow: `.github/workflows/static.yml`
+- Trigger: push to `main` when files under `frontend/` change
+- Publish source: `frontend/` directory only (not backend/deployment files)
+- Required repo setting: **Settings → Pages → Build and deployment → Source = GitHub Actions**
+
+---
+
 ## 🐳 Docker (Alternative)
 ```bash
 cp backend/.env.example backend/.env  # fill values
