@@ -36,7 +36,9 @@ const CORS_ORIGINS = [
   'https://fleet.fna.sa',
   'http://localhost:3000',
   'http://localhost:5000',
+  'http://localhost:8080',
   'http://127.0.0.1:5500',  // VS Code Live Server (dev)
+  'http://127.0.0.1:8080',
   'null',                    // file:// open in dev
 ];
 
@@ -71,7 +73,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
 
@@ -112,7 +114,7 @@ const users = [
 ];
 
 // Role permission levels
-const VALID_ROLES = ['admin', 'supervisor', 'operator', 'viewer'];
+const VALID_ROLES = ['admin', 'supervisor', 'operator', 'viewer', 'driver'];
 
 // ─── ID generator (collision-safe) ───────────────────────────────────────────
 function newId() {
@@ -298,6 +300,8 @@ let projects  = [];
 let vehicles  = [];
 let employees = [];
 let auditLogs = [];
+let requests        = [];   // driver requests & maintenance bookings
+let monthlyReports  = [];   // monthly vehicle status reports
 
 function audit(action, username) {
   auditLogs.push({
@@ -365,6 +369,196 @@ app.get('/employees', authAll, (_req, res) => res.json(employees));
 
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DRIVER LOGIN  — no password, just plate + national_id
+// ═══════════════════════════════════════════════════════════════════════════
+app.post('/driver/login', loginLimiter, (req, res) => {
+  const { plate, national_id } = req.body || {};
+  if (!plate || !national_id)
+    return res.status(400).json({ error: 'رقم اللوحة ورقم الهوية مطلوبان' });
+
+  const vehicle  = vehicles.find(v => v.plate && v.plate.trim().toUpperCase() === plate.trim().toUpperCase());
+  if (!vehicle)
+    return res.status(404).json({ error: 'رقم اللوحة غير موجود في النظام' });
+
+  const employee = employees.find(
+    e => e.national_id && String(e.national_id).trim() === String(national_id).trim()
+  );
+  if (!employee)
+    return res.status(404).json({ error: 'رقم الهوية غير موجود في النظام' });
+
+  const payload = {
+    id:          employee.id,
+    name:        employee.name,
+    national_id: employee.national_id,
+    role:        'driver',
+    vehicleId:   vehicle.id,
+    plate:       vehicle.plate,
+  };
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '12h' });
+  audit(`دخول سائق: ${employee.name} — لوحة: ${plate}`, employee.name);
+  res.json({ token, vehicle, employee: { id: employee.id, name: employee.name, national_id: employee.national_id } });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REQUESTS  (driver creates, admin/supervisor manage)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const driverOrAdmin = requireAuth(['admin', 'supervisor', 'operator', 'driver']);
+
+// POST /requests — create a new request
+app.post('/requests', driverOrAdmin, (req, res) => {
+  const { type, description, vehicleId, plate, photos = [], preferredDate, preferredTime, maintenanceType } = req.body || {};
+  if (!type || !description)
+    return res.status(400).json({ error: 'نوع الطلب والوصف مطلوبان' });
+
+  const r = {
+    id:              newId(),
+    type,
+    description,
+    vehicleId:       vehicleId || req.user.vehicleId || null,
+    plate:           plate     || req.user.plate     || null,
+    employeeId:      req.user.id,
+    employeeName:    req.user.name,
+    photos,
+    preferredDate:   preferredDate || null,
+    preferredTime:   preferredTime || null,
+    maintenanceType: maintenanceType || null,
+    status:          'pending',   // pending | approved | rejected | held
+    adminComment:    '',
+    createdAt:       new Date().toISOString(),
+    updatedAt:       new Date().toISOString(),
+  };
+  requests.push(r);
+  audit(`طلب جديد (${type}): ${r.employeeName}`, r.employeeName);
+  res.status(201).json(r);
+});
+
+// GET /requests — list all (admin/supervisor)
+app.get('/requests', supervisorUp, (_req, res) => res.json(requests));
+
+// GET /requests/my/:vehicleId — driver sees their vehicle's requests
+app.get('/requests/my/:vehicleId', driverOrAdmin, (req, res) => {
+  const { vehicleId } = req.params;
+  // Drivers may only see their own vehicle
+  if (req.user.role === 'driver' && req.user.vehicleId !== vehicleId)
+    return res.status(403).json({ error: 'لا تملك صلاحية عرض طلبات هذه المركبة' });
+  res.json(requests.filter(r => r.vehicleId === vehicleId));
+});
+
+// PUT /requests/:id — update status (admin/supervisor)
+app.put('/requests/:id', supervisorUp, (req, res) => {
+  const idx = requests.findIndex(r => r.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const { status, adminComment } = req.body || {};
+  const VALID_STATUS = ['pending', 'approved', 'rejected', 'held'];
+  if (status && !VALID_STATUS.includes(status))
+    return res.status(400).json({ error: 'حالة غير صالحة' });
+  if (status)       requests[idx].status       = status;
+  if (adminComment !== undefined) requests[idx].adminComment = adminComment;
+  requests[idx].updatedAt = new Date().toISOString();
+  audit(`تحديث طلب ${req.params.id} → ${status || 'تعليق'}`, req.user.username);
+  res.json(requests[idx]);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MONTHLY REPORTS  (driver submits, admin/supervisor view)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /monthly-reports — submit monthly vehicle status report
+app.post('/monthly-reports', driverOrAdmin, (req, res) => {
+  const {
+    vehicleId, plate,
+    photos = {},        // { front, back, right, left, inside, odometer, oilSticker }
+    tireCondition,      // good | needs_attention | damaged
+    fuelLevel,          // full | half | needs_refuel
+    odometer,
+    notes,
+  } = req.body || {};
+
+  if (!vehicleId && !req.user.vehicleId)
+    return res.status(400).json({ error: 'معرّف المركبة مطلوب' });
+
+  const report = {
+    id:            newId(),
+    vehicleId:     vehicleId || req.user.vehicleId,
+    plate:         plate     || req.user.plate     || null,
+    employeeId:    req.user.id,
+    employeeName:  req.user.name,
+    photos,
+    tireCondition: tireCondition || null,
+    fuelLevel:     fuelLevel     || null,
+    odometer:      odometer      || null,
+    notes:         notes         || '',
+    createdAt:     new Date().toISOString(),
+  };
+  monthlyReports.push(report);
+  audit(`تقرير شهري: ${report.plate || report.vehicleId}`, req.user.name);
+  res.status(201).json({ id: report.id, createdAt: report.createdAt });
+});
+
+// GET /monthly-reports — all reports (admin/supervisor), photos omitted for bandwidth
+app.get('/monthly-reports', supervisorUp, (_req, res) =>
+  res.json(monthlyReports.map(({ photos: _omittedPhotos, ...r }) => r))
+);
+
+// GET /monthly-reports/:vehicleId — reports for a specific vehicle
+app.get('/monthly-reports/:vehicleId', driverOrAdmin, (req, res) => {
+  const { vehicleId } = req.params;
+  if (req.user.role === 'driver' && req.user.vehicleId !== vehicleId)
+    return res.status(403).json({ error: 'لا تملك صلاحية عرض تقارير هذه المركبة' });
+  const reports = monthlyReports.filter(r => r.vehicleId === vehicleId);
+  // Return latest full report (with photos) to the driver; strip photos for admin list
+  res.json(reports);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI FLEET SUMMARY  (supervisor+)
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/ai/fleet-summary', supervisorUp, (_req, res) => {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const recentReports = monthlyReports.filter(r => r.createdAt >= thirtyDaysAgo);
+  const reportedIds   = new Set(recentReports.map(r => r.vehicleId));
+  const noReport      = vehicles.filter(v => !reportedIds.has(v.id));
+
+  const pendingCount   = requests.filter(r => r.status === 'pending').length;
+  const approvedCount  = requests.filter(r => r.status === 'approved').length;
+  const rejectedCount  = requests.filter(r => r.status === 'rejected').length;
+
+  const damagedTires   = recentReports.filter(r => r.tireCondition === 'damaged').length;
+  const needsFuel      = recentReports.filter(r => r.fuelLevel === 'needs_refuel').length;
+
+  res.json({
+    generated:      new Date().toISOString(),
+    fleet: {
+      total:        vehicles.length,
+      reportedLast30Days: recentReports.length,
+      noReportLast30Days: noReport.map(v => ({ id: v.id, plate: v.plate, name: v.name })),
+    },
+    requests: { pending: pendingCount, approved: approvedCount, rejected: rejectedCount },
+    alerts: {
+      damagedTires,
+      needsFuel,
+      urgentAttention: noReport.length + damagedTires,
+    },
+    recommendations: [
+      noReport.length
+        ? `${noReport.length} مركبة لم ترفع تقريراً شهرياً — يُنصح بالمتابعة`
+        : 'جميع المركبات رفعت تقاريرها الشهرية ✅',
+      damagedTires
+        ? `${damagedTires} مركبة تحتاج فحص إطارات عاجل`
+        : 'حالة الإطارات جيدة ✅',
+      pendingCount
+        ? `${pendingCount} طلب معلق يحتاج مراجعة`
+        : 'لا توجد طلبات معلقة ✅',
+    ],
+    model: 'telad-fleet-ai-v2',
+  });
+});
+
+
 
 // ─── 404 fallback ─────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'المسار غير موجود' }));
