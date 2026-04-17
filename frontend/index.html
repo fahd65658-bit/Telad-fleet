@@ -82,6 +82,9 @@
       <a class="nav-link" data-section="ai"          onclick="navigateTo('ai')">
         <span class="nav-icon">🧠</span> الذكاء الاصطناعي
       </a>
+      <a class="nav-link" data-section="condition"  onclick="navigateTo('condition')">
+        <span class="nav-icon">🔍</span> فحص حالة المركبة
+      </a>
       <a class="nav-link" data-section="logs"        onclick="navigateTo('logs')">
         <span class="nav-icon">📜</span> سجل العمليات
       </a>
@@ -308,7 +311,153 @@
       </table>
     </div><!-- /#sec-users -->
 
+    <!-- ── فحص حالة المركبة ──────────────────────────── -->
+    <div id="sec-condition" class="section" style="display:none">
+      <h2 class="sec-title">🔍 فحص حالة المركبة</h2>
+
+      <!-- Tabs -->
+      <div class="cond-tabs">
+        <button class="cond-tab active" id="ctab-delivery" onclick="switchCondTab('delivery')">📋 نموذج التسليم</button>
+        <button class="cond-tab"        id="ctab-receipt"  onclick="switchCondTab('receipt')">✅ نموذج الاستلام</button>
+        <button class="cond-tab"        id="ctab-history"  onclick="switchCondTab('history')">📜 السجل</button>
+      </div>
+
+      <!-- ── Delivery Tab ── -->
+      <div id="ctab-delivery-content">
+        <div class="data-form">
+          <h3>📋 نموذج تسليم المركبة للموظف</h3>
+          <p class="cond-hint">صوّر المركبة من جميع الجهات وسجّل حالتها قبل التسليم</p>
+          <div class="form-row">
+            <div class="form-group"><label>المركبة *</label><select id="del-vehicle"></select></div>
+            <div class="form-group"><label>اسم الموظف المستلم</label><input id="del-employee" placeholder="الاسم الكامل"></div>
+            <div class="form-group"><label>اسم السائق</label><input id="del-driver" placeholder="اسم السائق"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>الممشى (كم)</label><input id="del-mileage" type="number" min="0" placeholder="0"></div>
+            <div class="form-group"><label>مستوى الوقود (%)</label><input id="del-fuel" type="number" min="0" max="100" placeholder="50"></div>
+            <div class="form-group"><label>تقييم الحالة العامة</label><div class="star-rating" id="del-stars"></div></div>
+          </div>
+          <div class="photo-section">
+            <div class="photo-section-hdr">
+              <h4>📸 صور المركبة من جميع الجهات</h4>
+              <span class="photo-count-badge" id="del-photo-count">0/6 صور</span>
+            </div>
+            <div class="photo-grid" id="del-photo-grid"></div>
+          </div>
+          <div class="form-group" style="margin-top:18px">
+            <label>ملاحظات عامة</label>
+            <textarea id="del-notes" class="form-textarea" rows="3" placeholder="أي ملاحظات حول حالة المركبة..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="submitConditionReport('delivery')">✅ إرسال نموذج التسليم</button>
+          <span id="del-status-msg" class="status-msg"></span>
+        </div>
+      </div>
+
+      <!-- ── Receipt Tab ── -->
+      <div id="ctab-receipt-content" style="display:none">
+        <div class="data-form">
+          <h3>✅ نموذج استلام المركبة من الموظف</h3>
+          <p class="cond-hint">صوّر المركبة وقارنها بصور التسليم للكشف عن أي أضرار جديدة</p>
+          <div class="form-row">
+            <div class="form-group"><label>المركبة *</label><select id="rec-vehicle" onchange="loadPreviousDelivery()"></select></div>
+            <div class="form-group"><label>اسم الموظف المسلِّم</label><input id="rec-employee" placeholder="الاسم الكامل"></div>
+            <div class="form-group"><label>اسم السائق</label><input id="rec-driver" placeholder="اسم السائق"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>الممشى الحالي (كم)</label><input id="rec-mileage" type="number" min="0" placeholder="0"></div>
+            <div class="form-group"><label>مستوى الوقود (%)</label><input id="rec-fuel" type="number" min="0" max="100" placeholder="50"></div>
+            <div class="form-group"><label>تقييم الحالة عند الاستلام</label><div class="star-rating" id="rec-stars"></div></div>
+          </div>
+          <div id="prev-delivery-banner" class="prev-delivery-banner" style="display:none"></div>
+          <div class="photo-section">
+            <div class="photo-section-hdr">
+              <h4>📸 صور الاستلام</h4>
+              <span class="photo-count-badge" id="rec-photo-count">0/6 صور</span>
+            </div>
+            <div id="rec-comparison-grid" class="comparison-grid" style="display:none"></div>
+            <div class="photo-grid" id="rec-photo-grid"></div>
+          </div>
+          <div class="form-group" style="margin-top:18px">
+            <label>ملاحظات الاستلام</label>
+            <textarea id="rec-notes" class="form-textarea" rows="3" placeholder="ملاحظات حول الأضرار الجديدة أو أي تغييرات..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="submitConditionReport('receipt')">✅ إرسال نموذج الاستلام</button>
+          <button class="btn-ai" id="btn-ai-analyze" onclick="runAiAnalysis()" style="display:none">🤖 تحليل ذكاء اصطناعي</button>
+          <span id="rec-status-msg" class="status-msg"></span>
+        </div>
+        <div id="ai-result-panel" class="ai-result-panel" style="display:none"></div>
+      </div>
+
+      <!-- ── History Tab ── -->
+      <div id="ctab-history-content" style="display:none">
+        <div class="data-form">
+          <h3>📜 سجل تقارير حالة المركبات</h3>
+          <div class="form-row">
+            <div class="form-group" style="max-width:300px">
+              <label>تصفية حسب المركبة</label>
+              <select id="hist-vehicle-filter" onchange="loadConditionHistory()">
+                <option value="">— جميع المركبات —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>التاريخ</th><th>المركبة</th><th>النوع</th>
+              <th>الموظف</th><th>الممشى</th><th>الوقود</th>
+              <th>التقييم</th><th>بواسطة</th><th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="cond-history-tbody">
+            <tr><td colspan="9" class="tbl-empty">جارٍ التحميل…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /#sec-condition -->
+
   </div><!-- /.main -->
+
+<!-- ══ Annotation Modal ═══════════════════════════════════════════════════ -->
+<div id="annotation-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box annotation-box">
+    <div class="modal-header">
+      <h3>✏️ تعليم الأضرار على الصورة</h3>
+      <button class="modal-close" onclick="closeAnnotationModal()">✕</button>
+    </div>
+    <div class="annot-tools">
+      <button class="tool-btn active" id="tool-pen"    onclick="setDrawTool('pen')">✏️ قلم</button>
+      <button class="tool-btn"        id="tool-eraser" onclick="setDrawTool('eraser')">⬜ ممحاة</button>
+      <button class="tool-btn"                         onclick="clearAnnotCanvas()">🗑️ مسح الكل</button>
+      <label class="tool-label">اللون: <input type="color" id="annot-color" value="#ef4444"></label>
+      <label class="tool-label">السُّمك: <input type="range" id="annot-size" min="2" max="20" value="5"></label>
+    </div>
+    <div class="annot-canvas-wrap">
+      <img id="annot-img" alt="صورة المركبة">
+      <canvas id="annot-canvas"></canvas>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label>ملاحظة خاصة بهذه الصورة:</label>
+      <textarea id="annot-note" rows="2" class="form-textarea" placeholder="مثال: خدش في الجانب الأيسر، صدمة خفيفة..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveAnnotation()">💾 حفظ التعليق</button>
+      <button class="btn-cancel"  onclick="closeAnnotationModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Report View Modal ══════════════════════════════════════════════════ -->
+<div id="report-view-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box report-view-box">
+    <div class="modal-header">
+      <h3 id="report-view-title">📋 تفاصيل التقرير</h3>
+      <button class="modal-close" onclick="closeReportViewModal()">✕</button>
+    </div>
+    <div id="report-view-content" class="report-view-content"></div>
+  </div>
+</div>
 
 </div><!-- /#page-dashboard -->
 
