@@ -108,6 +108,12 @@
       <a class="nav-link" data-section="financial"    onclick="navigateTo('financial')">
         <span class="nav-icon">💰</span> العهد المالية
       </a>
+      <a class="nav-link" data-section="handovers"    onclick="navigateTo('handovers')">
+        <span class="nav-icon">🔄</span> الاستلام والتسليم
+      </a>
+      <a class="nav-link" data-section="employees"    onclick="navigateTo('employees')">
+        <span class="nav-icon">👤</span> الموظفون
+      </a>
       <a class="nav-link" data-section="reports"      onclick="navigateTo('reports')">
         <span class="nav-icon">📈</span> التقارير
       </a>
@@ -140,7 +146,8 @@
         <span class="topbar-sys">TELAD FLEET</span>
         <span class="topbar-domain">fna.sa</span>
       </div>
-    <div class="topbar-right">
+      <div class="topbar-right">
+        <span id="live-dot" title="بث GPS مباشر" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#334155;transition:background .4s;margin-left:6px;flex-shrink:0;align-self:center"></span>
         <button class="theme-toggle" id="theme-toggle-btn" title="تبديل الثيم (Alt+T)" aria-label="تبديل الثيم">🌙</button>
         <button class="notif-btn" id="notif-btn" title="الإشعارات" aria-label="الإشعارات">
           🔔<span class="notif-badge" id="notif-count" style="display:none">0</span>
@@ -153,66 +160,127 @@
 
     <!-- ── لوحة التحكم ──────────────────────────────── -->
     <div id="sec-dashboard" class="section">
-      <h2 class="sec-title">لوحة التحكم</h2>
-      <div class="cards">
-        <div class="card">
-          <div class="card-icon">🚗</div>
-          <div class="card-label">المركبات</div>
-          <div class="card-value" id="stat-vehicles">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">🧑‍✈️</div>
-          <div class="card-label">السائقون</div>
-          <div class="card-value" id="stat-drivers">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">👤</div>
-          <div class="card-label">الموظفون</div>
-          <div class="card-value" id="stat-employees">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">🔧</div>
-          <div class="card-label">الصيانة المعلقة</div>
-          <div class="card-value" id="stat-maintenance">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">📅</div>
-          <div class="card-label">المواعيد المنتظرة</div>
-          <div class="card-value" id="stat-appointments">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">🏙️</div>
-          <div class="card-label">المدن</div>
-          <div class="card-value" id="stat-cities">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">🏗️</div>
-          <div class="card-label">المشاريع</div>
-          <div class="card-value" id="stat-projects">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">🗺️</div>
-          <div class="card-label">المناطق</div>
-          <div class="card-value" id="stat-regions">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">⚠️</div>
-          <div class="card-label">الحوادث</div>
-          <div class="card-value" id="stat-accidents">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">🚦</div>
-          <div class="card-label">مخالفات غير مسددة</div>
-          <div class="card-value" id="stat-violations">—</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">💰</div>
-          <div class="card-label">مصروفات الشهر (ر.س)</div>
-          <div class="card-value" id="stat-financial">—</div>
+      <div class="dash-header">
+        <h2 class="sec-title" style="margin:0">لوحة التحكم</h2>
+        <div class="dash-mode-tabs">
+          <button class="mode-tab active" data-mode="executive" onclick="setDashMode('executive')">
+            👑 تنفيذي
+          </button>
+          <button class="mode-tab" data-mode="operations" onclick="setDashMode('operations')">
+            ⚙️ تشغيلي
+          </button>
+          <button class="mode-tab" data-mode="ai" onclick="setDashMode('ai')">
+            🧠 ذكاء اصطناعي
+          </button>
         </div>
       </div>
-      <div class="map-placeholder">
-        🛰&nbsp; خريطة الأسطول المباشرة – TELAD Fleet Live Map
+
+      <!-- ── Executive Mode ── -->
+      <div id="dash-executive" class="dash-mode">
+        <div class="kpi-row">
+          <div class="kpi-card kpi-blue">
+            <div class="kpi-icon">🚗</div>
+            <div class="kpi-body">
+              <div class="kpi-label">إجمالي المركبات</div>
+              <div class="kpi-value" id="stat-vehicles">—</div>
+              <div class="kpi-sub" id="stat-vehicles-active">— نشطة</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-green">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-body">
+              <div class="kpi-label">الموظفون</div>
+              <div class="kpi-value" id="stat-employees">—</div>
+              <div class="kpi-sub" id="stat-drivers-sub">— سائق</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-orange">
+            <div class="kpi-icon">⚡</div>
+            <div class="kpi-body">
+              <div class="kpi-label">كفاءة الأسطول</div>
+              <div class="kpi-value" id="stat-efficiency">—%</div>
+              <div class="kpi-sub">نسبة التشغيل</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-red">
+            <div class="kpi-icon">🚨</div>
+            <div class="kpi-body">
+              <div class="kpi-label">تنبيهات حرجة</div>
+              <div class="kpi-value" id="stat-alerts-kpi">—</div>
+              <div class="kpi-sub">تحتاج إجراء</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-grid-2">
+          <div class="dash-widget">
+            <div class="widget-title">📊 ملخص العمليات</div>
+            <div class="widget-rows">
+              <div class="widget-row"><span>🔧 صيانة معلقة</span><span class="badge-num" id="stat-maintenance">—</span></div>
+              <div class="widget-row"><span>📅 مواعيد منتظرة</span><span class="badge-num" id="stat-appointments">—</span></div>
+              <div class="widget-row"><span>🚦 مخالفات غير مسددة</span><span class="badge-num" id="stat-violations">—</span></div>
+              <div class="widget-row"><span>⚠️ حوادث مفتوحة</span><span class="badge-num" id="stat-accidents">—</span></div>
+              <div class="widget-row"><span>🔄 استلام/تسليم اليوم</span><span class="badge-num" id="stat-handovers">—</span></div>
+            </div>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-title">💰 المالية</div>
+            <div class="widget-rows">
+              <div class="widget-row"><span>مصروفات الشهر</span><span class="badge-num" id="stat-financial">—</span></div>
+              <div class="widget-row"><span>🏙️ المدن المغطاة</span><span class="badge-num" id="stat-cities">—</span></div>
+              <div class="widget-row"><span>🗺️ المناطق</span><span class="badge-num" id="stat-regions">—</span></div>
+              <div class="widget-row"><span>🏗️ المشاريع</span><span class="badge-num" id="stat-projects">—</span></div>
+            </div>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-title">🛡️ التأمين والفحص</div>
+            <div class="widget-rows">
+              <div class="widget-row"><span>⚠️ تأمين على وشك الانتهاء</span><span class="badge-num badge-warn" id="stat-insurance-exp">—</span></div>
+              <div class="widget-row"><span>🔴 فحص منتهي الصلاحية</span><span class="badge-num badge-danger" id="stat-inspection-exp">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Operations Mode ── -->
+      <div id="dash-operations" class="dash-mode" style="display:none">
+        <div class="ops-grid">
+          <div class="ops-map-wrap">
+            <div class="widget-title">🗺️ الخريطة المباشرة</div>
+            <div id="ops-map" style="height:380px;border-radius:8px;overflow:hidden;margin-top:8px"></div>
+          </div>
+          <div class="ops-list">
+            <div class="widget-title">🚗 حالة المركبات</div>
+            <div id="ops-vehicles-list" style="max-height:380px;overflow-y:auto">
+              <div class="tbl-empty">جارٍ التحميل…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── AI Mode ── -->
+      <div id="dash-ai" class="dash-mode" style="display:none">
+        <div class="ai-dash-grid">
+          <div class="dash-widget">
+            <div class="widget-title">🧠 التحليل الذكي للأسطول</div>
+            <div id="ai-dash-insights">
+              <div class="tbl-empty">اضغط "تحليل الآن" للحصول على رؤى ذكية</div>
+            </div>
+            <button class="btn-primary" style="margin-top:12px" onclick="loadAIDashInsights()">🔍 تحليل الآن</button>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-title">💬 المساعد الذكي</div>
+            <div id="ai-dash-chat" style="max-height:280px;overflow-y:auto;margin-bottom:10px"></div>
+            <div style="display:flex;gap:8px">
+              <input id="ai-dash-input" placeholder="اسأل عن أسطولك…" style="flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--border-color);background:var(--surface);color:var(--text)">
+              <button class="btn-primary" onclick="aiDashChat()">إرسال</button>
+            </div>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-title">📈 مؤشرات الأداء</div>
+            <div id="ai-dash-kpis"><div class="tbl-empty">—</div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -255,11 +323,11 @@
         <thead>
           <tr>
             <th>المركبة</th><th>رقم اللوحة</th>
-            <th>المدينة</th><th>السائق</th><th>إجراءات</th>
+            <th>المدينة</th><th>السائق</th><th>الحالة</th><th>إجراءات</th>
           </tr>
         </thead>
         <tbody id="vehicles-tbody">
-          <tr><td colspan="5" class="tbl-empty">جارٍ التحميل…</td></tr>
+          <tr><td colspan="6" class="tbl-empty">جارٍ التحميل…</td></tr>
         </tbody>
       </table>
     </div>
@@ -713,11 +781,330 @@
       </table>
     </div><!-- /#sec-devRequests -->
 
+    <!-- ── الاستلام والتسليم ──────────────────────────── -->
+    <div id="sec-handovers" class="section" style="display:none">
+      <h2 class="sec-title">الاستلام والتسليم</h2>
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <select id="handover-filter-type" class="filter-select" onchange="loadHandovers()">
+          <option value="">جميع الأنواع</option>
+          <option value="استلام">استلام</option>
+          <option value="تسليم">تسليم</option>
+        </select>
+        <select id="handover-filter-condition" class="filter-select" onchange="loadHandovers()">
+          <option value="">جميع الحالات</option>
+          <option value="ممتاز">ممتاز</option>
+          <option value="جيد">جيد</option>
+          <option value="مقبول">مقبول</option>
+          <option value="يحتاج صيانة">يحتاج صيانة</option>
+        </select>
+        <button class="btn-primary" onclick="openHandoverForm()">➕ تسجيل استلام/تسليم</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>المركبة</th><th>النوع</th><th>الموظف</th><th>التاريخ</th><th>الكيلومتراج</th><th>الوقود</th><th>الحالة</th><th>تقرير AI</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="handovers-tbody">
+          <tr><td colspan="9" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── الموظفون ───────────────────────────────────── -->
+    <div id="sec-employees" class="section" style="display:none">
+      <h2 class="sec-title">الموظفون</h2>
+
+      <div id="employee-form-wrap">
+        <form id="form-employee" class="data-form" onsubmit="addEmployee(event)">
+          <h3>إضافة موظف جديد</h3>
+          <div class="form-row">
+            <div class="form-group"><label>الاسم</label><input id="emp-name" required></div>
+            <div class="form-group"><label>رقم الهوية</label><input id="emp-nationalId"></div>
+            <div class="form-group"><label>الهاتف</label><input id="emp-phone"></div>
+            <div class="form-group"><label>القسم</label><input id="emp-department"></div>
+            <div class="form-group"><label>المسمى الوظيفي</label><input id="emp-jobTitle"></div>
+            <div class="form-group"><label>رقم المركبة المرتبطة</label><input id="emp-vehicleId" placeholder="اختياري"></div>
+          </div>
+          <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>الاسم</th><th>رقم الهوية</th><th>الهاتف</th><th>القسم</th><th>المركبة</th><th>المخالفات</th><th>الحوادث</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="employees-tbody">
+          <tr><td colspan="8" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div><!-- /.main -->
 
 </div><!-- /#page-dashboard -->
 
 <div id="toast-container" style="position:fixed;bottom:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
+
+<!-- ═══════════════ VEHICLE PROFILE MODAL ═══════════════ -->
+<div id="modal-vehicle-profile" class="modal-overlay" style="display:none" onclick="closeModal('modal-vehicle-profile')">
+  <div class="modal-box modal-xl" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3 id="vp-title">ملف المركبة</h3>
+        <p id="vp-plate" style="color:var(--text-muted);margin:0;font-size:13px"></p>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="score-badge" id="vp-score-badge">—</div>
+        <button class="modal-close" onclick="closeModal('modal-vehicle-profile')">✕</button>
+      </div>
+    </div>
+
+    <div class="profile-tabs">
+      <button class="ptab active" data-tab="basic"       onclick="switchProfileTab('basic')">📋 أساسي</button>
+      <button class="ptab" data-tab="insurance"          onclick="switchProfileTab('insurance')">🛡️ التأمين</button>
+      <button class="ptab" data-tab="maintenance"        onclick="switchProfileTab('maintenance')">🔧 الصيانة</button>
+      <button class="ptab" data-tab="violations"         onclick="switchProfileTab('violations')">🚦 المخالفات</button>
+      <button class="ptab" data-tab="accidents"          onclick="switchProfileTab('accidents')">⚠️ الحوادث</button>
+      <button class="ptab" data-tab="handovers-vp"       onclick="switchProfileTab('handovers-vp')">🔄 التسليم</button>
+    </div>
+
+    <!-- Basic info -->
+    <div class="ptab-pane" id="ptab-basic">
+      <div class="profile-grid">
+        <div class="pinfo-block">
+          <div class="pinfo-label">نوع المركبة</div><div class="pinfo-val" id="vp-name">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">رقم اللوحة</div><div class="pinfo-val" id="vp-plate2">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">الماركة / الموديل</div><div class="pinfo-val" id="vp-brand">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">سنة الصنع</div><div class="pinfo-val" id="vp-year">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">المدينة</div><div class="pinfo-val" id="vp-city">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">السائق المعيّن</div><div class="pinfo-val" id="vp-driver">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">حالة المركبة</div><div class="pinfo-val" id="vp-status">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">مستوى الوقود</div><div class="pinfo-val" id="vp-fuel">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">الكيلومتراج</div><div class="pinfo-val" id="vp-km">—</div>
+        </div>
+        <div class="pinfo-block">
+          <div class="pinfo-label">الموقع الحالي</div><div class="pinfo-val" id="vp-location">—</div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="pinfo-label">📍 الخريطة</div>
+        <div id="vp-mini-map" style="height:200px;border-radius:8px;margin-top:6px;overflow:hidden;border:1px solid var(--border-color)"></div>
+      </div>
+    </div>
+
+    <!-- Insurance & Inspection -->
+    <div class="ptab-pane" id="ptab-insurance" style="display:none">
+      <div class="profile-grid">
+        <div class="pinfo-block pinfo-full">
+          <div class="pinfo-label">🛡️ بيانات التأمين</div>
+          <table class="mini-table" id="vp-insurance-table"><tbody><tr><td>جارٍ التحميل…</td></tr></tbody></table>
+        </div>
+        <div class="pinfo-block pinfo-full">
+          <div class="pinfo-label">🔍 الفحص الدوري</div>
+          <table class="mini-table" id="vp-inspection-table"><tbody><tr><td>جارٍ التحميل…</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Maintenance -->
+    <div class="ptab-pane" id="ptab-maintenance" style="display:none">
+      <table class="mini-table" id="vp-maint-table">
+        <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
+        <tbody><tr><td colspan="4">—</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Violations -->
+    <div class="ptab-pane" id="ptab-violations" style="display:none">
+      <table class="mini-table" id="vp-viol-table">
+        <thead><tr><th>التاريخ</th><th>النوع</th><th>الغرامة</th><th>الحالة</th></tr></thead>
+        <tbody><tr><td colspan="4">—</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Accidents -->
+    <div class="ptab-pane" id="ptab-accidents" style="display:none">
+      <table class="mini-table" id="vp-acc-table">
+        <thead><tr><th>التاريخ</th><th>الموقع</th><th>الضرر</th><th>الحالة</th></tr></thead>
+        <tbody><tr><td colspan="4">—</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Handover History -->
+    <div class="ptab-pane" id="ptab-handovers-vp" style="display:none">
+      <div style="margin-bottom:12px">
+        <button class="btn-primary" id="vp-handover-btn" onclick="">➕ تسجيل استلام/تسليم</button>
+      </div>
+      <table class="mini-table" id="vp-handover-table">
+        <thead><tr><th>التاريخ</th><th>النوع</th><th>الموظف</th><th>الكيلومتراج</th><th>الحالة</th><th>تقرير AI</th></tr></thead>
+        <tbody><tr><td colspan="6">—</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-vehicle-profile')">إغلاق</button>
+      <button class="btn-primary" id="vp-handover-footer-btn">🔄 تسجيل استلام/تسليم</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ HANDOVER FORM MODAL ════════════════ -->
+<div id="modal-handover" class="modal-overlay" style="display:none" onclick="closeModal('modal-handover')">
+  <div class="modal-box modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🔄 تسجيل استلام / تسليم مركبة</h3>
+      <button class="modal-close" onclick="closeModal('modal-handover')">✕</button>
+    </div>
+
+    <form id="form-handover" onsubmit="submitHandover(event)">
+      <input type="hidden" id="ho-vehicleId">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>المركبة</label>
+          <select id="ho-vehicleSelect" required onchange="document.getElementById('ho-vehicleId').value=this.value">
+            <option value="">— اختر مركبة —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>نوع العملية</label>
+          <select id="ho-type" required>
+            <option value="استلام">استلام من الموظف</option>
+            <option value="تسليم">تسليم لموظف</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>الموظف</label>
+          <select id="ho-employeeSelect">
+            <option value="">— اختر موظف —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>اسم الموظف (يدوي)</label>
+          <input id="ho-employeeName" placeholder="أو أدخل الاسم مباشرة">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>الكيلومتراج</label>
+          <input id="ho-km" type="number" min="0" placeholder="الكيلومتراج الحالي">
+        </div>
+        <div class="form-group">
+          <label>مستوى الوقود (%)</label>
+          <input id="ho-fuel" type="number" min="0" max="100" placeholder="0-100">
+        </div>
+        <div class="form-group">
+          <label>الحالة العامة</label>
+          <select id="ho-condition">
+            <option>ممتاز</option>
+            <option>جيد</option>
+            <option>مقبول</option>
+            <option>يحتاج صيانة</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>الشاهد / المحقق</label>
+          <input id="ho-witness" placeholder="اسم الشاهد">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>ملاحظات</label>
+        <textarea id="ho-notes" rows="3" style="width:100%;padding:8px;border:1px solid var(--border-color);background:var(--surface);color:var(--text);border-radius:6px;resize:vertical"></textarea>
+      </div>
+
+      <!-- Photo Upload Section -->
+      <div class="handover-photos">
+        <div class="widget-title">📸 صور المركبة (4 اتجاهات)</div>
+        <div class="photo-grid">
+          <div class="photo-slot" id="photo-front">
+            <label class="photo-label" for="photo-input-front">
+              <span class="photo-icon">📸</span>
+              <span>الواجهة الأمامية</span>
+            </label>
+            <input type="file" id="photo-input-front" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this,'photo-front')">
+          </div>
+          <div class="photo-slot" id="photo-back">
+            <label class="photo-label" for="photo-input-back">
+              <span class="photo-icon">📸</span>
+              <span>الواجهة الخلفية</span>
+            </label>
+            <input type="file" id="photo-input-back" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this,'photo-back')">
+          </div>
+          <div class="photo-slot" id="photo-left">
+            <label class="photo-label" for="photo-input-left">
+              <span class="photo-icon">📸</span>
+              <span>الجانب الأيسر</span>
+            </label>
+            <input type="file" id="photo-input-left" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this,'photo-left')">
+          </div>
+          <div class="photo-slot" id="photo-right">
+            <label class="photo-label" for="photo-input-right">
+              <span class="photo-icon">📸</span>
+              <span>الجانب الأيمن</span>
+            </label>
+            <input type="file" id="photo-input-right" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this,'photo-right')">
+          </div>
+        </div>
+      </div>
+
+      <div id="ho-ai-result" style="display:none;margin-top:12px;padding:12px;background:var(--surface);border:1px solid var(--border-color);border-radius:8px;border-right:4px solid var(--accent)">
+        <strong>🧠 تقرير الذكاء الاصطناعي</strong>
+        <div id="ho-ai-text" style="margin-top:8px;white-space:pre-line"></div>
+      </div>
+
+      <p id="handover-form-error" class="error-msg"></p>
+
+      <div class="modal-footer" style="border:none;padding:16px 0 0">
+        <button type="button" class="btn-secondary" onclick="closeModal('modal-handover')">إلغاء</button>
+        <button type="submit" class="btn-primary" id="btn-ho-submit">
+          <span id="btn-ho-icon">🚗</span> تأكيد وتحليل
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════ EMPLOYEE PROFILE MODAL ══════════════ -->
+<div id="modal-employee-profile" class="modal-overlay" style="display:none" onclick="closeModal('modal-employee-profile')">
+  <div class="modal-box modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="ep-name">ملف الموظف</h3>
+      <button class="modal-close" onclick="closeModal('modal-employee-profile')">✕</button>
+    </div>
+    <div class="profile-grid">
+      <div class="pinfo-block"><div class="pinfo-label">رقم الهوية</div><div class="pinfo-val" id="ep-id">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">الهاتف</div><div class="pinfo-val" id="ep-phone">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">القسم</div><div class="pinfo-val" id="ep-dept">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">المسمى الوظيفي</div><div class="pinfo-val" id="ep-title">—</div></div>
+      <div class="pinfo-block pinfo-full"><div class="pinfo-label">المركبة المرتبطة</div><div class="pinfo-val" id="ep-vehicle">—</div></div>
+    </div>
+    <h4 style="margin-top:16px">📋 سجل الاستلام والتسليم</h4>
+    <table class="mini-table" id="ep-handovers-table">
+      <thead><tr><th>التاريخ</th><th>المركبة</th><th>النوع</th><th>الحالة</th></tr></thead>
+      <tbody><tr><td colspan="4">جارٍ التحميل…</td></tr></tbody>
+    </table>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-employee-profile')">إغلاق</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════ SIDEBAR OVERLAY (mobile) ═══ -->
 <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>

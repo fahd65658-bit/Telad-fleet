@@ -6,6 +6,12 @@ const pathModule = require('path');
 let generateFleetAnswer;
 try { generateFleetAnswer = require('../lib/ai-chat').generateFleetAnswer; } catch { generateFleetAnswer = null; }
 
+let authModule;
+try { authModule = require('../lib/auth'); } catch { authModule = null; }
+
+let analyzeVehicleDamage, formatReportText;
+try { ({ analyzeVehicleDamage, formatReportText } = require('../lib/ai-vision')); } catch {}
+
 const BASE_DIR = pathModule.join(__dirname, '..');
 const IS_PROD = process.env.NODE_ENV === 'production';
 const DEFAULT_ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -137,6 +143,13 @@ function tokenFromRequest(req) {
 function currentUser(req) {
   const token = tokenFromRequest(req);
   if (!token) return null;
+  if (authModule) {
+    try {
+      const payload = authModule.verifyAccess(token);
+      const user = state.users.find(u => u.id === payload.id && u.active);
+      return user ? sanitizeUser(user) : null;
+    } catch { return null; }
+  }
   const user = state.users.find(e => e.token === token && e.active);
   return user ? sanitizeUser(user) : null;
 }
@@ -144,6 +157,12 @@ function currentUser(req) {
 function findRawUser(req) {
   const token = tokenFromRequest(req);
   if (!token) return null;
+  if (authModule) {
+    try {
+      const payload = authModule.verifyAccess(token);
+      return state.users.find(u => u.id === payload.id && u.active) || null;
+    } catch { return null; }
+  }
   return state.users.find(e => e.token === token && e.active) || null;
 }
 
@@ -346,7 +365,7 @@ module.exports = async (req, res) => {
     if (!user) return sendJson(res, 401, { error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
     const token = issueToken(user);
     addLog('تسجيل دخول', user.username);
-    return sendJson(res, 200, { token, user: sanitizeUser(user) });
+    return sendJson(res, 200, { token, accessToken: token, user: sanitizeUser(user) });
   }
 
   if (method === 'GET' && path === '/auth/me') {
@@ -359,6 +378,21 @@ module.exports = async (req, res) => {
     const raw = findRawUser(req);
     if (raw) { raw.token = null; addLog('تسجيل خروج', raw.username); }
     return sendJson(res, 200, { ok: true });
+  }
+
+  // Refresh token endpoint
+  if (method === 'POST' && path === '/auth/refresh') {
+    if (!authModule) return sendJson(res, 501, { error: 'Refresh tokens not available' });
+    const body = await readBody(req);
+    const rt = (req.headers.cookie || '').match(/telad_rt=([^;]+)/)?.[1] || body?.refreshToken;
+    if (!rt) return sendJson(res, 401, { error: 'لا يوجد Refresh Token' });
+    try {
+      const payload = authModule.verifyRefresh(rt);
+      const user = state.users.find(u => u.id === payload.id && u.active);
+      if (!user) return sendJson(res, 401, { error: 'المستخدم غير موجود' });
+      const tokens = authModule.issueTokens(user);
+      return sendJson(res, 200, { accessToken: tokens.accessToken, token: tokens.accessToken });
+    } catch { return sendJson(res, 401, { error: 'Refresh Token منتهٍ أو غير صالح' }); }
   }
 
   // ── USERS (admin) ─────────────────────────────────────────────────
@@ -816,6 +850,111 @@ module.exports = async (req, res) => {
       state.devRequests = state.devRequests.filter(x => x.id !== pm.id);
       return sendJson(res, 200, { ok: true });
     }
+  }
+
+  // ── HANDOVERS ──────────────────────────────────────────────────────
+  if (method === 'GET' && path === '/handovers') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    return sendJson(res, 200, state.handovers || []);
+  }
+  {
+    const pmv = matchPath('/vehicles/:id/handovers', path);
+    if (pmv && method === 'GET') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      return sendJson(res, 200, (state.handovers || []).filter(h => h.vehicleId === pmv.id));
+    }
+    const pmh = matchPath('/vehicles/:id/handover', path);
+    if (pmh && method === 'POST') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const v = state.vehicles.find(x => x.id === pmh.id);
+      if (!v) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const body = await readBody(req);
+      if (!state.handovers) state.handovers = [];
+      let aiReport = '';
+      if (analyzeVehicleDamage) {
+        try { aiReport = formatReportText(await analyzeVehicleDamage(body.images || [], v, body.type || 'استلام')); } catch {}
+      }
+      const h = {
+        id: uid(), vehicleId: v.id, vehiclePlate: v.plate, vehicleName: v.name,
+        type: body.type || 'استلام', employeeId: body.employeeId || '', employeeName: body.employeeName || cu.name,
+        date: nowIso(), km: Number(body.km) || 0, fuelLevel: Number(body.fuelLevel) || 0,
+        condition: body.condition || 'جيد', notes: body.notes || '', images: body.images || [],
+        aiReport, createdAt: nowIso(),
+      };
+      state.handovers.push(h);
+      addLog(`${h.type}: ${v.name} ← ${h.employeeName}`, cu.username);
+      return sendJson(res, 201, h);
+    }
+    const pmhd = matchPath('/handovers/:id', path);
+    if (pmhd && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin','supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      state.handovers = (state.handovers || []).filter(x => x.id !== pmhd.id);
+      return sendJson(res, 200, { ok: true });
+    }
+  }
+
+  // ── EMPLOYEES ─────────────────────────────────────────────────────
+  if (method === 'GET' && path === '/employees') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    return sendJson(res, 200, state.employees || []);
+  }
+  if (method === 'POST' && path === '/employees') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    if (!['admin','supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+    const body = await readBody(req);
+    if (!state.employees) state.employees = [];
+    const emp = { id: uid(), ...body, status: body.status || 'active', createdAt: nowIso() };
+    state.employees.push(emp);
+    addLog(`إضافة موظف: ${emp.name || emp.id}`, cu.username);
+    return sendJson(res, 201, emp);
+  }
+  {
+    const pme = matchPath('/employees/:id', path);
+    if (pme) {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const emp = (state.employees || []).find(e => e.id === pme.id);
+      if (!emp) return sendJson(res, 404, { error: 'الموظف غير موجود' });
+      if (method === 'GET') return sendJson(res, 200, emp);
+      if (method === 'PUT') {
+        if (!['admin','supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+        const body = await readBody(req);
+        Object.assign(emp, body);
+        return sendJson(res, 200, emp);
+      }
+      if (method === 'DELETE') {
+        if (cu.role !== 'admin') return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+        state.employees = state.employees.filter(e => e.id !== pme.id);
+        return sendJson(res, 200, { ok: true });
+      }
+    }
+  }
+
+  // ── GPS POSITIONS (REST, no WebSocket on Vercel) ───────────────────
+  if (method === 'GET' && path === '/gps/positions') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    const positions = state.vehicles.map(v => ({ vehicleId: v.id, plate: v.plate, name: v.name, lat: v.lat, lng: v.lng, status: v.status, t: v.gpsUpdatedAt || null }));
+    return sendJson(res, 200, positions);
+  }
+
+  if (method === 'POST' && path === '/gps/push') {
+    const body = await readBody(req);
+    // Simple API-key or token auth for GPS devices
+    const key = req.headers['x-gps-key'] || body.key;
+    if (key && key !== (process.env.GPS_API_KEY || key)) return sendJson(res, 401, { error: 'مفتاح GPS غير صالح' });
+    const { vehicleId, lat, lng } = body;
+    if (!vehicleId || lat == null || lng == null) return sendJson(res, 400, { error: 'vehicleId, lat, lng مطلوبة' });
+    const v = state.vehicles.find(x => x.id === vehicleId);
+    if (v) { v.lat = parseFloat(lat); v.lng = parseFloat(lng); v.gpsUpdatedAt = nowIso(); }
+    return sendJson(res, 200, { ok: true, vehicleId, lat, lng });
   }
 
   return sendJson(res, 404, { error: 'Route not found', path });

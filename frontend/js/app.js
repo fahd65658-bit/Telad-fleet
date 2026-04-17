@@ -25,9 +25,9 @@ const ROLE_NAMES = {
 
 // Sections accessible per role
 const ROLE_SECTIONS = {
-  admin:      ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users', 'devRequests'],
-  supervisor: ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'reports', 'ai'],
-  operator:   ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments'],
+  admin:      ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'handovers', 'employees', 'reports', 'ai', 'logs', 'users', 'devRequests'],
+  supervisor: ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'handovers', 'employees', 'reports', 'ai'],
+  operator:   ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'handovers'],
   viewer:     ['dashboard', 'map'],
 };
 
@@ -105,7 +105,9 @@ const CMD_ITEMS = [
   { icon: '⚠️', label: 'الحوادث',              section: 'accidents' },
   { icon: '🚦', label: 'المخالفات',             section: 'violations' },
   { icon: '💰', label: 'العهد المالية',          section: 'financial' },
-  { icon: '📈', label: 'التقارير',              section: 'reports' },
+  { icon: '�', label: 'الاستلام والتسليم',        section: 'handovers' },
+  { icon: '👤', label: 'الموظفون',                 section: 'employees' },
+  { icon: '�📈', label: 'التقارير',              section: 'reports' },
   { icon: '🧠', label: 'الذكاء الاصطناعي',       section: 'ai' },
   { icon: '📜', label: 'سجل العمليات',          section: 'logs' },
   { icon: '👥', label: 'إدارة المستخدمين',       section: 'users' },
@@ -426,6 +428,8 @@ function navigateTo(section) {
     users:        loadUsers,
     logs:         loadLogs,
     devRequests:  loadDevRequests,
+    handovers:    loadHandovers,
+    employees:    loadEmployees,
   };
   if (loaders[section]) loaders[section]();
 
@@ -462,17 +466,24 @@ async function loadDashboardStats() {
     if (!res.ok) return;
     const d = await res.json();
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
-    set('stat-vehicles',     d.vehicles);
-    set('stat-drivers',      d.drivers);
-    set('stat-employees',    d.employees);
-    set('stat-maintenance',  d.maintenance);
-    set('stat-appointments', d.appointments);
-    set('stat-cities',       d.cities);
-    set('stat-projects',     d.projects);
-    set('stat-regions',      d.regions);
-    set('stat-accidents',    d.accidents);
-    set('stat-violations',   d.violationsUnpaid);
-    set('stat-financial',    d.financialMonth);
+    set('stat-vehicles',        d.vehicles);
+    set('stat-vehicles-active', (d.activeVehicles || 0) + ' نشطة');
+    set('stat-drivers',         d.drivers);
+    set('stat-drivers-sub',     (d.drivers || 0) + ' سائق');
+    set('stat-employees',       d.employees);
+    set('stat-efficiency',      (d.efficiency || 0) + '%');
+    set('stat-alerts-kpi',      d.alerts);
+    set('stat-maintenance',     d.maintenance);
+    set('stat-appointments',    d.appointments);
+    set('stat-violations',      d.violationsUnpaid);
+    set('stat-accidents',       d.accidents);
+    set('stat-handovers',       d.handoversToday);
+    set('stat-financial',       (d.financialMonth || 0) + ' ر.س');
+    set('stat-cities',          d.cities);
+    set('stat-regions',         d.regions);
+    set('stat-projects',        d.projects);
+    set('stat-insurance-exp',   d.insuranceExpiring || 0);
+    set('stat-inspection-exp',  d.inspectionExpired || 0);
     _updateNotifBadge(d.alerts || 0);
   } catch { /* backend may not be running in dev */ }
 }
@@ -489,20 +500,24 @@ async function loadVehicles() {
     const vehicles = await res.json();
     const canEdit  = ['admin', 'supervisor'].includes(currentUser?.role);
     tbody.innerHTML = vehicles.length === 0
-      ? '<tr><td colspan="5" class="tbl-empty">لا توجد مركبات مضافة بعد</td></tr>'
+      ? '<tr><td colspan="6" class="tbl-empty">لا توجد مركبات مضافة بعد</td></tr>'
       : vehicles.map(v => `
           <tr>
             <td>${escHtml(v.name   || '—')}</td>
             <td>${escHtml(v.plate  || '—')}</td>
             <td>${escHtml(v.city   || '—')}</td>
             <td>${escHtml(v.driver || '—')}</td>
-            <td>${canEdit
-              ? `<button class="btn-sm btn-danger" data-action="delete-vehicle" data-id="${escHtml(String(v.id))}">حذف</button>`
-              : '—'
-            }</td>
+            <td><span class="status-pill ${v.status==='active'?'pill-green':v.status==='maintenance'?'pill-red':'pill-gray'}">${escHtml(v.status||'—')}</span></td>
+            <td style="display:flex;gap:6px">
+              <button class="btn-sm btn-info" onclick="openVehicleProfile('${escHtml(String(v.id))}')">📋 ملف</button>
+              ${canEdit
+                ? `<button class="btn-sm btn-danger" data-action="delete-vehicle" data-id="${escHtml(String(v.id))}">حذف</button>`
+                : ''
+              }
+            </td>
           </tr>`).join('');
   } catch {
-    tbody.innerHTML = '<tr><td colspan="5" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
   }
 }
 
@@ -1316,13 +1331,19 @@ function initMap() {
 }
 
 function _updateMapMarker(vehicleId, lat, lng, label) {
-  if (!fleetMap || !lat || !lng) return;
-  if (vehicleMarkers[vehicleId]) {
-    vehicleMarkers[vehicleId].setLatLng([lat, lng]);
-  } else {
-    vehicleMarkers[vehicleId] = L.marker([lat, lng])
-      .addTo(fleetMap)
-      .bindPopup(label || vehicleId);
+  if (lat && lng) {
+    // Main fleet map
+    if (fleetMap) {
+      if (vehicleMarkers[vehicleId]) {
+        vehicleMarkers[vehicleId].setLatLng([lat, lng]);
+      } else {
+        vehicleMarkers[vehicleId] = L.marker([lat, lng])
+          .addTo(fleetMap)
+          .bindPopup(label || vehicleId);
+      }
+    }
+    // Ops dashboard map
+    _updateOpsMapMarker(vehicleId, lat, lng);
   }
 }
 
@@ -1378,16 +1399,35 @@ function connectRealtimeSocket() {
       _applyDashboardData(d);
     });
 
+    // Live GPS → update ops map markers in real time
+    _rtSocket.on('gps:update', ({ vehicleId, lat, lng }) => {
+      _updateOpsMapMarker(vehicleId, lat, lng);
+      _pulseLiveIndicator();
+    });
+
     // Vehicle add/update events
-    _rtSocket.on('vehicles:new',    () => { if (_isActive('vehicles'))    loadVehicles();    });
-    _rtSocket.on('vehicles:update', () => { if (_isActive('vehicles'))    loadVehicles();    });
+    _rtSocket.on('vehicles:new',    (v) => { if (_isActive('vehicles'))    loadVehicles();    loadDashboardStats(); showToast(`🚗 مركبة جديدة: ${v&&v.name?v.name:''}`, 'success'); });
+    _rtSocket.on('vehicles:update', ()  => { if (_isActive('vehicles'))    loadVehicles();    });
 
     // Maintenance events
-    _rtSocket.on('maintenance:new',      () => { if (_isActive('maintenance')) loadMaintenance(); });
-    _rtSocket.on('maintenance:complete', () => { if (_isActive('maintenance')) loadMaintenance(); });
+    _rtSocket.on('maintenance:new',      (m) => { if (_isActive('maintenance')) loadMaintenance(); showToast(`🔧 صيانة جديدة: ${m&&m.type?m.type:''}`, 'info'); });
+    _rtSocket.on('maintenance:complete', ()  => { if (_isActive('maintenance')) loadMaintenance(); loadDashboardStats(); });
 
     // Appointments
-    _rtSocket.on('appointments:new', () => { if (_isActive('appointments')) loadAppointments(); });
+    _rtSocket.on('appointments:new', () => { if (_isActive('appointments')) loadAppointments(); loadDashboardStats(); });
+
+    // Handovers
+    _rtSocket.on('handover:new', (data) => {
+      if (_isActive('handovers')) loadHandovers();
+      loadDashboardStats();
+      showToast(`🔄 ${data&&data.handover?data.handover.type:'استلام/تسليم'} جديد`, 'success');
+    });
+
+    // Employees
+    _rtSocket.on('employees:new', () => { if (_isActive('employees')) loadEmployees(); loadDashboardStats(); });
+
+    // Server alert push
+    _rtSocket.on('alert', (msg) => { if (msg) showToast('🔔 ' + msg, 'info'); });
 
     _rtSocket.on('disconnect', () => {
       console.log('[RT] Socket disconnected');
@@ -1403,6 +1443,23 @@ function _isActive(section) {
   return !!document.querySelector(`.nav-link[data-section="${section}"].active`);
 }
 
+function _updateOpsMapMarker(vehicleId, lat, lng) {
+  if (!_opsMap) return;
+  if (!_opsMap._markers) _opsMap._markers = {};
+  if (_opsMap._markers[vehicleId]) {
+    _opsMap._markers[vehicleId].setLatLng([lat, lng]);
+  }
+}
+
+let _pulseTimer = null;
+function _pulseLiveIndicator() {
+  const dot = document.getElementById('live-dot');
+  if (!dot) return;
+  dot.style.background = '#22c55e';
+  clearTimeout(_pulseTimer);
+  _pulseTimer = setTimeout(() => { dot.style.background = ''; }, 1500);
+}
+
 function _updateNotifBadge(count) {
   const badge = document.getElementById('notif-count');
   if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
@@ -1410,9 +1467,18 @@ function _updateNotifBadge(count) {
 
 function _applyDashboardData(d) {
   const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
-  set('stat-vehicles',    d.vehicles);
-  set('stat-drivers',     d.drivers);
-  set('stat-maintenance', d.maintenance);
+  set('stat-vehicles',        d.vehicles);
+  set('stat-vehicles-active', (d.activeVehicles||0) + ' نشطة');
+  set('stat-drivers',         d.drivers);
+  set('stat-drivers-sub',     (d.drivers||0) + ' سائق');
+  set('stat-employees',       d.employees);
+  set('stat-efficiency',      (d.efficiency||Math.round((d.activeVehicles||0)/Math.max(d.vehicles||1,1)*100)) + '%');
+  set('stat-alerts-kpi',      d.alerts);
+  set('stat-maintenance',     d.maintenance);
+  set('stat-handovers',       d.handoversToday);
+  set('stat-insurance-exp',   d.insuranceExpiring||0);
+  set('stat-inspection-exp',  d.inspectionExpired||0);
+  if (d.alerts) _updateNotifBadge(d.alerts);
 }
 
 // Disconnect on logout
@@ -1541,3 +1607,514 @@ async function deleteDevRequest(id) {
   if (res.ok) { loadDevRequests(); showToast('تم حذف الطلب'); }
   else        { showToast('فشل حذف الطلب', 'error'); }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DASHBOARD MODES
+// ═══════════════════════════════════════════════════════════════════════════
+let _currentDashMode = 'executive';
+let _opsMap = null;
+
+function setDashMode(mode) {
+  _currentDashMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+  document.querySelectorAll('.dash-mode').forEach(m => m.style.display = 'none');
+  const el = document.getElementById('dash-' + mode);
+  if (el) el.style.display = '';
+
+  if (mode === 'operations') initOpsMap();
+  if (mode === 'ai') loadAIDashKPIs();
+}
+
+function initOpsMap() {
+  if (_opsMap) return;
+  const el = document.getElementById('ops-map');
+  if (!el || typeof L === 'undefined') return;
+  _opsMap = L.map('ops-map', { zoomControl: true }).setView([24.68, 46.72], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+  }).addTo(_opsMap);
+  loadOpsVehicles();
+}
+
+async function loadOpsVehicles() {
+  try {
+    const res = await apiFetch('/vehicles');
+    if (!res.ok) return;
+    const vehicles = await res.json();
+    const list = document.getElementById('ops-vehicles-list');
+    if (list) {
+      list.innerHTML = vehicles.map(v => `
+        <div class="ops-vehicle-item" onclick="openVehicleProfile('${escHtml(String(v.id))}')">
+          <div>
+            <div class="ops-vehicle-name">${escHtml(v.name || '—')}</div>
+            <div class="ops-vehicle-plate">${escHtml(v.plate || '—')} · ${escHtml(v.city || '—')}</div>
+          </div>
+          <div class="status-dot ${v.status === 'active' ? 'active' : v.status === 'maintenance' ? 'maintenance' : 'idle'}"></div>
+        </div>`).join('');
+    }
+    if (_opsMap) {
+      if (!_opsMap._markers) _opsMap._markers = {};
+      vehicles.forEach(v => {
+        if (!v.lat || !v.lng) return;
+        const color = v.status === 'active' ? '#22c55e' : v.status === 'maintenance' ? '#ef4444' : '#f59e0b';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>`,
+          iconSize: [12,12], iconAnchor: [6,6],
+        });
+        if (_opsMap._markers[v.id]) {
+          _opsMap._markers[v.id].setLatLng([v.lat, v.lng]);
+        } else {
+          _opsMap._markers[v.id] = L.marker([v.lat, v.lng], { icon }).addTo(_opsMap)
+            .bindPopup(`<strong>${v.name}</strong><br>${v.plate}<br>${v.status}`);
+        }
+      });
+      // Fit bounds to all markers if first load
+      const points = vehicles.filter(v=>v.lat&&v.lng).map(v=>[v.lat,v.lng]);
+      if (points.length > 1) _opsMap.fitBounds(points, { padding: [30,30] });
+    }
+  } catch { /**/ }
+}
+
+async function loadAIDashKPIs() {
+  const el = document.getElementById('ai-dash-kpis');
+  if (!el) return;
+  try {
+    const res = await apiFetch('/dashboard');
+    if (!res.ok) return;
+    const d = await res.json();
+    el.innerHTML = `
+      <div class="widget-rows">
+        <div class="widget-row"><span>كفاءة الأسطول</span><span class="badge-num">${d.efficiency || 0}%</span></div>
+        <div class="widget-row"><span>استلام/تسليم اليوم</span><span class="badge-num">${d.handoversToday || 0}</span></div>
+        <div class="widget-row"><span>تأمين منتهٍ قريباً</span><span class="badge-num badge-warn">${d.insuranceExpiring || 0}</span></div>
+        <div class="widget-row"><span>فحص منتهي الصلاحية</span><span class="badge-num badge-danger">${d.inspectionExpired || 0}</span></div>
+      </div>`;
+  } catch { el.innerHTML = '<div class="tbl-empty">—</div>'; }
+}
+
+async function loadAIDashInsights() {
+  const el = document.getElementById('ai-dash-insights');
+  if (!el) return;
+  el.innerHTML = '<div class="tbl-empty">جارٍ التحليل…</div>';
+  try {
+    const res = await apiFetch('/dashboard');
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    const insights = [];
+    if (d.insuranceExpiring > 0) insights.push({ icon: '⚠️', text: `${d.insuranceExpiring} مركبات تأمينها ينتهي قريباً – يُنصح بتجديده` });
+    if (d.inspectionExpired > 0) insights.push({ icon: '🔴', text: `${d.inspectionExpired} مركبات الفحص الدوري منتهٍ – يجب إجراء الفحص فوراً` });
+    if (d.maintenance > 0)       insights.push({ icon: '🔧', text: `${d.maintenance} طلب صيانة معلق يحتاج متابعة` });
+    if (d.violationsUnpaid > 0)  insights.push({ icon: '🚦', text: `${d.violationsUnpaid} مخالفة غير مسددة – قد تتراكم غرامات` });
+    if (d.accidents > 0)         insights.push({ icon: '⚠️', text: `${d.accidents} حادث مفتوح يحتاج إجراءات تأمينية` });
+    if (d.efficiency < 70)       insights.push({ icon: '📉', text: `كفاءة الأسطول منخفضة (${d.efficiency}%) – راجع المركبات المعطّلة` });
+    if (insights.length === 0)   insights.push({ icon: '✅', text: 'الأسطول يعمل بكفاءة عالية – لا توجد تنبيهات حرجة' });
+    el.innerHTML = insights.map(i => `
+      <div class="ai-insight-item">
+        <span class="ai-insight-icon">${i.icon}</span>
+        <span class="ai-insight-text">${escHtml(i.text)}</span>
+      </div>`).join('');
+  } catch { el.innerHTML = '<div class="tbl-empty">تعذّر التحليل</div>'; }
+}
+
+async function aiDashChat() {
+  const input = document.getElementById('ai-dash-input');
+  const chat  = document.getElementById('ai-dash-chat');
+  if (!input || !chat) return;
+  const msg = input.value.trim();
+  if (!msg) return;
+  chat.innerHTML += `<div style="text-align:left;margin-bottom:8px"><span style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:16px 16px 4px 16px;display:inline-block;font-size:13px">${escHtml(msg)}</span></div>`;
+  input.value = '';
+  chat.scrollTop = chat.scrollHeight;
+  try {
+    const res = await apiFetch('/ai/chat', { method: 'POST', body: JSON.stringify({ message: msg }) });
+    const data = await res.json();
+    const reply = data.reply || data.answer || '—';
+    chat.innerHTML += `<div style="margin-bottom:8px"><span style="background:var(--surface-2);padding:6px 12px;border-radius:16px 16px 16px 4px;display:inline-block;font-size:13px">${escHtml(reply)}</span></div>`;
+    chat.scrollTop = chat.scrollHeight;
+  } catch { /**/ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VEHICLE PROFILE MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+let _currentProfileVehicleId = null;
+
+async function openVehicleProfile(vehicleId) {
+  _currentProfileVehicleId = vehicleId;
+  document.getElementById('modal-vehicle-profile').style.display = 'flex';
+  document.getElementById('vp-title').textContent = 'جارٍ التحميل…';
+
+  try {
+    const res = await apiFetch('/vehicles/' + vehicleId + '/profile');
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    const v = d.vehicle;
+
+    // Header
+    document.getElementById('vp-title').textContent = v.name || '—';
+    document.getElementById('vp-plate').textContent  = v.plate || '';
+    const sb = document.getElementById('vp-score-badge');
+    if (sb && d.score) {
+      sb.textContent = d.score.score + ' – ' + d.score.label;
+      sb.style.background = d.score.color + '22';
+      sb.style.color = d.score.color;
+    }
+
+    // Basic
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+    setEl('vp-name', v.name); setEl('vp-plate2', v.plate); setEl('vp-brand', (v.brand||'') + ' ' + (v.model||''));
+    setEl('vp-year', v.year); setEl('vp-city', v.city); setEl('vp-driver', v.driver);
+    setEl('vp-status', v.status); setEl('vp-fuel', (v.fuelLevel||0) + '%');
+    setEl('vp-km', (v.km||0).toLocaleString('ar') + ' كم');
+    setEl('vp-location', v.location || (v.lat ? `${v.lat}, ${v.lng}` : '—'));
+
+    // Mini Map
+    const mapEl = document.getElementById('vp-mini-map');
+    if (mapEl && v.lat && v.lng && typeof L !== 'undefined') {
+      mapEl.innerHTML = '';
+      const mm = L.map('vp-mini-map', { zoomControl: false }).setView([v.lat, v.lng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mm);
+      L.marker([v.lat, v.lng]).addTo(mm).bindPopup(v.name || '').openPopup();
+    } else if (mapEl) {
+      mapEl.innerHTML = '<div class="tbl-empty" style="height:100%;display:flex;align-items:center;justify-content:center">لا توجد إحداثيات GPS</div>';
+    }
+
+    // Insurance
+    const ins = v.insurance || {};
+    document.querySelector('#vp-insurance-table tbody').innerHTML = `
+      <tr><td>شركة التأمين</td><td>${escHtml(ins.company||'—')}</td></tr>
+      <tr><td>رقم الوثيقة</td><td>${escHtml(ins.policyNo||'—')}</td></tr>
+      <tr><td>تاريخ الانتهاء</td><td>${escHtml(ins.expiry||'—')}</td></tr>
+      <tr><td>الحالة</td><td><span class="${ins.status==='active'?'pill-green':ins.status==='expiring'?'pill-orange':'pill-red'} status-pill">${escHtml(ins.status||'—')}</span></td></tr>`;
+
+    const insp = v.inspection || {};
+    document.querySelector('#vp-inspection-table tbody').innerHTML = `
+      <tr><td>حالة الفحص</td><td>${escHtml(insp.status||'—')}</td></tr>
+      <tr><td>تاريخ الانتهاء</td><td>${escHtml(insp.expiry||'—')}</td></tr>
+      <tr><td>مركز الفحص</td><td>${escHtml(insp.center||'—')}</td></tr>`;
+
+    // Maintenance
+    const maintTbody = document.querySelector('#vp-maint-table tbody');
+    maintTbody.innerHTML = (d.maintenance||[]).length === 0
+      ? '<tr><td colspan="4" class="tbl-empty">لا يوجد</td></tr>'
+      : (d.maintenance||[]).map(m=>`<tr><td>${escHtml(m.type||'—')}</td><td>${escHtml(m.scheduledDate||'—')}</td><td>${escHtml(String(m.cost||0))}</td><td>${escHtml(m.status||'—')}</td></tr>`).join('');
+
+    // Violations
+    const violTbody = document.querySelector('#vp-viol-table tbody');
+    violTbody.innerHTML = (d.violations||[]).length === 0
+      ? '<tr><td colspan="4" class="tbl-empty">لا يوجد</td></tr>'
+      : (d.violations||[]).map(vi=>`<tr><td>${escHtml(vi.date||'—')}</td><td>${escHtml(vi.type||'—')}</td><td>${escHtml(String(vi.fine||0))}</td><td>${escHtml(vi.status||'—')}</td></tr>`).join('');
+
+    // Accidents
+    const accTbody = document.querySelector('#vp-acc-table tbody');
+    accTbody.innerHTML = (d.accidents||[]).length === 0
+      ? '<tr><td colspan="4" class="tbl-empty">لا يوجد</td></tr>'
+      : (d.accidents||[]).map(a=>`<tr><td>${escHtml(a.date||'—')}</td><td>${escHtml(a.location||'—')}</td><td>${escHtml(String(a.damage||0))}</td><td>${escHtml(a.status||'—')}</td></tr>`).join('');
+
+    // Handovers tab
+    const hTbody = document.querySelector('#vp-handover-table tbody');
+    hTbody.innerHTML = (d.handovers||[]).length === 0
+      ? '<tr><td colspan="6" class="tbl-empty">لا يوجد</td></tr>'
+      : (d.handovers||[]).map(h=>`<tr><td>${escHtml((h.date||'—').slice(0,10))}</td><td>${escHtml(h.type||'—')}</td><td>${escHtml(h.employeeName||'—')}</td><td>${escHtml(String(h.km||0))}</td><td>${escHtml(h.condition||'—')}</td><td style="max-width:200px;white-space:pre-wrap">${escHtml(h.aiReport||'—')}</td></tr>`).join('');
+
+    // Wire handover buttons in modal
+    const onHandover = () => openHandoverForm(vehicleId);
+    document.getElementById('vp-handover-btn').onclick          = onHandover;
+    document.getElementById('vp-handover-footer-btn').onclick   = onHandover;
+
+  } catch {
+    document.getElementById('vp-title').textContent = 'تعذّر تحميل البيانات';
+  }
+}
+
+function switchProfileTab(tab) {
+  document.querySelectorAll('.ptab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
+  const pane = document.getElementById('ptab-' + tab);
+  if (pane) pane.style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HANDOVERS
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadHandovers() {
+  const tbody = document.getElementById('handovers-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="9" class="tbl-empty">جارٍ التحميل…</td></tr>';
+  try {
+    const typeFilter = document.getElementById('handover-filter-type')?.value || '';
+    const condFilter = document.getElementById('handover-filter-condition')?.value || '';
+    const res = await apiFetch('/handovers');
+    if (!res.ok) throw new Error();
+    let rows = await res.json();
+    if (typeFilter) rows = rows.filter(h => h.type === typeFilter);
+    if (condFilter) rows = rows.filter(h => h.condition === condFilter);
+    tbody.innerHTML = rows.length === 0
+      ? '<tr><td colspan="9" class="tbl-empty">لا توجد عمليات</td></tr>'
+      : rows.map(h => `
+          <tr>
+            <td>${escHtml(h.vehicleId||'—')}</td>
+            <td><span class="status-pill ${h.type==='استلام'?'pill-green':'pill-orange'}">${escHtml(h.type||'—')}</span></td>
+            <td>${escHtml(h.employeeName||'—')}</td>
+            <td>${escHtml((h.date||'—').slice(0,10))}</td>
+            <td>${escHtml(String(h.km||0))} كم</td>
+            <td>${escHtml(String(h.fuelLevel||0))}%</td>
+            <td>${escHtml(h.condition||'—')}</td>
+            <td style="max-width:180px;font-size:12px;white-space:pre-wrap">${escHtml(h.aiReport||'—')}</td>
+            <td>
+              <button class="btn-sm btn-danger" onclick="deleteHandover('${escHtml(String(h.id))}')">حذف</button>
+            </td>
+          </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="9" class="tbl-empty">تعذّر التحميل</td></tr>';
+  }
+}
+
+async function openHandoverForm(vehicleId = null) {
+  document.getElementById('modal-handover').style.display = 'flex';
+  document.getElementById('handover-form-error').textContent = '';
+  document.getElementById('ho-ai-result').style.display = 'none';
+
+  // Reset photo slots
+  ['front','back','left','right'].forEach(side => {
+    const slot = document.getElementById('photo-' + side);
+    if (!slot) return;
+    slot.classList.remove('has-photo');
+    const existing = slot.querySelector('.photo-preview');
+    if (existing) existing.remove();
+    slot.querySelector('.photo-label').style.display = 'flex';
+    const inp = document.getElementById('photo-input-' + side);
+    if (inp) inp.value = '';
+  });
+
+  // Populate vehicle select
+  const vSel = document.getElementById('ho-vehicleSelect');
+  try {
+    const res = await apiFetch('/vehicles');
+    const vehicles = res.ok ? await res.json() : [];
+    vSel.innerHTML = '<option value="">— اختر مركبة —</option>' +
+      vehicles.map(v => `<option value="${escHtml(String(v.id))}">${escHtml(v.name + ' – ' + v.plate)}</option>`).join('');
+    if (vehicleId) {
+      vSel.value = vehicleId;
+      document.getElementById('ho-vehicleId').value = vehicleId;
+    }
+  } catch { vSel.innerHTML = '<option value="">تعذّر التحميل</option>'; }
+
+  // Populate employee select
+  const eSel = document.getElementById('ho-employeeSelect');
+  try {
+    const r2 = await apiFetch('/employees');
+    const emps = r2.ok ? await r2.json() : [];
+    eSel.innerHTML = '<option value="">— اختر موظف —</option>' +
+      emps.map(e => `<option value="${escHtml(e.name)}">${escHtml(e.name)} – ${escHtml(e.department||'')}</option>`).join('');
+  } catch { /**/ }
+}
+
+function previewPhoto(input, slotId) {
+  const slot = document.getElementById(slotId);
+  if (!slot || !input.files.length) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    let img = slot.querySelector('.photo-preview');
+    if (!img) { img = document.createElement('img'); img.className = 'photo-preview'; slot.appendChild(img); }
+    img.src = e.target.result;
+    slot.querySelector('.photo-label').style.display = 'none';
+    slot.classList.add('has-photo');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitHandover(event) {
+  event.preventDefault();
+  const errEl  = document.getElementById('handover-form-error');
+  const btn    = document.getElementById('btn-ho-submit');
+  const icon   = document.getElementById('btn-ho-icon');
+  errEl.textContent = '';
+
+  const vehicleId   = document.getElementById('ho-vehicleId').value ||
+                      document.getElementById('ho-vehicleSelect').value;
+  const employeeSel = document.getElementById('ho-employeeSelect').value;
+  const employeeManual = document.getElementById('ho-employeeName').value.trim();
+
+  if (!vehicleId) { errEl.textContent = 'يرجى اختيار مركبة'; return; }
+
+  btn.disabled = true; if (icon) icon.textContent = '⏳';
+
+  // Collect base64 images
+  const images = [];
+  for (const side of ['front','back','left','right']) {
+    const inp = document.getElementById('photo-input-' + side);
+    if (inp?.files?.length) {
+      await new Promise(resolve => {
+        const fr = new FileReader();
+        fr.onload = e => { images.push({ side, data: e.target.result }); resolve(); };
+        fr.readAsDataURL(inp.files[0]);
+      });
+    }
+  }
+
+  const payload = {
+    type:         document.getElementById('ho-type').value,
+    employeeName: employeeSel || employeeManual || '—',
+    km:           Number(document.getElementById('ho-km').value) || 0,
+    fuelLevel:    Number(document.getElementById('ho-fuel').value) || 0,
+    condition:    document.getElementById('ho-condition').value,
+    witness:      document.getElementById('ho-witness').value,
+    notes:        document.getElementById('ho-notes').value,
+    images,
+  };
+
+  try {
+    const res = await apiFetch('/vehicles/' + vehicleId + '/handover', {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'فشل التسجيل'; btn.disabled = false; if (icon) icon.textContent = '🚗'; return; }
+
+    // Show AI Report
+    if (data.aiReport) {
+      document.getElementById('ho-ai-result').style.display = 'block';
+      document.getElementById('ho-ai-text').textContent = data.aiReport;
+    }
+    showToast('✅ تم تسجيل عملية الاستلام/التسليم');
+    loadHandovers();
+    setTimeout(() => closeModal('modal-handover'), 3000);
+  } catch {
+    errEl.textContent = 'تعذّر الاتصال بالخادم';
+  } finally {
+    btn.disabled = false; if (icon) icon.textContent = '🚗';
+  }
+}
+
+async function deleteHandover(id) {
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  const res = await apiFetch('/handovers/' + id, { method: 'DELETE' });
+  if (res.ok) { loadHandovers(); showToast('تم الحذف'); }
+  else        { showToast('فشل الحذف', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EMPLOYEES
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadEmployees() {
+  const tbody = document.getElementById('employees-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">جارٍ التحميل…</td></tr>';
+  try {
+    const [empRes, handRes, vehRes, accRes, violRes] = await Promise.all([
+      apiFetch('/employees'),
+      apiFetch('/handovers'),
+      apiFetch('/vehicles'),
+      apiFetch('/accidents'),
+      apiFetch('/violations'),
+    ]);
+    const employees = empRes.ok  ? await empRes.json()  : [];
+    const handovers = handRes.ok ? await handRes.json() : [];
+    const vehicles  = vehRes.ok  ? await vehRes.json()  : [];
+    const accidents = accRes.ok  ? await accRes.json()  : [];
+    const violations = violRes.ok ? await violRes.json() : [];
+
+    const empHandovers = (eid, ename) => handovers.filter(h => h.employeeId === eid || h.employeeName === ename).length;
+    const empAccidents = (eid) => accidents.filter(a => a.employeeId === eid).length;
+    const empViolations= (eid) => violations.filter(v => v.employeeId === eid).length;
+    const vehName = vId => { const v = vehicles.find(v => v.id === vId); return v ? (v.name + ' – ' + v.plate) : (vId||'—'); };
+
+    const canEdit = ['admin','supervisor'].includes(currentUser?.role);
+    tbody.innerHTML = employees.length === 0
+      ? '<tr><td colspan="8" class="tbl-empty">لا يوجد موظفون</td></tr>'
+      : employees.map(e => `
+          <tr>
+            <td>${escHtml(e.name||'—')}</td>
+            <td>${escHtml(e.nationalId||'—')}</td>
+            <td>${escHtml(e.phone||'—')}</td>
+            <td>${escHtml(e.department||'—')}</td>
+            <td>${escHtml(vehName(e.vehicleId))}</td>
+            <td><span class="badge-num">${empViolations(e.id)}</span></td>
+            <td><span class="badge-num">${empAccidents(e.id)}</span></td>
+            <td style="display:flex;gap:6px">
+              <button class="btn-sm btn-info" onclick="openEmployeeProfile('${escHtml(String(e.id))}')">👤 ملف</button>
+              ${canEdit ? `<button class="btn-sm btn-danger" onclick="deleteEmployee('${escHtml(String(e.id))}')">حذف</button>` : ''}
+            </td>
+          </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">تعذّر التحميل</td></tr>';
+  }
+}
+
+async function addEmployee(event) {
+  event.preventDefault();
+  const payload = {
+    name:       document.getElementById('emp-name').value.trim(),
+    nationalId: document.getElementById('emp-nationalId').value.trim(),
+    phone:      document.getElementById('emp-phone').value.trim(),
+    department: document.getElementById('emp-department').value.trim(),
+    jobTitle:   document.getElementById('emp-jobTitle').value.trim(),
+    vehicleId:  document.getElementById('emp-vehicleId').value.trim() || null,
+  };
+  const res = await apiFetch('/employees', { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok) {
+    ['emp-name','emp-nationalId','emp-phone','emp-department','emp-jobTitle','emp-vehicleId'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    loadEmployees(); showToast('تمت إضافة الموظف');
+  } else {
+    showToast('فشل الإضافة', 'error');
+  }
+}
+
+async function deleteEmployee(id) {
+  if (!confirm('هل تريد حذف هذا الموظف؟')) return;
+  const res = await apiFetch('/employees/' + id, { method: 'DELETE' });
+  if (res.ok) { loadEmployees(); showToast('تم الحذف'); }
+  else        { showToast('فشل الحذف', 'error'); }
+}
+
+async function openEmployeeProfile(empId) {
+  document.getElementById('modal-employee-profile').style.display = 'flex';
+  try {
+    const res = await apiFetch('/employees/' + empId);
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    const e = d.employee;
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+    setEl('ep-name',  e.name);
+    setEl('ep-id',    e.nationalId);
+    setEl('ep-phone', e.phone);
+    setEl('ep-dept',  e.department);
+    setEl('ep-title', e.jobTitle);
+    setEl('ep-vehicle', e.vehicleId ? (d.vehicle ? d.vehicle.name + ' – ' + d.vehicle.plate : e.vehicleId) : '—');
+
+    const handovers = d.handovers || [];
+    const hTbody = document.querySelector('#ep-handovers-table tbody');
+    hTbody.innerHTML = handovers.length === 0
+      ? '<tr><td colspan="4" class="tbl-empty">لا يوجد</td></tr>'
+      : handovers.map(h => `
+          <tr>
+            <td>${escHtml((h.date||'—').slice(0,10))}</td>
+            <td>${escHtml(h.vehicleId||'—')}</td>
+            <td>${escHtml(h.type||'—')}</td>
+            <td>${escHtml(h.condition||'—')}</td>
+          </tr>`).join('');
+  } catch {
+    document.getElementById('ep-name').textContent = 'تعذّر التحميل';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+// Close modals on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['modal-vehicle-profile','modal-handover','modal-employee-profile'].forEach(closeModal);
+  }
+});

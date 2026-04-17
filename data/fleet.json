@@ -5,30 +5,30 @@
       "name": "مدير النظام",
       "username": "admin",
       "email": "admin@fna.sa",
-      "passwordHash": "$2a$10$dqCX37n2kSm.bAlp5GjONOuD6DvmX3ptzjw0yhrTEi7Waj/csVjKi",
+      "passwordHash": "$2a$10$vAVS55rEi8DD7FlXU8UxCOKD/qdOsImpNUXUiyLH8Jc0g2AEIxURi",
       "role": "admin",
       "active": true,
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "u2",
       "name": "أحمد المشرف",
       "username": "supervisor1",
       "email": "sup@fna.sa",
-      "passwordHash": "$2a$10$iOy/gx7Y56EFa1g0Del.kOcnrFQj6X3XaV/NhMzQPX9hQXAaizgOq",
+      "passwordHash": "$2a$10$yLsx3159unpj5alCFxu2ZeYNfMdfxhtdnjGHfLXO29uhpkUNFBNHu",
       "role": "supervisor",
       "active": true,
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "u3",
       "name": "سالم المشغّل",
       "username": "operator1",
       "email": "op@fna.sa",
-      "passwordHash": "$2a$10$UIg4e56JBygDD7b6AYffr.SOBsHFtjmCZ99DB0HaR8a1z5eSq3KOa",
+      "passwordHash": "$2a$10$e2N9vy9flJhg/xiRGuNPlevyS56447WKnTy5F91sOM9WEd4SoM74u",
       "role": "operator",
       "active": true,
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
   "vehicles": [
@@ -37,23 +37,40 @@
       "name": "تويوتا لاندكروزر",
       "plate": "أ ب ج 1234",
       "city": "الرياض",
+      "driverId": "d1",
       "driver": "أحمد سالم",
       "status": "active",
       "location": "الرياض",
-      "lat": 24.708983,
-      "lng": 46.684068,
-      "km": 45200,
-      "fuelLevel": 78,
+      "lat": 24.738317,
+      "lng": 46.691401,
+      "km": 46000,
+      "fuelLevel": 70,
       "year": 2022,
       "color": "أبيض",
-      "createdAt": "2026-04-17T15:39:49.551Z",
-      "lastGps": "2026-04-17T15:49:42.502Z"
+      "brand": "Toyota",
+      "model": "Land Cruiser",
+      "insurance": {
+        "company": "الراجحي تكافل",
+        "policyNo": "INS-001",
+        "expiry": "2026-12-01",
+        "status": "active"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2026-08-15",
+        "center": "مركز فحص الرياض"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z",
+      "lastGps": "2026-04-17T18:16:58.518Z",
+      "updatedAt": "2026-04-17T17:14:11.114Z"
     },
     {
       "id": "v2",
       "name": "فورد F-150",
       "plate": "د هـ و 5678",
       "city": "جدة",
+      "driverId": "d2",
       "driver": "سارة علي",
       "status": "charging",
       "location": "جدة",
@@ -63,13 +80,28 @@
       "fuelLevel": 45,
       "year": 2023,
       "color": "أسود",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "brand": "Ford",
+      "model": "F-150",
+      "insurance": {
+        "company": "التعاونية للتأمين",
+        "policyNo": "INS-002",
+        "expiry": "2026-09-20",
+        "status": "active"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2026-11-01",
+        "center": "مركز فحص جدة"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "v3",
       "name": "شيفروليه سيلفرادو",
       "plate": "ز ح ط 9012",
       "city": "الدمام",
+      "driverId": "d3",
       "driver": "خالد حسن",
       "status": "maintenance",
       "location": "الدمام",
@@ -79,47 +111,92 @@
       "fuelLevel": 20,
       "year": 2021,
       "color": "رمادي",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "brand": "Chevrolet",
+      "model": "Silverado",
+      "insurance": {
+        "company": "ملاذ للتأمين",
+        "policyNo": "INS-003",
+        "expiry": "2026-07-10",
+        "status": "expiring"
+      },
+      "inspection": {
+        "status": "منتهي",
+        "expiry": "2026-03-01",
+        "center": "مركز فحص الدمام"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "v4",
       "name": "تويوتا هايلوكس",
       "plate": "ي ك ل 3456",
       "city": "المدينة",
+      "driverId": "d4",
       "driver": "منى فهد",
       "status": "active",
       "location": "المدينة",
-      "lat": 24.525806,
-      "lng": 39.569161,
+      "lat": 24.519143,
+      "lng": 39.567517,
       "km": 28900,
       "fuelLevel": 92,
       "year": 2023,
       "color": "أبيض",
-      "createdAt": "2026-04-17T15:39:49.551Z",
-      "lastGps": "2026-04-17T15:48:32.476Z"
+      "brand": "Toyota",
+      "model": "Hilux",
+      "insurance": {
+        "company": "بوبا العربية",
+        "policyNo": "INS-004",
+        "expiry": "2027-01-15",
+        "status": "active"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2026-12-20",
+        "center": "مركز فحص المدينة"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z",
+      "lastGps": "2026-04-17T18:17:08.522Z"
     },
     {
       "id": "v5",
       "name": "نيسان باترول",
       "plate": "م ن س 7890",
       "city": "مكة",
+      "driverId": "d5",
       "driver": "علي ناصر",
       "status": "active",
       "location": "مكة",
-      "lat": 21.385134,
-      "lng": 39.856792,
+      "lat": 21.403778,
+      "lng": 39.812598,
       "km": 19400,
       "fuelLevel": 65,
       "year": 2024,
       "color": "أزرق",
-      "createdAt": "2026-04-17T15:39:49.551Z",
-      "lastGps": "2026-04-17T15:49:22.495Z"
+      "brand": "Nissan",
+      "model": "Patrol",
+      "insurance": {
+        "company": "الراجحي تكافل",
+        "policyNo": "INS-005",
+        "expiry": "2027-03-01",
+        "status": "active"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2027-01-10",
+        "center": "مركز فحص مكة"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z",
+      "lastGps": "2026-04-17T18:16:38.504Z"
     },
     {
       "id": "v6",
       "name": "مرسيدس سبرينتر",
       "plate": "ع غ ف 1122",
       "city": "أبها",
+      "driverId": "d6",
       "driver": "هند راشد",
       "status": "charging",
       "location": "أبها",
@@ -129,41 +206,85 @@
       "fuelLevel": 30,
       "year": 2022,
       "color": "أبيض",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "brand": "Mercedes",
+      "model": "Sprinter",
+      "insurance": {
+        "company": "بوبا العربية",
+        "policyNo": "INS-006",
+        "expiry": "2026-06-30",
+        "status": "expiring"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2026-09-05",
+        "center": "مركز فحص أبها"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "v7",
       "name": "كيا سورينتو",
       "plate": "ق ر س 3311",
       "city": "تبوك",
+      "driverId": null,
       "driver": "فيصل عمر",
       "status": "active",
       "location": "تبوك",
-      "lat": 28.392962,
-      "lng": 36.567268,
+      "lat": 28.389,
+      "lng": 36.547954,
       "km": 12700,
       "fuelLevel": 88,
       "year": 2024,
       "color": "أحمر",
-      "createdAt": "2026-04-17T15:39:49.551Z",
-      "lastGps": "2026-04-17T15:49:52.509Z"
+      "brand": "Kia",
+      "model": "Sorento",
+      "insurance": {
+        "company": "التعاونية للتأمين",
+        "policyNo": "INS-007",
+        "expiry": "2027-02-20",
+        "status": "active"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2027-01-01",
+        "center": "مركز فحص تبوك"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z",
+      "lastGps": "2026-04-17T18:17:13.524Z"
     },
     {
       "id": "v8",
       "name": "هيوندا توسون",
       "plate": "ت ث ج 7744",
       "city": "القصيم",
+      "driverId": null,
       "driver": "نورة سعد",
       "status": "active",
       "location": "القصيم",
-      "lat": 26.326039,
-      "lng": 43.976614,
+      "lat": 26.313486,
+      "lng": 43.990604,
       "km": 8900,
       "fuelLevel": 71,
       "year": 2025,
       "color": "أخضر",
-      "createdAt": "2026-04-17T15:39:49.551Z",
-      "lastGps": "2026-04-17T15:49:47.506Z"
+      "brand": "Hyundai",
+      "model": "Tucson",
+      "insurance": {
+        "company": "ملاذ للتأمين",
+        "policyNo": "INS-008",
+        "expiry": "2027-04-01",
+        "status": "active"
+      },
+      "inspection": {
+        "status": "ساري",
+        "expiry": "2027-03-15",
+        "center": "مركز فحص القصيم"
+      },
+      "documents": [],
+      "createdAt": "2026-04-17T17:05:23.306Z",
+      "lastGps": "2026-04-17T18:16:53.514Z"
     }
   ],
   "drivers": [
@@ -176,7 +297,7 @@
       "nationalId": "1012345678",
       "status": "active",
       "vehicleId": "v1",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "d2",
@@ -187,7 +308,7 @@
       "nationalId": "1098765432",
       "status": "active",
       "vehicleId": "v2",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "d3",
@@ -198,7 +319,7 @@
       "nationalId": "1056781234",
       "status": "active",
       "vehicleId": "v3",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "d4",
@@ -209,7 +330,7 @@
       "nationalId": "1023344556",
       "status": "active",
       "vehicleId": "v4",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "d5",
@@ -220,7 +341,7 @@
       "nationalId": "1077889900",
       "status": "active",
       "vehicleId": "v5",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "d6",
@@ -231,7 +352,7 @@
       "nationalId": "1033445566",
       "status": "active",
       "vehicleId": "v6",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
   "maintenance": [
@@ -243,7 +364,7 @@
       "scheduledDate": "2026-04-20",
       "cost": 350,
       "status": "pending",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "m2",
@@ -253,7 +374,7 @@
       "scheduledDate": "2026-04-22",
       "cost": 200,
       "status": "pending",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "m3",
@@ -264,7 +385,7 @@
       "cost": 180,
       "status": "completed",
       "completedAt": "2026-03-10",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "m4",
@@ -274,7 +395,7 @@
       "scheduledDate": "2026-04-28",
       "cost": 1200,
       "status": "pending",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
   "appointments": [
@@ -285,7 +406,7 @@
       "scheduledAt": "2026-04-25T09:00",
       "notes": "تجديد استمارة المرور",
       "status": "pending",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "a2",
@@ -294,7 +415,7 @@
       "scheduledAt": "2026-04-28T11:00",
       "notes": "",
       "status": "confirmed",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "a3",
@@ -303,7 +424,7 @@
       "scheduledAt": "2026-05-05T10:00",
       "notes": "إحضار الوثائق الأصلية",
       "status": "pending",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
   "regions": [
@@ -311,31 +432,31 @@
       "id": "r1",
       "name": "منطقة الرياض",
       "description": "العاصمة والمناطق المحيطة",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "r2",
       "name": "منطقة جدة",
       "description": "ميناء جدة والمناطق الغربية",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "r3",
       "name": "المنطقة الشرقية",
       "description": "الدمام والخبر والظهران",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "r4",
       "name": "منطقة مكة",
       "description": "مكة المكرمة والطائف وجدة",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "r5",
       "name": "منطقة المدينة",
       "description": "المدينة المنورة والمناطق المحيطة",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
   "accidents": [],
@@ -349,7 +470,7 @@
       "vehicleId": null,
       "date": "2026-03-31",
       "receiptNo": "REC-001",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "f2",
@@ -359,7 +480,7 @@
       "vehicleId": "v1",
       "date": "2026-03-15",
       "receiptNo": "REC-002",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "f3",
@@ -369,7 +490,7 @@
       "vehicleId": null,
       "date": "2026-03-31",
       "receiptNo": "REC-003",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "f4",
@@ -379,122 +500,197 @@
       "vehicleId": null,
       "date": "2026-04-15",
       "receiptNo": "REC-004",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
-  "reports": [
-    {
-      "type": "vehicles",
-      "from": "2026-01-01",
-      "to": "2026-12-31",
-      "data": {
-        "total": 8,
-        "byStatus": {
-          "active": 5,
-          "charging": 2,
-          "maintenance": 1
-        },
-        "byCity": {
-          "الرياض": 1,
-          "جدة": 1,
-          "الدمام": 1,
-          "المدينة": 1,
-          "مكة": 1,
-          "أبها": 1,
-          "تبوك": 1,
-          "القصيم": 1
-        }
-      },
-      "generatedBy": "admin",
-      "id": "mo331mtmdg3c",
-      "createdAt": "2026-04-17T15:48:19.786Z"
-    },
-    {
-      "type": "financial",
-      "from": "2026-01-01",
-      "to": "2026-12-31",
-      "data": {
-        "total": 28650,
-        "byType": {
-          "fuel": 2,
-          "maintenance": 1,
-          "salary": 1
-        }
-      },
-      "generatedBy": "admin",
-      "id": "mo331mtt3dj4",
-      "createdAt": "2026-04-17T15:48:19.793Z"
-    },
-    {
-      "type": "maintenance",
-      "data": {
-        "total": 4,
-        "byStatus": {
-          "pending": 3,
-          "completed": 1
-        },
-        "totalCost": 1930
-      },
-      "generatedBy": "admin",
-      "id": "mo331mty93ah",
-      "createdAt": "2026-04-17T15:48:19.798Z"
-    }
-  ],
+  "reports": [],
   "devRequests": [],
+  "handovers": [
+    {
+      "id": "h1",
+      "vehicleId": "v1",
+      "type": "تسليم",
+      "employeeId": "e1",
+      "employeeName": "أحمد سالم",
+      "date": "2026-04-17T17:05:23.306Z",
+      "km": 45000,
+      "fuelLevel": 80,
+      "condition": "جيد",
+      "notes": "لا ملاحظات",
+      "aiReport": "لم يتم اكتشاف أضرار جديدة",
+      "images": [],
+      "signedBy": "أحمد سالم",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "h2",
+      "vehicleId": "v1",
+      "type": "استلام",
+      "employeeId": "e1",
+      "employeeName": "أحمد سالم",
+      "date": "2026-04-17T17:05:23.306Z",
+      "km": 45200,
+      "fuelLevel": 78,
+      "condition": "جيد",
+      "notes": "",
+      "aiReport": "لم يتم اكتشاف أضرار جديدة",
+      "images": [],
+      "signedBy": "أحمد سالم",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "vehicleId": "v1",
+      "vehiclePlate": "أ ب ج 1234",
+      "vehicleName": "تويوتا لاندكروزر",
+      "type": "تسليم",
+      "employeeName": "تست موظف",
+      "date": "2026-04-17T17:13:52.735Z",
+      "km": 46000,
+      "fuelLevel": 70,
+      "condition": "جيد",
+      "notes": "اختبار",
+      "images": [],
+      "aiReport": "✅ لم يتم اكتشاف أضرار جديدة عند تسليم. حالة المركبة جيدة.",
+      "comparison": {
+        "changed": false,
+        "message": "لا توجد تغييرات في حالة المركبة"
+      },
+      "signedBy": "تست موظف",
+      "id": "mo363nfj5og1",
+      "createdAt": "2026-04-17T17:13:52.735Z"
+    },
+    {
+      "vehicleId": "v1",
+      "vehiclePlate": "أ ب ج 1234",
+      "vehicleName": "تويوتا لاندكروزر",
+      "type": "تسليم",
+      "employeeName": "تست",
+      "date": "2026-04-17T17:14:11.114Z",
+      "km": 46000,
+      "fuelLevel": 70,
+      "condition": "جيد",
+      "notes": "",
+      "images": [],
+      "aiReport": "✅ لم يتم اكتشاف أضرار جديدة عند تسليم. حالة المركبة جيدة.",
+      "comparison": {
+        "changed": false,
+        "message": "لا توجد تغييرات في حالة المركبة"
+      },
+      "signedBy": "تست",
+      "id": "mo3641m25nb9",
+      "createdAt": "2026-04-17T17:14:11.114Z"
+    }
+  ],
+  "employees": [
+    {
+      "id": "e1",
+      "name": "أحمد سالم",
+      "nationalId": "1012345678",
+      "phone": "0501234567",
+      "department": "العمليات",
+      "jobTitle": "سائق",
+      "email": "ahmed@fna.sa",
+      "status": "active",
+      "vehicleId": "v1",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "e2",
+      "name": "سارة علي",
+      "nationalId": "1098765432",
+      "phone": "0509876543",
+      "department": "اللوجستيات",
+      "jobTitle": "سائقة",
+      "email": "sara@fna.sa",
+      "status": "active",
+      "vehicleId": "v2",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "e3",
+      "name": "خالد حسن",
+      "nationalId": "1056781234",
+      "phone": "0505551234",
+      "department": "الصيانة",
+      "jobTitle": "فني",
+      "email": "khalid@fna.sa",
+      "status": "active",
+      "vehicleId": "v3",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "e4",
+      "name": "منى فهد",
+      "nationalId": "1023344556",
+      "phone": "0502223344",
+      "department": "العمليات",
+      "jobTitle": "سائقة",
+      "email": "mona@fna.sa",
+      "status": "active",
+      "vehicleId": "v4",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "e5",
+      "name": "علي ناصر",
+      "nationalId": "1077889900",
+      "phone": "0507778899",
+      "department": "الإدارة",
+      "jobTitle": "مشرف عمليات",
+      "email": "ali@fna.sa",
+      "status": "active",
+      "vehicleId": "v5",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "e6",
+      "name": "هند راشد",
+      "nationalId": "1033445566",
+      "phone": "0503334455",
+      "department": "اللوجستيات",
+      "jobTitle": "سائقة",
+      "email": "hind@fna.sa",
+      "status": "active",
+      "vehicleId": "v6",
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    }
+  ],
   "alerts": [
     {
-      "id": "mo331mjg6lju",
-      "message": "مخالفة جديدة: سرعة",
-      "type": "warning",
-      "createdAt": "2026-04-17T15:48:19.420Z"
-    },
-    {
-      "id": "mo331mj8nxvr",
-      "message": "حادث جديد للمركبة: v1",
-      "type": "danger",
-      "createdAt": "2026-04-17T15:48:19.412Z"
-    },
-    {
-      "id": "mo331mi8eqvk",
-      "message": "اكتملت الصيانة: فحص شامل",
-      "type": "success",
-      "createdAt": "2026-04-17T15:48:19.376Z"
-    },
-    {
-      "id": "mo331mhzma9r",
-      "message": "طلب صيانة: فحص شامل",
+      "id": "mo3641m2er10",
+      "message": "تسليم: تويوتا لاندكروزر ← تست",
       "type": "info",
-      "createdAt": "2026-04-17T15:48:19.367Z"
+      "createdAt": "2026-04-17T17:14:11.114Z"
     },
     {
-      "id": "mo331mhtul1q",
-      "message": "تم إضافة سائق: سائق فحص",
-      "type": "success",
-      "createdAt": "2026-04-17T15:48:19.361Z"
-    },
-    {
-      "id": "mo331mhfs1yc",
-      "message": "تم إضافة مركبة: تيست فحص",
-      "type": "success",
-      "createdAt": "2026-04-17T15:48:19.347Z"
+      "id": "mo363nfj2z1m",
+      "message": "تسليم: تويوتا لاندكروزر ← تست موظف",
+      "type": "info",
+      "createdAt": "2026-04-17T17:13:52.735Z"
     },
     {
       "id": "al1",
       "message": "المركبة TLD-204 بحاجة إلى فحص دوري خلال 24 ساعة.",
       "type": "warning",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "al2",
       "message": "تم اكتمال صيانة المركبة مرسيدس سبرينتر بنجاح.",
       "type": "success",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
     },
     {
       "id": "al3",
       "message": "تنبيه: مستوى الوقود في شيفروليه سيلفرادو منخفض (20%).",
       "type": "danger",
-      "createdAt": "2026-04-17T15:39:49.551Z"
+      "createdAt": "2026-04-17T17:05:23.306Z"
+    },
+    {
+      "id": "al4",
+      "message": "موعد تجديد رخصة المركبة نيسان باترول خلال 30 يوماً.",
+      "type": "warning",
+      "createdAt": "2026-04-17T17:05:23.306Z"
     }
   ],
   "logs": [
@@ -503,1237 +699,2861 @@
       "action": "تهيئة النظام وتحميل البيانات",
       "user": "system",
       "ip": "127.0.0.1",
-      "time": "2026-04-17T15:39:49.551Z"
+      "time": "2026-04-17T17:05:23.306Z"
     },
     {
-      "id": "mo32rpyze26a",
+      "id": "mo35trcw7slr",
       "action": "GET /health",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:40:37.307Z"
+      "time": "2026-04-17T17:06:11.264Z"
     },
     {
-      "id": "mo32rpzp5d5r",
-      "action": "GET /version",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:40:37.333Z"
-    },
-    {
-      "id": "mo32rq189m4z",
+      "id": "mo35tzosf162",
       "action": "POST /auth/login",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:40:37.388Z"
+      "time": "2026-04-17T17:06:22.060Z"
     },
     {
-      "id": "mo32rq4h7v53",
+      "id": "mo35tzrmy5cx",
       "action": "تسجيل دخول: admin",
       "user": "admin",
       "ip": "::1",
-      "time": "2026-04-17T15:40:37.505Z"
+      "time": "2026-04-17T17:06:22.162Z"
     },
     {
-      "id": "mo32rq5c4ct8",
-      "action": "GET /dashboard",
+      "id": "mo35tzsap6vs",
+      "action": "GET /employees",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:40:37.536Z"
+      "time": "2026-04-17T17:06:22.186Z"
     },
     {
-      "id": "mo32rqjkq0yb",
-      "action": "GET /vehicles",
+      "id": "mo35tzsw927x",
+      "action": "GET /handovers",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:40:38.048Z"
+      "time": "2026-04-17T17:06:22.208Z"
     },
     {
-      "id": "mo32rqklr2sh",
-      "action": "GET /alerts",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:40:38.085Z"
-    },
-    {
-      "id": "mo32sxt4g4j5",
+      "id": "mo35u8mmabdj",
       "action": "POST /auth/login",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:41:34.120Z"
+      "time": "2026-04-17T17:06:33.646Z"
     },
     {
-      "id": "mo32sxvpjeob",
+      "id": "mo35u8ranlzp",
       "action": "تسجيل دخول: admin",
       "user": "admin",
       "ip": "::1",
-      "time": "2026-04-17T15:41:34.213Z"
+      "time": "2026-04-17T17:06:33.814Z"
     },
     {
-      "id": "mo32sxwfqpfs",
-      "action": "GET /ai/insights",
+      "id": "mo35u8s2iq7b",
+      "action": "GET /vehicles/v1/profile",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:41:34.239Z"
+      "time": "2026-04-17T17:06:33.842Z"
     },
     {
-      "id": "mo32sxx8ui77",
-      "action": "GET /reports/analytics",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:41:34.268Z"
-    },
-    {
-      "id": "mo32zi74j19x",
-      "action": "POST /auth/login",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:40.480Z"
-    },
-    {
-      "id": "mo32zi9w7nk1",
-      "action": "تسجيل دخول: admin",
-      "user": "admin",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:40.580Z"
-    },
-    {
-      "id": "mo32zip0fyra",
+      "id": "mo35x9ctdrm3",
       "action": "GET /health",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.124Z"
+      "time": "2026-04-17T17:08:54.557Z"
     },
     {
-      "id": "mo32zip3k8e2",
-      "action": "GET /version",
+      "id": "mo35x9e5lxew",
+      "action": "POST /auth/login",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.127Z"
+      "time": "2026-04-17T17:08:54.605Z"
     },
     {
-      "id": "mo32zip5dqco",
-      "action": "GET /auth/me",
+      "id": "mo35x9gmk0a6",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T17:08:54.694Z"
+    },
+    {
+      "id": "mo35xhzbvfub",
+      "action": "POST /auth/login",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.129Z"
+      "time": "2026-04-17T17:09:05.735Z"
     },
     {
-      "id": "mo32zip7m2st",
-      "action": "GET /auth/users",
-      "user": "anon",
+      "id": "mo35xi2ow2sy",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.131Z"
+      "time": "2026-04-17T17:09:05.856Z"
     },
     {
-      "id": "mo32zip8y12f",
+      "id": "mo35xi38pidf",
       "action": "GET /dashboard",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.132Z"
+      "time": "2026-04-17T17:09:05.876Z"
     },
     {
-      "id": "mo32zipav1h3",
+      "id": "mo35xi3lyeba",
       "action": "GET /vehicles",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.134Z"
+      "time": "2026-04-17T17:09:05.889Z"
     },
     {
-      "id": "mo32zipck32d",
+      "id": "mo35xi3x7bk7",
+      "action": "GET /employees",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:09:05.901Z"
+    },
+    {
+      "id": "mo35xi4grx6s",
+      "action": "GET /handovers",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:09:05.920Z"
+    },
+    {
+      "id": "mo35xi4rdsfa",
       "action": "GET /drivers",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.136Z"
+      "time": "2026-04-17T17:09:05.931Z"
     },
     {
-      "id": "mo32zipeqq6q",
+      "id": "mo35xi539l5u",
       "action": "GET /maintenance",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.138Z"
+      "time": "2026-04-17T17:09:05.943Z"
     },
     {
-      "id": "mo32ziphst5t",
-      "action": "GET /appointments",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.141Z"
-    },
-    {
-      "id": "mo32zipjs2a1",
-      "action": "GET /regions",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.143Z"
-    },
-    {
-      "id": "mo32zipkihzk",
+      "id": "mo35xi5d2cnm",
       "action": "GET /accidents",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.144Z"
+      "time": "2026-04-17T17:09:05.953Z"
     },
     {
-      "id": "mo32zipl50ak",
+      "id": "mo35xi5n3seb",
       "action": "GET /violations",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.145Z"
+      "time": "2026-04-17T17:09:05.963Z"
     },
     {
-      "id": "mo32zipmiwky",
+      "id": "mo35xi5xmkp3",
       "action": "GET /financial",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.146Z"
+      "time": "2026-04-17T17:09:05.973Z"
     },
     {
-      "id": "mo32zipnscps",
-      "action": "GET /reports",
+      "id": "mo35xi6andsx",
+      "action": "GET /regions",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:46:41.147Z"
+      "time": "2026-04-17T17:09:05.986Z"
     },
     {
-      "id": "mo32zipo980l",
-      "action": "GET /reports/analytics",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.148Z"
-    },
-    {
-      "id": "mo32zipqahgu",
-      "action": "GET /ai/insights",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.150Z"
-    },
-    {
-      "id": "mo32ziprznbx",
-      "action": "GET /alerts",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.151Z"
-    },
-    {
-      "id": "mo32ziptv4e4",
-      "action": "GET /logs",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.153Z"
-    },
-    {
-      "id": "mo32zipu8d43",
-      "action": "GET /dev-requests",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.154Z"
-    },
-    {
-      "id": "mo32zipwwlqq",
-      "action": "POST /vehicles",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.156Z"
-    },
-    {
-      "id": "mo32zipx83ps",
-      "action": "POST /drivers",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.157Z"
-    },
-    {
-      "id": "mo32zipztsiz",
-      "action": "POST /maintenance",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.159Z"
-    },
-    {
-      "id": "mo32ziq0juxr",
-      "action": "POST /financial",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.160Z"
-    },
-    {
-      "id": "mo32ziq193ae",
-      "action": "POST /ai/query",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.161Z"
-    },
-    {
-      "id": "mo32ziq3ecu5",
-      "action": "POST /reports/generate",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:46:41.163Z"
-    },
-    {
-      "id": "mo331mb187ay",
+      "id": "mo35xqcnq9b4",
       "action": "POST /auth/login",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.117Z"
+      "time": "2026-04-17T17:09:16.583Z"
     },
     {
-      "id": "mo331mfpanqh",
+      "id": "mo35xqf7ovl4",
       "action": "تسجيل دخول: admin",
       "user": "admin",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.285Z"
+      "time": "2026-04-17T17:09:16.675Z"
     },
     {
-      "id": "mo331mfvb2jr",
-      "action": "GET /health",
+      "id": "mo35xqg2a8el",
+      "action": "GET /vehicles/v1/profile",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.291Z"
+      "time": "2026-04-17T17:09:16.706Z"
     },
     {
-      "id": "mo331mfyrnp6",
-      "action": "GET /version",
+      "id": "mo35xqguankw",
+      "action": "GET /employees/e1",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.294Z"
+      "time": "2026-04-17T17:09:16.734Z"
     },
     {
-      "id": "mo331mg2hvee",
-      "action": "GET /auth/me",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.298Z"
-    },
-    {
-      "id": "mo331mg7arn2",
-      "action": "GET /auth/users",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.303Z"
-    },
-    {
-      "id": "mo331mga4dpz",
-      "action": "GET /dashboard",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.306Z"
-    },
-    {
-      "id": "mo331mgdix43",
-      "action": "GET /vehicles",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.309Z"
-    },
-    {
-      "id": "mo331mgfidqs",
-      "action": "GET /drivers",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.311Z"
-    },
-    {
-      "id": "mo331mghbw7f",
-      "action": "GET /maintenance",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.313Z"
-    },
-    {
-      "id": "mo331mgkej7n",
+      "id": "mo35xqhgf84m",
       "action": "GET /appointments",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.316Z"
+      "time": "2026-04-17T17:09:16.756Z"
     },
     {
-      "id": "mo331mgm0xvc",
-      "action": "GET /regions",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.318Z"
-    },
-    {
-      "id": "mo331mgq6cec",
-      "action": "GET /accidents",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.322Z"
-    },
-    {
-      "id": "mo331mgsthat",
-      "action": "GET /violations",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.324Z"
-    },
-    {
-      "id": "mo331mgvwyl0",
-      "action": "GET /financial",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.327Z"
-    },
-    {
-      "id": "mo331mgx1vc6",
+      "id": "mo35xqhr8b7d",
       "action": "GET /reports",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.329Z"
+      "time": "2026-04-17T17:09:16.767Z"
     },
     {
-      "id": "mo331mh0kkp1",
-      "action": "GET /reports/analytics",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.332Z"
-    },
-    {
-      "id": "mo331mh2do8u",
-      "action": "GET /ai/insights",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.334Z"
-    },
-    {
-      "id": "mo331mh5pi9v",
-      "action": "GET /alerts",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.337Z"
-    },
-    {
-      "id": "mo331mh78w28",
+      "id": "mo35xqi1lk2s",
       "action": "GET /logs",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.339Z"
+      "time": "2026-04-17T17:09:16.777Z"
     },
     {
-      "id": "mo331mhbco7c",
+      "id": "mo35xqic1aje",
+      "action": "GET /users",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:09:16.788Z"
+    },
+    {
+      "id": "mo35xqitiiwm",
       "action": "GET /dev-requests",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.343Z"
+      "time": "2026-04-17T17:09:16.805Z"
     },
     {
-      "id": "mo331mhecr7w",
-      "action": "POST /vehicles",
+      "id": "mo35xqjc2j5m",
+      "action": "GET /ai/chat",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.346Z"
+      "time": "2026-04-17T17:09:16.824Z"
     },
     {
-      "id": "mo331mhjuhr6",
-      "action": "PUT /vehicles/mo331mhfjn4u",
+      "id": "mo362jrc2tqu",
+      "action": "GET /health",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.351Z"
+      "time": "2026-04-17T17:13:01.320Z"
     },
     {
-      "id": "mo331mhmxy4k",
-      "action": "DELETE /vehicles/mo331mhfjn4u",
+      "id": "mo363m7lyxai",
+      "action": "POST /auth/login",
       "user": "anon",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.354Z"
+      "time": "2026-04-17T17:13:51.153Z"
     },
     {
-      "id": "mo331mhs5o91",
-      "action": "POST /drivers",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.360Z"
-    },
-    {
-      "id": "mo331mhx5d09",
-      "action": "DELETE /drivers/mo331mhtjkba",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.365Z"
-    },
-    {
-      "id": "mo331mhzc9t6",
-      "action": "POST /maintenance",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.367Z"
-    },
-    {
-      "id": "mo331mi7jnsg",
-      "action": "POST /maintenance/mo331mhzj36c/complete",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.375Z"
-    },
-    {
-      "id": "mo331miaioao",
-      "action": "DELETE /maintenance/mo331mhzj36c",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.378Z"
-    },
-    {
-      "id": "mo331mifi9jr",
-      "action": "POST /appointments",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.383Z"
-    },
-    {
-      "id": "mo331mijzf52",
-      "action": "POST /appointments/mo331mif8dcg/confirm",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.387Z"
-    },
-    {
-      "id": "mo331minc1s5",
-      "action": "POST /appointments/mo331mif8dcg/cancel",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.391Z"
-    },
-    {
-      "id": "mo331miq6pq8",
-      "action": "DELETE /appointments/mo331mif8dcg",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.394Z"
-    },
-    {
-      "id": "mo331mixvww1",
-      "action": "POST /financial",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.401Z"
-    },
-    {
-      "id": "mo331mizccjd",
-      "action": "DELETE /financial/mo331mixnqlv",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.403Z"
-    },
-    {
-      "id": "mo331mj1on9g",
-      "action": "POST /regions",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.405Z"
-    },
-    {
-      "id": "mo331mj3lx3d",
-      "action": "PUT /regions/mo331mj2ndet",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.407Z"
-    },
-    {
-      "id": "mo331mj5aerr",
-      "action": "DELETE /regions/mo331mj2ndet",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.409Z"
-    },
-    {
-      "id": "mo331mj8vbp9",
-      "action": "POST /accidents",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.412Z"
-    },
-    {
-      "id": "mo331mj9zd77",
-      "action": "PUT /accidents/mo331mj84nuo",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.413Z"
-    },
-    {
-      "id": "mo331mjcuqre",
-      "action": "DELETE /accidents/mo331mj84nuo",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.416Z"
-    },
-    {
-      "id": "mo331mjg1ct8",
-      "action": "POST /violations",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.420Z"
-    },
-    {
-      "id": "mo331mjiwetj",
-      "action": "POST /violations/mo331mjgexf3/pay",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.422Z"
-    },
-    {
-      "id": "mo331mjj0rgp",
-      "action": "DELETE /violations/mo331mjgexf3",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.423Z"
-    },
-    {
-      "id": "mo331mjm0d2q",
-      "action": "POST /ai/query",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.426Z"
-    },
-    {
-      "id": "mo331mtfsrmv",
-      "action": "POST /ai/query",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.779Z"
-    },
-    {
-      "id": "mo331mtj4v5v",
-      "action": "POST /reports/generate",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.783Z"
-    },
-    {
-      "id": "mo331mtto8tl",
-      "action": "POST /reports/generate",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.793Z"
-    },
-    {
-      "id": "mo331mtwultf",
-      "action": "POST /reports/generate",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.796Z"
-    },
-    {
-      "id": "mo331mu6x6jb",
-      "action": "POST /auth/users",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.806Z"
-    },
-    {
-      "id": "mo331mwl6e5j",
-      "action": "PUT /auth/users/mo331mwjxlvs",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.893Z"
-    },
-    {
-      "id": "mo331mwn7wpe",
-      "action": "DELETE /auth/users/mo331mwjxlvs",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.895Z"
-    },
-    {
-      "id": "mo331mwo82yw",
-      "action": "POST /dev-requests",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.896Z"
-    },
-    {
-      "id": "mo331mwqo9l2",
-      "action": "PUT /dev-requests/mo331mwobnkr/status",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.898Z"
-    },
-    {
-      "id": "mo331mwtx2gi",
-      "action": "DELETE /dev-requests/mo331mwobnkr",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.901Z"
-    },
-    {
-      "id": "mo331mwviyov",
-      "action": "GET /alerts",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.903Z"
-    },
-    {
-      "id": "mo331mwx7475",
-      "action": "DELETE /alerts/al4",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.905Z"
-    },
-    {
-      "id": "mo331mx0u55d",
-      "action": "POST /auth/logout",
-      "user": "anon",
-      "ip": "::1",
-      "time": "2026-04-17T15:48:19.908Z"
-    },
-    {
-      "id": "mo331mx0l58q",
-      "action": "تسجيل خروج: admin",
+      "id": "mo363mb4m6my",
+      "action": "تسجيل دخول: admin",
       "user": "admin",
       "ip": "::1",
-      "time": "2026-04-17T15:48:19.908Z"
+      "time": "2026-04-17T17:13:51.280Z"
+    },
+    {
+      "id": "mo363mhv69vd",
+      "action": "GET /dashboard",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:13:51.523Z"
+    },
+    {
+      "id": "mo363mo5gbh6",
+      "action": "GET /vehicles/v1/profile",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:13:51.749Z"
+    },
+    {
+      "id": "mo363mxk7r2b",
+      "action": "GET /employees",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:13:52.088Z"
+    },
+    {
+      "id": "mo363n6669o9",
+      "action": "GET /handovers",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:13:52.398Z"
+    },
+    {
+      "id": "mo363nfii7yd",
+      "action": "POST /vehicles/v1/handover",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:13:52.734Z"
+    },
+    {
+      "id": "mo3641afam8w",
+      "action": "POST /auth/login",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:10.695Z"
+    },
+    {
+      "id": "mo3641dyluab",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:10.822Z"
+    },
+    {
+      "id": "mo3641h0fwf2",
+      "action": "GET /dashboard",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:10.932Z"
+    },
+    {
+      "id": "mo3641jjoemh",
+      "action": "GET /vehicles/v1/profile",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:11.023Z"
+    },
+    {
+      "id": "mo3641m0twtq",
+      "action": "POST /vehicles/v1/handover",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:11.112Z"
+    },
+    {
+      "id": "mo3648ao1dz1",
+      "action": "GET /health",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:19.776Z"
+    },
+    {
+      "id": "mo3648b97yb3",
+      "action": "POST /auth/login",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:19.797Z"
+    },
+    {
+      "id": "mo3648dk2lq6",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T17:14:19.880Z"
     }
   ],
   "gpsHistory": {
+    "v5": [
+      {
+        "lat": 21.389274,
+        "lng": 39.840583,
+        "t": "2026-04-17T17:26:47.148Z"
+      },
+      {
+        "lat": 21.391214,
+        "lng": 39.841285,
+        "t": "2026-04-17T17:27:37.173Z"
+      },
+      {
+        "lat": 21.393223,
+        "lng": 39.8393,
+        "t": "2026-04-17T17:28:12.187Z"
+      },
+      {
+        "lat": 21.392884,
+        "lng": 39.837229,
+        "t": "2026-04-17T17:28:47.199Z"
+      },
+      {
+        "lat": 21.390449,
+        "lng": 39.838272,
+        "t": "2026-04-17T17:28:57.201Z"
+      },
+      {
+        "lat": 21.392312,
+        "lng": 39.836766,
+        "t": "2026-04-17T17:29:52.219Z"
+      },
+      {
+        "lat": 21.392414,
+        "lng": 39.838753,
+        "t": "2026-04-17T17:30:22.228Z"
+      },
+      {
+        "lat": 21.390809,
+        "lng": 39.836515,
+        "t": "2026-04-17T17:30:32.235Z"
+      },
+      {
+        "lat": 21.389354,
+        "lng": 39.834894,
+        "t": "2026-04-17T17:30:47.240Z"
+      },
+      {
+        "lat": 21.387742,
+        "lng": 39.834161,
+        "t": "2026-04-17T17:30:52.243Z"
+      },
+      {
+        "lat": 21.388992,
+        "lng": 39.832103,
+        "t": "2026-04-17T17:31:07.253Z"
+      },
+      {
+        "lat": 21.390168,
+        "lng": 39.830467,
+        "t": "2026-04-17T17:32:12.282Z"
+      },
+      {
+        "lat": 21.389608,
+        "lng": 39.830913,
+        "t": "2026-04-17T17:32:17.283Z"
+      },
+      {
+        "lat": 21.388592,
+        "lng": 39.829223,
+        "t": "2026-04-17T17:32:47.297Z"
+      },
+      {
+        "lat": 21.390483,
+        "lng": 39.831324,
+        "t": "2026-04-17T17:34:12.332Z"
+      },
+      {
+        "lat": 21.390263,
+        "lng": 39.832765,
+        "t": "2026-04-17T17:35:42.377Z"
+      },
+      {
+        "lat": 21.390443,
+        "lng": 39.830578,
+        "t": "2026-04-17T17:36:07.387Z"
+      },
+      {
+        "lat": 21.390897,
+        "lng": 39.830551,
+        "t": "2026-04-17T17:36:42.406Z"
+      },
+      {
+        "lat": 21.390875,
+        "lng": 39.832908,
+        "t": "2026-04-17T17:37:42.429Z"
+      },
+      {
+        "lat": 21.388833,
+        "lng": 39.834901,
+        "t": "2026-04-17T17:38:37.454Z"
+      },
+      {
+        "lat": 21.38659,
+        "lng": 39.833388,
+        "t": "2026-04-17T17:39:27.472Z"
+      },
+      {
+        "lat": 21.388272,
+        "lng": 39.834463,
+        "t": "2026-04-17T17:40:32.506Z"
+      },
+      {
+        "lat": 21.388544,
+        "lng": 39.835055,
+        "t": "2026-04-17T17:40:52.513Z"
+      },
+      {
+        "lat": 21.387328,
+        "lng": 39.834153,
+        "t": "2026-04-17T17:41:57.539Z"
+      },
+      {
+        "lat": 21.387472,
+        "lng": 39.833187,
+        "t": "2026-04-17T17:42:02.543Z"
+      },
+      {
+        "lat": 21.389457,
+        "lng": 39.833057,
+        "t": "2026-04-17T17:42:07.561Z"
+      },
+      {
+        "lat": 21.389267,
+        "lng": 39.830959,
+        "t": "2026-04-17T17:42:12.564Z"
+      },
+      {
+        "lat": 21.388292,
+        "lng": 39.832737,
+        "t": "2026-04-17T17:42:17.563Z"
+      },
+      {
+        "lat": 21.390208,
+        "lng": 39.83284,
+        "t": "2026-04-17T17:42:32.571Z"
+      },
+      {
+        "lat": 21.391676,
+        "lng": 39.834254,
+        "t": "2026-04-17T17:43:12.589Z"
+      },
+      {
+        "lat": 21.392349,
+        "lng": 39.832715,
+        "t": "2026-04-17T17:43:17.590Z"
+      },
+      {
+        "lat": 21.393019,
+        "lng": 39.832811,
+        "t": "2026-04-17T17:43:47.601Z"
+      },
+      {
+        "lat": 21.394951,
+        "lng": 39.834657,
+        "t": "2026-04-17T17:43:57.606Z"
+      },
+      {
+        "lat": 21.394449,
+        "lng": 39.833111,
+        "t": "2026-04-17T17:44:17.613Z"
+      },
+      {
+        "lat": 21.392823,
+        "lng": 39.83295,
+        "t": "2026-04-17T17:44:32.618Z"
+      },
+      {
+        "lat": 21.390352,
+        "lng": 39.831098,
+        "t": "2026-04-17T17:44:57.630Z"
+      },
+      {
+        "lat": 21.389638,
+        "lng": 39.8299,
+        "t": "2026-04-17T17:45:42.647Z"
+      },
+      {
+        "lat": 21.391183,
+        "lng": 39.827533,
+        "t": "2026-04-17T17:46:32.676Z"
+      },
+      {
+        "lat": 21.392327,
+        "lng": 39.828445,
+        "t": "2026-04-17T17:46:52.686Z"
+      },
+      {
+        "lat": 21.393114,
+        "lng": 39.826952,
+        "t": "2026-04-17T17:47:17.697Z"
+      },
+      {
+        "lat": 21.394391,
+        "lng": 39.826211,
+        "t": "2026-04-17T17:47:22.698Z"
+      },
+      {
+        "lat": 21.392265,
+        "lng": 39.826478,
+        "t": "2026-04-17T17:47:27.701Z"
+      },
+      {
+        "lat": 21.394468,
+        "lng": 39.825171,
+        "t": "2026-04-17T17:47:42.709Z"
+      },
+      {
+        "lat": 21.39234,
+        "lng": 39.824451,
+        "t": "2026-04-17T17:48:07.721Z"
+      },
+      {
+        "lat": 21.394047,
+        "lng": 39.823221,
+        "t": "2026-04-17T17:48:37.737Z"
+      },
+      {
+        "lat": 21.393555,
+        "lng": 39.824958,
+        "t": "2026-04-17T17:48:47.738Z"
+      },
+      {
+        "lat": 21.393234,
+        "lng": 39.826432,
+        "t": "2026-04-17T17:49:02.748Z"
+      },
+      {
+        "lat": 21.391824,
+        "lng": 39.825906,
+        "t": "2026-04-17T17:49:12.752Z"
+      },
+      {
+        "lat": 21.389657,
+        "lng": 39.827825,
+        "t": "2026-04-17T17:49:52.764Z"
+      },
+      {
+        "lat": 21.390106,
+        "lng": 39.82925,
+        "t": "2026-04-17T17:50:07.775Z"
+      },
+      {
+        "lat": 21.389339,
+        "lng": 39.828768,
+        "t": "2026-04-17T17:50:52.792Z"
+      },
+      {
+        "lat": 21.387307,
+        "lng": 39.828338,
+        "t": "2026-04-17T17:51:17.803Z"
+      },
+      {
+        "lat": 21.388694,
+        "lng": 39.830617,
+        "t": "2026-04-17T17:51:57.824Z"
+      },
+      {
+        "lat": 21.388246,
+        "lng": 39.829004,
+        "t": "2026-04-17T17:52:17.831Z"
+      },
+      {
+        "lat": 21.388941,
+        "lng": 39.828667,
+        "t": "2026-04-17T17:53:07.856Z"
+      },
+      {
+        "lat": 21.386467,
+        "lng": 39.828132,
+        "t": "2026-04-17T17:53:37.872Z"
+      },
+      {
+        "lat": 21.386501,
+        "lng": 39.829207,
+        "t": "2026-04-17T17:53:57.882Z"
+      },
+      {
+        "lat": 21.384547,
+        "lng": 39.826859,
+        "t": "2026-04-17T17:54:07.888Z"
+      },
+      {
+        "lat": 21.384868,
+        "lng": 39.825032,
+        "t": "2026-04-17T17:54:17.895Z"
+      },
+      {
+        "lat": 21.385806,
+        "lng": 39.827444,
+        "t": "2026-04-17T17:54:27.898Z"
+      },
+      {
+        "lat": 21.386228,
+        "lng": 39.826176,
+        "t": "2026-04-17T17:54:32.901Z"
+      },
+      {
+        "lat": 21.385192,
+        "lng": 39.826898,
+        "t": "2026-04-17T17:56:12.946Z"
+      },
+      {
+        "lat": 21.382971,
+        "lng": 39.827995,
+        "t": "2026-04-17T17:57:22.982Z"
+      },
+      {
+        "lat": 21.382988,
+        "lng": 39.82639,
+        "t": "2026-04-17T17:57:42.992Z"
+      },
+      {
+        "lat": 21.385027,
+        "lng": 39.827564,
+        "t": "2026-04-17T17:58:23.007Z"
+      },
+      {
+        "lat": 21.387343,
+        "lng": 39.825354,
+        "t": "2026-04-17T17:58:53.021Z"
+      },
+      {
+        "lat": 21.38708,
+        "lng": 39.824181,
+        "t": "2026-04-17T17:58:58.022Z"
+      },
+      {
+        "lat": 21.384679,
+        "lng": 39.825645,
+        "t": "2026-04-17T17:59:03.025Z"
+      },
+      {
+        "lat": 21.38329,
+        "lng": 39.824009,
+        "t": "2026-04-17T17:59:18.029Z"
+      },
+      {
+        "lat": 21.385196,
+        "lng": 39.824572,
+        "t": "2026-04-17T18:00:18.057Z"
+      },
+      {
+        "lat": 21.384513,
+        "lng": 39.826561,
+        "t": "2026-04-17T18:00:58.076Z"
+      },
+      {
+        "lat": 21.38673,
+        "lng": 39.826649,
+        "t": "2026-04-17T18:01:18.083Z"
+      },
+      {
+        "lat": 21.388825,
+        "lng": 39.824602,
+        "t": "2026-04-17T18:02:53.127Z"
+      },
+      {
+        "lat": 21.390098,
+        "lng": 39.823621,
+        "t": "2026-04-17T18:03:53.155Z"
+      },
+      {
+        "lat": 21.391288,
+        "lng": 39.822581,
+        "t": "2026-04-17T18:04:48.181Z"
+      },
+      {
+        "lat": 21.392666,
+        "lng": 39.82233,
+        "t": "2026-04-17T18:05:28.198Z"
+      },
+      {
+        "lat": 21.393361,
+        "lng": 39.821458,
+        "t": "2026-04-17T18:05:38.204Z"
+      },
+      {
+        "lat": 21.393157,
+        "lng": 39.81995,
+        "t": "2026-04-17T18:06:13.220Z"
+      },
+      {
+        "lat": 21.395261,
+        "lng": 39.818336,
+        "t": "2026-04-17T18:06:18.222Z"
+      },
+      {
+        "lat": 21.395833,
+        "lng": 39.818944,
+        "t": "2026-04-17T18:06:33.228Z"
+      },
+      {
+        "lat": 21.398221,
+        "lng": 39.818637,
+        "t": "2026-04-17T18:07:03.241Z"
+      },
+      {
+        "lat": 21.398995,
+        "lng": 39.816883,
+        "t": "2026-04-17T18:07:23.247Z"
+      },
+      {
+        "lat": 21.399348,
+        "lng": 39.81475,
+        "t": "2026-04-17T18:07:28.248Z"
+      },
+      {
+        "lat": 21.398867,
+        "lng": 39.817241,
+        "t": "2026-04-17T18:09:18.296Z"
+      },
+      {
+        "lat": 21.400015,
+        "lng": 39.818954,
+        "t": "2026-04-17T18:09:38.305Z"
+      },
+      {
+        "lat": 21.398986,
+        "lng": 39.817263,
+        "t": "2026-04-17T18:10:03.319Z"
+      },
+      {
+        "lat": 21.396581,
+        "lng": 39.817834,
+        "t": "2026-04-17T18:10:13.326Z"
+      },
+      {
+        "lat": 21.398027,
+        "lng": 39.819284,
+        "t": "2026-04-17T18:11:03.349Z"
+      },
+      {
+        "lat": 21.400281,
+        "lng": 39.81852,
+        "t": "2026-04-17T18:11:08.350Z"
+      },
+      {
+        "lat": 21.401002,
+        "lng": 39.817719,
+        "t": "2026-04-17T18:11:53.374Z"
+      },
+      {
+        "lat": 21.401115,
+        "lng": 39.816349,
+        "t": "2026-04-17T18:12:13.380Z"
+      },
+      {
+        "lat": 21.398697,
+        "lng": 39.816145,
+        "t": "2026-04-17T18:12:38.391Z"
+      },
+      {
+        "lat": 21.401004,
+        "lng": 39.815833,
+        "t": "2026-04-17T18:12:43.394Z"
+      },
+      {
+        "lat": 21.401792,
+        "lng": 39.814575,
+        "t": "2026-04-17T18:12:58.400Z"
+      },
+      {
+        "lat": 21.403895,
+        "lng": 39.812121,
+        "t": "2026-04-17T18:13:23.413Z"
+      },
+      {
+        "lat": 21.403793,
+        "lng": 39.810081,
+        "t": "2026-04-17T18:13:43.422Z"
+      },
+      {
+        "lat": 21.405145,
+        "lng": 39.812057,
+        "t": "2026-04-17T18:14:43.451Z"
+      },
+      {
+        "lat": 21.405351,
+        "lng": 39.813386,
+        "t": "2026-04-17T18:14:58.456Z"
+      },
+      {
+        "lat": 21.403346,
+        "lng": 39.811031,
+        "t": "2026-04-17T18:15:43.479Z"
+      },
+      {
+        "lat": 21.403778,
+        "lng": 39.812598,
+        "t": "2026-04-17T18:16:38.504Z"
+      }
+    ],
     "v4": [
       {
-        "lat": 24.525122,
-        "lng": 39.571691,
-        "t": "2026-04-17T15:39:54.556Z"
+        "lat": 24.511428,
+        "lng": 39.561236,
+        "t": "2026-04-17T17:39:22.470Z"
       },
       {
-        "lat": 24.524465,
-        "lng": 39.57342,
-        "t": "2026-04-17T15:40:09.563Z"
+        "lat": 24.509371,
+        "lng": 39.561195,
+        "t": "2026-04-17T17:39:32.474Z"
       },
       {
-        "lat": 24.52693,
-        "lng": 39.572357,
-        "t": "2026-04-17T15:40:19.564Z"
+        "lat": 24.507425,
+        "lng": 39.561145,
+        "t": "2026-04-17T17:39:37.476Z"
       },
       {
-        "lat": 24.525481,
-        "lng": 39.570589,
-        "t": "2026-04-17T15:40:59.577Z"
+        "lat": 24.50773,
+        "lng": 39.559103,
+        "t": "2026-04-17T17:39:47.482Z"
       },
       {
-        "lat": 24.527667,
-        "lng": 39.573013,
-        "t": "2026-04-17T15:41:14.582Z"
+        "lat": 24.508817,
+        "lng": 39.5616,
+        "t": "2026-04-17T17:39:57.489Z"
       },
       {
-        "lat": 24.528244,
-        "lng": 39.571921,
-        "t": "2026-04-17T15:41:44.594Z"
+        "lat": 24.511063,
+        "lng": 39.560109,
+        "t": "2026-04-17T17:40:22.499Z"
       },
       {
-        "lat": 24.529768,
-        "lng": 39.573179,
-        "t": "2026-04-17T15:42:04.599Z"
+        "lat": 24.513509,
+        "lng": 39.56225,
+        "t": "2026-04-17T17:40:37.508Z"
       },
       {
-        "lat": 24.529866,
-        "lng": 39.573486,
-        "t": "2026-04-17T15:42:14.603Z"
+        "lat": 24.514675,
+        "lng": 39.562286,
+        "t": "2026-04-17T17:40:47.512Z"
       },
       {
-        "lat": 24.532348,
-        "lng": 39.57431,
-        "t": "2026-04-17T15:42:39.613Z"
+        "lat": 24.515425,
+        "lng": 39.56451,
+        "t": "2026-04-17T17:41:07.519Z"
       },
       {
-        "lat": 24.53074,
-        "lng": 39.573782,
-        "t": "2026-04-17T15:43:39.641Z"
+        "lat": 24.517865,
+        "lng": 39.56218,
+        "t": "2026-04-17T17:41:27.528Z"
       },
       {
-        "lat": 24.530523,
-        "lng": 39.571418,
-        "t": "2026-04-17T15:43:44.643Z"
+        "lat": 24.517967,
+        "lng": 39.559866,
+        "t": "2026-04-17T17:41:37.531Z"
       },
       {
-        "lat": 24.529817,
-        "lng": 39.569533,
-        "t": "2026-04-17T15:44:19.656Z"
+        "lat": 24.520188,
+        "lng": 39.559,
+        "t": "2026-04-17T17:41:47.534Z"
       },
       {
-        "lat": 24.528043,
-        "lng": 39.57025,
-        "t": "2026-04-17T15:45:52.413Z"
+        "lat": 24.519713,
+        "lng": 39.561345,
+        "t": "2026-04-17T17:43:07.586Z"
       },
       {
-        "lat": 24.528667,
-        "lng": 39.570268,
-        "t": "2026-04-17T15:47:02.441Z"
+        "lat": 24.520836,
+        "lng": 39.560811,
+        "t": "2026-04-17T17:43:32.598Z"
       },
       {
-        "lat": 24.526878,
-        "lng": 39.568565,
-        "t": "2026-04-17T15:47:32.453Z"
+        "lat": 24.521798,
+        "lng": 39.559532,
+        "t": "2026-04-17T17:43:37.599Z"
       },
       {
-        "lat": 24.528753,
-        "lng": 39.567218,
-        "t": "2026-04-17T15:47:57.462Z"
+        "lat": 24.523231,
+        "lng": 39.55963,
+        "t": "2026-04-17T17:43:42.600Z"
       },
       {
-        "lat": 24.527865,
-        "lng": 39.568003,
-        "t": "2026-04-17T15:48:02.466Z"
+        "lat": 24.523764,
+        "lng": 39.561506,
+        "t": "2026-04-17T17:44:22.612Z"
       },
       {
-        "lat": 24.525806,
-        "lng": 39.569161,
-        "t": "2026-04-17T15:48:32.476Z"
+        "lat": 24.524587,
+        "lng": 39.560244,
+        "t": "2026-04-17T17:44:37.621Z"
+      },
+      {
+        "lat": 24.527075,
+        "lng": 39.559419,
+        "t": "2026-04-17T17:44:47.624Z"
+      },
+      {
+        "lat": 24.525833,
+        "lng": 39.560186,
+        "t": "2026-04-17T17:45:07.637Z"
+      },
+      {
+        "lat": 24.525326,
+        "lng": 39.557686,
+        "t": "2026-04-17T17:45:22.642Z"
+      },
+      {
+        "lat": 24.526837,
+        "lng": 39.558954,
+        "t": "2026-04-17T17:46:02.655Z"
+      },
+      {
+        "lat": 24.528989,
+        "lng": 39.559834,
+        "t": "2026-04-17T17:46:07.659Z"
+      },
+      {
+        "lat": 24.530502,
+        "lng": 39.561355,
+        "t": "2026-04-17T17:46:57.687Z"
+      },
+      {
+        "lat": 24.528097,
+        "lng": 39.561341,
+        "t": "2026-04-17T17:47:07.693Z"
+      },
+      {
+        "lat": 24.530265,
+        "lng": 39.562961,
+        "t": "2026-04-17T17:47:57.715Z"
+      },
+      {
+        "lat": 24.531871,
+        "lng": 39.561594,
+        "t": "2026-04-17T17:48:32.733Z"
+      },
+      {
+        "lat": 24.530491,
+        "lng": 39.562076,
+        "t": "2026-04-17T17:49:42.761Z"
+      },
+      {
+        "lat": 24.530077,
+        "lng": 39.562726,
+        "t": "2026-04-17T17:50:17.778Z"
+      },
+      {
+        "lat": 24.528887,
+        "lng": 39.561053,
+        "t": "2026-04-17T17:50:22.782Z"
+      },
+      {
+        "lat": 24.530526,
+        "lng": 39.561828,
+        "t": "2026-04-17T17:50:27.782Z"
+      },
+      {
+        "lat": 24.528659,
+        "lng": 39.560374,
+        "t": "2026-04-17T17:50:47.790Z"
+      },
+      {
+        "lat": 24.530603,
+        "lng": 39.55857,
+        "t": "2026-04-17T17:50:57.794Z"
+      },
+      {
+        "lat": 24.530546,
+        "lng": 39.558548,
+        "t": "2026-04-17T17:51:52.823Z"
+      },
+      {
+        "lat": 24.530154,
+        "lng": 39.560515,
+        "t": "2026-04-17T17:52:32.840Z"
+      },
+      {
+        "lat": 24.528179,
+        "lng": 39.56135,
+        "t": "2026-04-17T17:52:37.842Z"
+      },
+      {
+        "lat": 24.529303,
+        "lng": 39.561386,
+        "t": "2026-04-17T17:53:02.853Z"
+      },
+      {
+        "lat": 24.530445,
+        "lng": 39.563393,
+        "t": "2026-04-17T17:53:12.860Z"
+      },
+      {
+        "lat": 24.529388,
+        "lng": 39.562394,
+        "t": "2026-04-17T17:53:42.874Z"
+      },
+      {
+        "lat": 24.526943,
+        "lng": 39.562591,
+        "t": "2026-04-17T17:53:47.875Z"
+      },
+      {
+        "lat": 24.525993,
+        "lng": 39.561779,
+        "t": "2026-04-17T17:55:27.927Z"
+      },
+      {
+        "lat": 24.525539,
+        "lng": 39.559373,
+        "t": "2026-04-17T17:55:52.939Z"
+      },
+      {
+        "lat": 24.527166,
+        "lng": 39.559979,
+        "t": "2026-04-17T17:56:02.942Z"
+      },
+      {
+        "lat": 24.526394,
+        "lng": 39.561127,
+        "t": "2026-04-17T17:56:27.956Z"
+      },
+      {
+        "lat": 24.527193,
+        "lng": 39.563209,
+        "t": "2026-04-17T17:56:42.964Z"
+      },
+      {
+        "lat": 24.529489,
+        "lng": 39.563061,
+        "t": "2026-04-17T17:56:52.967Z"
+      },
+      {
+        "lat": 24.529091,
+        "lng": 39.56264,
+        "t": "2026-04-17T17:57:37.989Z"
+      },
+      {
+        "lat": 24.529923,
+        "lng": 39.560405,
+        "t": "2026-04-17T17:57:47.994Z"
+      },
+      {
+        "lat": 24.53008,
+        "lng": 39.558571,
+        "t": "2026-04-17T17:57:57.997Z"
+      },
+      {
+        "lat": 24.530777,
+        "lng": 39.55816,
+        "t": "2026-04-17T17:58:13.004Z"
+      },
+      {
+        "lat": 24.528689,
+        "lng": 39.560434,
+        "t": "2026-04-17T17:58:33.012Z"
+      },
+      {
+        "lat": 24.528524,
+        "lng": 39.560505,
+        "t": "2026-04-17T17:58:38.015Z"
+      },
+      {
+        "lat": 24.527451,
+        "lng": 39.561008,
+        "t": "2026-04-17T17:59:38.038Z"
+      },
+      {
+        "lat": 24.525305,
+        "lng": 39.560575,
+        "t": "2026-04-17T17:59:43.041Z"
+      },
+      {
+        "lat": 24.526986,
+        "lng": 39.56115,
+        "t": "2026-04-17T18:00:33.065Z"
+      },
+      {
+        "lat": 24.525911,
+        "lng": 39.56124,
+        "t": "2026-04-17T18:00:48.071Z"
+      },
+      {
+        "lat": 24.526731,
+        "lng": 39.561399,
+        "t": "2026-04-17T18:01:03.080Z"
+      },
+      {
+        "lat": 24.525518,
+        "lng": 39.560905,
+        "t": "2026-04-17T18:01:28.090Z"
+      },
+      {
+        "lat": 24.524804,
+        "lng": 39.559797,
+        "t": "2026-04-17T18:02:03.108Z"
+      },
+      {
+        "lat": 24.523315,
+        "lng": 39.560229,
+        "t": "2026-04-17T18:02:13.113Z"
+      },
+      {
+        "lat": 24.520943,
+        "lng": 39.561065,
+        "t": "2026-04-17T18:02:28.117Z"
+      },
+      {
+        "lat": 24.522938,
+        "lng": 39.563161,
+        "t": "2026-04-17T18:02:58.130Z"
+      },
+      {
+        "lat": 24.523558,
+        "lng": 39.56501,
+        "t": "2026-04-17T18:03:13.139Z"
+      },
+      {
+        "lat": 24.525188,
+        "lng": 39.566601,
+        "t": "2026-04-17T18:03:18.141Z"
+      },
+      {
+        "lat": 24.526584,
+        "lng": 39.564284,
+        "t": "2026-04-17T18:03:33.146Z"
+      },
+      {
+        "lat": 24.524695,
+        "lng": 39.564275,
+        "t": "2026-04-17T18:03:38.149Z"
+      },
+      {
+        "lat": 24.527175,
+        "lng": 39.562437,
+        "t": "2026-04-17T18:05:48.206Z"
+      },
+      {
+        "lat": 24.524851,
+        "lng": 39.56098,
+        "t": "2026-04-17T18:05:53.209Z"
+      },
+      {
+        "lat": 24.522785,
+        "lng": 39.56088,
+        "t": "2026-04-17T18:06:03.215Z"
+      },
+      {
+        "lat": 24.521134,
+        "lng": 39.560718,
+        "t": "2026-04-17T18:06:08.217Z"
+      },
+      {
+        "lat": 24.521843,
+        "lng": 39.56289,
+        "t": "2026-04-17T18:06:43.234Z"
+      },
+      {
+        "lat": 24.521714,
+        "lng": 39.565308,
+        "t": "2026-04-17T18:06:53.238Z"
+      },
+      {
+        "lat": 24.521391,
+        "lng": 39.565526,
+        "t": "2026-04-17T18:07:08.241Z"
+      },
+      {
+        "lat": 24.520315,
+        "lng": 39.566437,
+        "t": "2026-04-17T18:07:48.255Z"
+      },
+      {
+        "lat": 24.518671,
+        "lng": 39.567886,
+        "t": "2026-04-17T18:08:13.270Z"
+      },
+      {
+        "lat": 24.518414,
+        "lng": 39.56795,
+        "t": "2026-04-17T18:08:18.271Z"
+      },
+      {
+        "lat": 24.51808,
+        "lng": 39.566349,
+        "t": "2026-04-17T18:08:23.275Z"
+      },
+      {
+        "lat": 24.518065,
+        "lng": 39.568467,
+        "t": "2026-04-17T18:08:28.278Z"
+      },
+      {
+        "lat": 24.519684,
+        "lng": 39.566793,
+        "t": "2026-04-17T18:08:58.287Z"
+      },
+      {
+        "lat": 24.520137,
+        "lng": 39.568002,
+        "t": "2026-04-17T18:09:43.308Z"
+      },
+      {
+        "lat": 24.522396,
+        "lng": 39.568,
+        "t": "2026-04-17T18:10:18.327Z"
+      },
+      {
+        "lat": 24.524532,
+        "lng": 39.568436,
+        "t": "2026-04-17T18:10:33.335Z"
+      },
+      {
+        "lat": 24.523991,
+        "lng": 39.56938,
+        "t": "2026-04-17T18:11:38.366Z"
+      },
+      {
+        "lat": 24.522115,
+        "lng": 39.569105,
+        "t": "2026-04-17T18:11:58.376Z"
+      },
+      {
+        "lat": 24.521247,
+        "lng": 39.571251,
+        "t": "2026-04-17T18:12:08.379Z"
+      },
+      {
+        "lat": 24.522359,
+        "lng": 39.573681,
+        "t": "2026-04-17T18:12:23.385Z"
+      },
+      {
+        "lat": 24.524495,
+        "lng": 39.572952,
+        "t": "2026-04-17T18:12:48.396Z"
+      },
+      {
+        "lat": 24.522934,
+        "lng": 39.573451,
+        "t": "2026-04-17T18:13:13.409Z"
+      },
+      {
+        "lat": 24.523205,
+        "lng": 39.575686,
+        "t": "2026-04-17T18:13:18.410Z"
+      },
+      {
+        "lat": 24.524214,
+        "lng": 39.577439,
+        "t": "2026-04-17T18:13:53.426Z"
+      },
+      {
+        "lat": 24.52441,
+        "lng": 39.576403,
+        "t": "2026-04-17T18:13:58.428Z"
+      },
+      {
+        "lat": 24.522754,
+        "lng": 39.574295,
+        "t": "2026-04-17T18:14:03.432Z"
+      },
+      {
+        "lat": 24.522442,
+        "lng": 39.573963,
+        "t": "2026-04-17T18:14:18.436Z"
+      },
+      {
+        "lat": 24.52132,
+        "lng": 39.571872,
+        "t": "2026-04-17T18:14:38.449Z"
+      },
+      {
+        "lat": 24.519361,
+        "lng": 39.569755,
+        "t": "2026-04-17T18:14:48.452Z"
+      },
+      {
+        "lat": 24.517724,
+        "lng": 39.568734,
+        "t": "2026-04-17T18:15:08.461Z"
+      },
+      {
+        "lat": 24.517878,
+        "lng": 39.56733,
+        "t": "2026-04-17T18:15:48.480Z"
+      },
+      {
+        "lat": 24.51801,
+        "lng": 39.568857,
+        "t": "2026-04-17T18:15:53.484Z"
+      },
+      {
+        "lat": 24.519195,
+        "lng": 39.56777,
+        "t": "2026-04-17T18:17:03.518Z"
+      },
+      {
+        "lat": 24.519143,
+        "lng": 39.567517,
+        "t": "2026-04-17T18:17:08.522Z"
       }
     ],
     "v1": [
       {
-        "lat": 24.713207,
-        "lng": 46.674319,
-        "t": "2026-04-17T15:39:59.557Z"
+        "lat": 24.724254,
+        "lng": 46.68849,
+        "t": "2026-04-17T17:31:02.250Z"
       },
       {
-        "lat": 24.715104,
-        "lng": 46.674655,
-        "t": "2026-04-17T15:40:14.563Z"
+        "lat": 24.725301,
+        "lng": 46.690774,
+        "t": "2026-04-17T17:31:47.269Z"
       },
       {
-        "lat": 24.717107,
-        "lng": 46.67317,
-        "t": "2026-04-17T15:40:49.575Z"
+        "lat": 24.725284,
+        "lng": 46.689287,
+        "t": "2026-04-17T17:32:07.278Z"
       },
       {
-        "lat": 24.7162,
-        "lng": 46.673845,
-        "t": "2026-04-17T15:41:04.578Z"
+        "lat": 24.725199,
+        "lng": 46.687885,
+        "t": "2026-04-17T17:32:42.295Z"
       },
       {
-        "lat": 24.718128,
-        "lng": 46.67561,
-        "t": "2026-04-17T15:41:19.581Z"
+        "lat": 24.722924,
+        "lng": 46.690382,
+        "t": "2026-04-17T17:33:17.309Z"
       },
       {
-        "lat": 24.715849,
-        "lng": 46.677448,
-        "t": "2026-04-17T15:41:34.589Z"
+        "lat": 24.7242,
+        "lng": 46.690252,
+        "t": "2026-04-17T17:33:32.316Z"
       },
       {
-        "lat": 24.714361,
-        "lng": 46.67912,
-        "t": "2026-04-17T15:42:24.605Z"
+        "lat": 24.723438,
+        "lng": 46.691277,
+        "t": "2026-04-17T17:33:47.321Z"
       },
       {
-        "lat": 24.715538,
-        "lng": 46.67769,
-        "t": "2026-04-17T15:43:04.622Z"
+        "lat": 24.724475,
+        "lng": 46.693431,
+        "t": "2026-04-17T17:33:52.323Z"
       },
       {
-        "lat": 24.716542,
-        "lng": 46.676186,
-        "t": "2026-04-17T15:43:54.645Z"
+        "lat": 24.725431,
+        "lng": 46.693932,
+        "t": "2026-04-17T17:33:57.325Z"
       },
       {
-        "lat": 24.714863,
-        "lng": 46.677638,
-        "t": "2026-04-17T15:43:59.649Z"
+        "lat": 24.72521,
+        "lng": 46.695129,
+        "t": "2026-04-17T17:34:32.342Z"
       },
       {
-        "lat": 24.712453,
-        "lng": 46.678538,
-        "t": "2026-04-17T15:44:04.653Z"
+        "lat": 24.727559,
+        "lng": 46.695194,
+        "t": "2026-04-17T17:35:37.373Z"
       },
       {
-        "lat": 24.710573,
-        "lng": 46.679742,
-        "t": "2026-04-17T15:44:09.652Z"
+        "lat": 24.727567,
+        "lng": 46.696188,
+        "t": "2026-04-17T17:35:57.382Z"
       },
       {
-        "lat": 24.711246,
-        "lng": 46.681081,
-        "t": "2026-04-17T15:44:14.656Z"
+        "lat": 24.726215,
+        "lng": 46.698245,
+        "t": "2026-04-17T17:36:22.397Z"
       },
       {
-        "lat": 24.710678,
-        "lng": 46.683156,
-        "t": "2026-04-17T15:46:02.417Z"
+        "lat": 24.724292,
+        "lng": 46.699261,
+        "t": "2026-04-17T17:37:12.417Z"
       },
       {
-        "lat": 24.713177,
-        "lng": 46.682357,
-        "t": "2026-04-17T15:46:27.427Z"
+        "lat": 24.723438,
+        "lng": 46.698573,
+        "t": "2026-04-17T17:37:47.430Z"
       },
       {
-        "lat": 24.713957,
-        "lng": 46.683506,
-        "t": "2026-04-17T15:46:32.430Z"
+        "lat": 24.725409,
+        "lng": 46.697404,
+        "t": "2026-04-17T17:38:17.442Z"
       },
       {
-        "lat": 24.713115,
-        "lng": 46.682833,
-        "t": "2026-04-17T15:47:12.444Z"
+        "lat": 24.727893,
+        "lng": 46.698979,
+        "t": "2026-04-17T17:38:27.447Z"
       },
       {
-        "lat": 24.712524,
-        "lng": 46.681162,
-        "t": "2026-04-17T15:47:17.447Z"
+        "lat": 24.726789,
+        "lng": 46.699771,
+        "t": "2026-04-17T17:38:32.451Z"
       },
       {
-        "lat": 24.711174,
-        "lng": 46.682244,
-        "t": "2026-04-17T15:47:22.449Z"
+        "lat": 24.726367,
+        "lng": 46.700502,
+        "t": "2026-04-17T17:38:52.455Z"
       },
       {
-        "lat": 24.713563,
-        "lng": 46.680005,
-        "t": "2026-04-17T15:47:47.458Z"
+        "lat": 24.727968,
+        "lng": 46.699901,
+        "t": "2026-04-17T17:39:17.466Z"
       },
       {
-        "lat": 24.711536,
-        "lng": 46.680372,
-        "t": "2026-04-17T15:48:17.470Z"
+        "lat": 24.726771,
+        "lng": 46.698954,
+        "t": "2026-04-17T17:39:42.482Z"
       },
       {
-        "lat": 24.710908,
-        "lng": 46.681033,
-        "t": "2026-04-17T15:48:22.471Z"
+        "lat": 24.726586,
+        "lng": 46.696456,
+        "t": "2026-04-17T17:41:42.533Z"
       },
       {
-        "lat": 24.708914,
-        "lng": 46.679642,
-        "t": "2026-04-17T15:48:37.477Z"
+        "lat": 24.725025,
+        "lng": 46.694716,
+        "t": "2026-04-17T17:42:27.567Z"
       },
       {
-        "lat": 24.710628,
-        "lng": 46.681212,
-        "t": "2026-04-17T15:48:42.481Z"
+        "lat": 24.724611,
+        "lng": 46.69559,
+        "t": "2026-04-17T17:42:37.571Z"
       },
       {
-        "lat": 24.711646,
-        "lng": 46.682699,
-        "t": "2026-04-17T15:49:02.489Z"
+        "lat": 24.723034,
+        "lng": 46.69781,
+        "t": "2026-04-17T17:44:42.624Z"
       },
       {
-        "lat": 24.712446,
-        "lng": 46.685021,
-        "t": "2026-04-17T15:49:27.498Z"
+        "lat": 24.724385,
+        "lng": 46.695528,
+        "t": "2026-04-17T17:45:02.634Z"
       },
       {
-        "lat": 24.709954,
-        "lng": 46.684815,
-        "t": "2026-04-17T15:49:37.501Z"
+        "lat": 24.725627,
+        "lng": 46.693292,
+        "t": "2026-04-17T17:45:27.642Z"
       },
       {
-        "lat": 24.708983,
-        "lng": 46.684068,
-        "t": "2026-04-17T15:49:42.502Z"
-      }
-    ],
-    "v8": [
-      {
-        "lat": 26.325889,
-        "lng": 43.975322,
-        "t": "2026-04-17T15:40:04.560Z"
+        "lat": 24.727546,
+        "lng": 46.691882,
+        "t": "2026-04-17T17:45:32.642Z"
       },
       {
-        "lat": 26.323874,
-        "lng": 43.976925,
-        "t": "2026-04-17T15:40:39.573Z"
+        "lat": 24.726561,
+        "lng": 46.689944,
+        "t": "2026-04-17T17:46:12.666Z"
       },
       {
-        "lat": 26.323922,
-        "lng": 43.977556,
-        "t": "2026-04-17T15:41:39.592Z"
+        "lat": 24.728885,
+        "lng": 46.687917,
+        "t": "2026-04-17T17:46:17.666Z"
       },
       {
-        "lat": 26.322309,
-        "lng": 43.975355,
-        "t": "2026-04-17T15:42:09.601Z"
+        "lat": 24.73049,
+        "lng": 46.689157,
+        "t": "2026-04-17T17:46:47.684Z"
       },
       {
-        "lat": 26.323889,
-        "lng": 43.974237,
-        "t": "2026-04-17T15:42:34.609Z"
+        "lat": 24.73063,
+        "lng": 46.68938,
+        "t": "2026-04-17T17:47:52.711Z"
       },
       {
-        "lat": 26.325926,
-        "lng": 43.973005,
-        "t": "2026-04-17T15:42:49.617Z"
+        "lat": 24.730536,
+        "lng": 46.68812,
+        "t": "2026-04-17T17:48:17.725Z"
       },
       {
-        "lat": 26.326373,
-        "lng": 43.975316,
-        "t": "2026-04-17T15:42:54.619Z"
+        "lat": 24.732734,
+        "lng": 46.68581,
+        "t": "2026-04-17T17:48:27.730Z"
       },
       {
-        "lat": 26.328142,
-        "lng": 43.975745,
-        "t": "2026-04-17T15:43:19.628Z"
+        "lat": 24.731554,
+        "lng": 46.683659,
+        "t": "2026-04-17T17:49:07.749Z"
       },
       {
-        "lat": 26.326889,
-        "lng": 43.973762,
-        "t": "2026-04-17T15:43:29.633Z"
+        "lat": 24.73239,
+        "lng": 46.685769,
+        "t": "2026-04-17T17:49:37.760Z"
       },
       {
-        "lat": 26.32579,
-        "lng": 43.97456,
-        "t": "2026-04-17T15:43:34.637Z"
+        "lat": 24.733634,
+        "lng": 46.685574,
+        "t": "2026-04-17T17:49:47.761Z"
       },
       {
-        "lat": 26.328057,
-        "lng": 43.975836,
-        "t": "2026-04-17T15:43:49.644Z"
+        "lat": 24.731614,
+        "lng": 46.683793,
+        "t": "2026-04-17T17:50:02.772Z"
       },
       {
-        "lat": 26.326912,
-        "lng": 43.975328,
-        "t": "2026-04-17T15:45:47.410Z"
+        "lat": 24.730524,
+        "lng": 46.681332,
+        "t": "2026-04-17T17:50:12.778Z"
       },
       {
-        "lat": 26.327052,
-        "lng": 43.977204,
-        "t": "2026-04-17T15:47:37.453Z"
+        "lat": 24.732314,
+        "lng": 46.679933,
+        "t": "2026-04-17T17:50:32.784Z"
       },
       {
-        "lat": 26.325254,
-        "lng": 43.974938,
-        "t": "2026-04-17T15:47:42.457Z"
+        "lat": 24.734255,
+        "lng": 46.679287,
+        "t": "2026-04-17T17:51:07.798Z"
       },
       {
-        "lat": 26.323881,
-        "lng": 43.977275,
-        "t": "2026-04-17T15:48:47.484Z"
+        "lat": 24.735297,
+        "lng": 46.678108,
+        "t": "2026-04-17T17:51:32.813Z"
       },
       {
-        "lat": 26.324417,
-        "lng": 43.977477,
-        "t": "2026-04-17T15:48:52.485Z"
+        "lat": 24.73731,
+        "lng": 46.676511,
+        "t": "2026-04-17T17:52:02.825Z"
       },
       {
-        "lat": 26.324436,
-        "lng": 43.97553,
-        "t": "2026-04-17T15:49:07.490Z"
+        "lat": 24.737412,
+        "lng": 46.678568,
+        "t": "2026-04-17T17:52:07.829Z"
       },
       {
-        "lat": 26.326039,
-        "lng": 43.976614,
-        "t": "2026-04-17T15:49:47.506Z"
-      }
-    ],
-    "v5": [
-      {
-        "lat": 21.389279,
-        "lng": 39.856479,
-        "t": "2026-04-17T15:40:24.566Z"
+        "lat": 24.739204,
+        "lng": 46.679717,
+        "t": "2026-04-17T17:52:42.844Z"
       },
       {
-        "lat": 21.390674,
-        "lng": 39.855594,
-        "t": "2026-04-17T15:40:34.572Z"
+        "lat": 24.738133,
+        "lng": 46.680481,
+        "t": "2026-04-17T17:52:47.846Z"
       },
       {
-        "lat": 21.393005,
-        "lng": 39.857155,
-        "t": "2026-04-17T15:40:44.575Z"
+        "lat": 24.73725,
+        "lng": 46.679065,
+        "t": "2026-04-17T17:52:57.850Z"
       },
       {
-        "lat": 21.395197,
-        "lng": 39.855997,
-        "t": "2026-04-17T15:40:54.575Z"
+        "lat": 24.734775,
+        "lng": 46.677744,
+        "t": "2026-04-17T17:53:17.861Z"
       },
       {
-        "lat": 21.3946,
-        "lng": 39.855342,
-        "t": "2026-04-17T15:41:24.584Z"
+        "lat": 24.736546,
+        "lng": 46.6761,
+        "t": "2026-04-17T17:53:22.865Z"
       },
       {
-        "lat": 21.393126,
-        "lng": 39.854961,
-        "t": "2026-04-17T15:41:29.588Z"
+        "lat": 24.737659,
+        "lng": 46.678251,
+        "t": "2026-04-17T17:53:32.870Z"
       },
       {
-        "lat": 21.393841,
-        "lng": 39.855523,
-        "t": "2026-04-17T15:42:19.604Z"
+        "lat": 24.73989,
+        "lng": 46.680437,
+        "t": "2026-04-17T17:54:02.885Z"
       },
       {
-        "lat": 21.394702,
-        "lng": 39.857724,
-        "t": "2026-04-17T15:42:29.607Z"
+        "lat": 24.740681,
+        "lng": 46.679184,
+        "t": "2026-04-17T17:54:12.892Z"
       },
       {
-        "lat": 21.392486,
-        "lng": 39.856467,
-        "t": "2026-04-17T15:42:59.622Z"
+        "lat": 24.741052,
+        "lng": 46.680541,
+        "t": "2026-04-17T17:54:57.915Z"
       },
       {
-        "lat": 21.392216,
-        "lng": 39.856985,
-        "t": "2026-04-17T15:44:29.660Z"
+        "lat": 24.738976,
+        "lng": 46.682749,
+        "t": "2026-04-17T17:55:07.921Z"
       },
       {
-        "lat": 21.390879,
-        "lng": 39.855863,
-        "t": "2026-04-17T15:44:34.662Z"
+        "lat": 24.740645,
+        "lng": 46.684949,
+        "t": "2026-04-17T17:55:32.931Z"
       },
       {
-        "lat": 21.38973,
-        "lng": 39.855343,
-        "t": "2026-04-17T15:46:07.418Z"
+        "lat": 24.738731,
+        "lng": 46.683853,
+        "t": "2026-04-17T17:56:32.957Z"
       },
       {
-        "lat": 21.392039,
-        "lng": 39.85495,
-        "t": "2026-04-17T15:46:12.421Z"
+        "lat": 24.73745,
+        "lng": 46.681664,
+        "t": "2026-04-17T17:56:37.961Z"
       },
       {
-        "lat": 21.391411,
-        "lng": 39.855986,
-        "t": "2026-04-17T15:46:42.431Z"
+        "lat": 24.739888,
+        "lng": 46.680368,
+        "t": "2026-04-17T17:57:17.978Z"
       },
       {
-        "lat": 21.3897,
-        "lng": 39.857166,
-        "t": "2026-04-17T15:46:52.434Z"
+        "lat": 24.738576,
+        "lng": 46.682128,
+        "t": "2026-04-17T17:58:18.004Z"
       },
       {
-        "lat": 21.38733,
-        "lng": 39.855845,
-        "t": "2026-04-17T15:46:57.438Z"
+        "lat": 24.738262,
+        "lng": 46.682849,
+        "t": "2026-04-17T17:58:43.017Z"
       },
       {
-        "lat": 21.386646,
-        "lng": 39.853906,
-        "t": "2026-04-17T15:47:52.461Z"
+        "lat": 24.737001,
+        "lng": 46.682305,
+        "t": "2026-04-17T17:59:28.034Z"
       },
       {
-        "lat": 21.385087,
-        "lng": 39.853391,
-        "t": "2026-04-17T15:48:12.467Z"
+        "lat": 24.738374,
+        "lng": 46.683729,
+        "t": "2026-04-17T18:00:23.060Z"
       },
       {
-        "lat": 21.387277,
-        "lng": 39.855585,
-        "t": "2026-04-17T15:48:57.487Z"
+        "lat": 24.736873,
+        "lng": 46.685439,
+        "t": "2026-04-17T18:00:38.068Z"
       },
       {
-        "lat": 21.385134,
-        "lng": 39.856792,
-        "t": "2026-04-17T15:49:22.495Z"
+        "lat": 24.737134,
+        "lng": 46.687874,
+        "t": "2026-04-17T18:01:08.080Z"
+      },
+      {
+        "lat": 24.73559,
+        "lng": 46.688838,
+        "t": "2026-04-17T18:01:38.094Z"
+      },
+      {
+        "lat": 24.735658,
+        "lng": 46.690386,
+        "t": "2026-04-17T18:02:08.111Z"
+      },
+      {
+        "lat": 24.737568,
+        "lng": 46.690962,
+        "t": "2026-04-17T18:02:23.117Z"
+      },
+      {
+        "lat": 24.737927,
+        "lng": 46.692069,
+        "t": "2026-04-17T18:02:48.126Z"
+      },
+      {
+        "lat": 24.7401,
+        "lng": 46.693798,
+        "t": "2026-04-17T18:03:03.133Z"
+      },
+      {
+        "lat": 24.738981,
+        "lng": 46.691916,
+        "t": "2026-04-17T18:03:23.143Z"
+      },
+      {
+        "lat": 24.741105,
+        "lng": 46.691049,
+        "t": "2026-04-17T18:03:28.146Z"
+      },
+      {
+        "lat": 24.741486,
+        "lng": 46.690791,
+        "t": "2026-04-17T18:03:58.157Z"
+      },
+      {
+        "lat": 24.739158,
+        "lng": 46.692217,
+        "t": "2026-04-17T18:04:13.166Z"
+      },
+      {
+        "lat": 24.738447,
+        "lng": 46.694665,
+        "t": "2026-04-17T18:04:23.171Z"
+      },
+      {
+        "lat": 24.738066,
+        "lng": 46.693478,
+        "t": "2026-04-17T18:04:28.174Z"
+      },
+      {
+        "lat": 24.738369,
+        "lng": 46.691582,
+        "t": "2026-04-17T18:04:33.177Z"
+      },
+      {
+        "lat": 24.740696,
+        "lng": 46.690986,
+        "t": "2026-04-17T18:04:53.184Z"
+      },
+      {
+        "lat": 24.73994,
+        "lng": 46.69195,
+        "t": "2026-04-17T18:05:03.186Z"
+      },
+      {
+        "lat": 24.739876,
+        "lng": 46.693784,
+        "t": "2026-04-17T18:05:13.191Z"
+      },
+      {
+        "lat": 24.737925,
+        "lng": 46.694035,
+        "t": "2026-04-17T18:05:43.205Z"
+      },
+      {
+        "lat": 24.738395,
+        "lng": 46.69353,
+        "t": "2026-04-17T18:05:58.212Z"
+      },
+      {
+        "lat": 24.737251,
+        "lng": 46.692232,
+        "t": "2026-04-17T18:06:38.231Z"
+      },
+      {
+        "lat": 24.739677,
+        "lng": 46.693131,
+        "t": "2026-04-17T18:06:48.235Z"
+      },
+      {
+        "lat": 24.737938,
+        "lng": 46.690856,
+        "t": "2026-04-17T18:07:43.253Z"
+      },
+      {
+        "lat": 24.737071,
+        "lng": 46.691051,
+        "t": "2026-04-17T18:07:53.257Z"
+      },
+      {
+        "lat": 24.736401,
+        "lng": 46.690092,
+        "t": "2026-04-17T18:07:58.260Z"
+      },
+      {
+        "lat": 24.734485,
+        "lng": 46.689455,
+        "t": "2026-04-17T18:08:43.283Z"
+      },
+      {
+        "lat": 24.735796,
+        "lng": 46.690722,
+        "t": "2026-04-17T18:08:48.284Z"
+      },
+      {
+        "lat": 24.737986,
+        "lng": 46.691654,
+        "t": "2026-04-17T18:09:28.301Z"
+      },
+      {
+        "lat": 24.735677,
+        "lng": 46.691479,
+        "t": "2026-04-17T18:10:23.330Z"
+      },
+      {
+        "lat": 24.737159,
+        "lng": 46.691375,
+        "t": "2026-04-17T18:10:43.339Z"
+      },
+      {
+        "lat": 24.737043,
+        "lng": 46.693264,
+        "t": "2026-04-17T18:10:53.343Z"
+      },
+      {
+        "lat": 24.73595,
+        "lng": 46.691522,
+        "t": "2026-04-17T18:12:33.389Z"
+      },
+      {
+        "lat": 24.734283,
+        "lng": 46.689259,
+        "t": "2026-04-17T18:14:13.434Z"
+      },
+      {
+        "lat": 24.735805,
+        "lng": 46.687173,
+        "t": "2026-04-17T18:14:53.453Z"
+      },
+      {
+        "lat": 24.733977,
+        "lng": 46.68904,
+        "t": "2026-04-17T18:15:03.458Z"
+      },
+      {
+        "lat": 24.735864,
+        "lng": 46.686654,
+        "t": "2026-04-17T18:15:38.477Z"
+      },
+      {
+        "lat": 24.735836,
+        "lng": 46.687748,
+        "t": "2026-04-17T18:16:03.488Z"
+      },
+      {
+        "lat": 24.737829,
+        "lng": 46.689863,
+        "t": "2026-04-17T18:16:33.502Z"
+      },
+      {
+        "lat": 24.738317,
+        "lng": 46.691401,
+        "t": "2026-04-17T18:16:58.518Z"
       }
     ],
     "v7": [
       {
-        "lat": 28.383879,
-        "lng": 36.567762,
-        "t": "2026-04-17T15:40:29.570Z"
+        "lat": 28.375068,
+        "lng": 36.55581,
+        "t": "2026-04-17T17:40:57.515Z"
       },
       {
-        "lat": 28.385252,
-        "lng": 36.570223,
-        "t": "2026-04-17T15:41:09.581Z"
+        "lat": 28.376609,
+        "lng": 36.556711,
+        "t": "2026-04-17T17:41:02.518Z"
       },
       {
-        "lat": 28.383293,
-        "lng": 36.571032,
-        "t": "2026-04-17T15:41:49.595Z"
+        "lat": 28.376742,
+        "lng": 36.555817,
+        "t": "2026-04-17T17:41:12.523Z"
       },
       {
-        "lat": 28.381442,
-        "lng": 36.568602,
-        "t": "2026-04-17T15:41:54.596Z"
+        "lat": 28.378446,
+        "lng": 36.553806,
+        "t": "2026-04-17T17:41:32.528Z"
       },
       {
-        "lat": 28.383028,
-        "lng": 36.568622,
-        "t": "2026-04-17T15:41:59.597Z"
+        "lat": 28.378039,
+        "lng": 36.552309,
+        "t": "2026-04-17T17:41:52.538Z"
       },
       {
-        "lat": 28.382942,
-        "lng": 36.566729,
-        "t": "2026-04-17T15:42:44.617Z"
+        "lat": 28.376489,
+        "lng": 36.55022,
+        "t": "2026-04-17T17:42:42.572Z"
       },
       {
-        "lat": 28.384111,
-        "lng": 36.567794,
-        "t": "2026-04-17T15:43:09.625Z"
+        "lat": 28.374839,
+        "lng": 36.550012,
+        "t": "2026-04-17T17:42:47.574Z"
       },
       {
-        "lat": 28.385469,
-        "lng": 36.567506,
-        "t": "2026-04-17T15:43:14.627Z"
+        "lat": 28.375864,
+        "lng": 36.550258,
+        "t": "2026-04-17T17:42:52.577Z"
       },
       {
-        "lat": 28.384392,
-        "lng": 36.56501,
-        "t": "2026-04-17T15:43:24.632Z"
+        "lat": 28.376475,
+        "lng": 36.548648,
+        "t": "2026-04-17T17:43:02.583Z"
       },
       {
-        "lat": 28.382027,
-        "lng": 36.566863,
-        "t": "2026-04-17T15:44:24.658Z"
+        "lat": 28.375359,
+        "lng": 36.547145,
+        "t": "2026-04-17T17:43:22.594Z"
       },
       {
-        "lat": 28.383055,
-        "lng": 36.567261,
-        "t": "2026-04-17T15:45:42.409Z"
+        "lat": 28.37708,
+        "lng": 36.546896,
+        "t": "2026-04-17T17:43:52.603Z"
       },
       {
-        "lat": 28.385296,
-        "lng": 36.567429,
-        "t": "2026-04-17T15:45:57.416Z"
+        "lat": 28.375792,
+        "lng": 36.546878,
+        "t": "2026-04-17T17:44:07.609Z"
       },
       {
-        "lat": 28.385812,
-        "lng": 36.565918,
-        "t": "2026-04-17T15:46:17.423Z"
+        "lat": 28.375644,
+        "lng": 36.545534,
+        "t": "2026-04-17T17:45:12.639Z"
       },
       {
-        "lat": 28.385097,
-        "lng": 36.567539,
-        "t": "2026-04-17T15:46:22.426Z"
+        "lat": 28.37428,
+        "lng": 36.546479,
+        "t": "2026-04-17T17:45:17.639Z"
       },
       {
-        "lat": 28.385103,
-        "lng": 36.56799,
-        "t": "2026-04-17T15:46:37.430Z"
+        "lat": 28.375568,
+        "lng": 36.548187,
+        "t": "2026-04-17T17:45:37.643Z"
       },
       {
-        "lat": 28.387048,
-        "lng": 36.56857,
-        "t": "2026-04-17T15:46:47.432Z"
+        "lat": 28.373482,
+        "lng": 36.548178,
+        "t": "2026-04-17T17:46:27.674Z"
       },
       {
-        "lat": 28.389473,
-        "lng": 36.568559,
-        "t": "2026-04-17T15:47:07.440Z"
+        "lat": 28.373541,
+        "lng": 36.545861,
+        "t": "2026-04-17T17:46:37.679Z"
       },
       {
-        "lat": 28.38747,
-        "lng": 36.567525,
-        "t": "2026-04-17T15:47:27.452Z"
+        "lat": 28.37472,
+        "lng": 36.546714,
+        "t": "2026-04-17T17:46:42.683Z"
       },
       {
-        "lat": 28.387252,
-        "lng": 36.565983,
-        "t": "2026-04-17T15:48:07.466Z"
+        "lat": 28.376478,
+        "lng": 36.548415,
+        "t": "2026-04-17T17:47:37.707Z"
       },
       {
-        "lat": 28.386664,
-        "lng": 36.567022,
-        "t": "2026-04-17T15:48:27.474Z"
+        "lat": 28.374741,
+        "lng": 36.54755,
+        "t": "2026-04-17T17:47:47.709Z"
       },
       {
-        "lat": 28.38747,
-        "lng": 36.567629,
-        "t": "2026-04-17T15:49:12.492Z"
+        "lat": 28.372313,
+        "lng": 36.546835,
+        "t": "2026-04-17T17:48:22.728Z"
       },
       {
-        "lat": 28.389856,
-        "lng": 36.567166,
-        "t": "2026-04-17T15:49:17.492Z"
+        "lat": 28.374497,
+        "lng": 36.545689,
+        "t": "2026-04-17T17:48:42.737Z"
       },
       {
-        "lat": 28.391101,
-        "lng": 36.566829,
-        "t": "2026-04-17T15:49:32.501Z"
+        "lat": 28.375618,
+        "lng": 36.547655,
+        "t": "2026-04-17T17:48:52.741Z"
       },
       {
-        "lat": 28.392962,
-        "lng": 36.567268,
-        "t": "2026-04-17T15:49:52.509Z"
+        "lat": 28.375703,
+        "lng": 36.548953,
+        "t": "2026-04-17T17:48:57.745Z"
+      },
+      {
+        "lat": 28.373435,
+        "lng": 36.550263,
+        "t": "2026-04-17T17:49:17.753Z"
+      },
+      {
+        "lat": 28.374682,
+        "lng": 36.547879,
+        "t": "2026-04-17T17:50:42.789Z"
+      },
+      {
+        "lat": 28.374111,
+        "lng": 36.547466,
+        "t": "2026-04-17T17:51:27.813Z"
+      },
+      {
+        "lat": 28.37457,
+        "lng": 36.545938,
+        "t": "2026-04-17T17:51:37.817Z"
+      },
+      {
+        "lat": 28.376102,
+        "lng": 36.545891,
+        "t": "2026-04-17T17:51:42.819Z"
+      },
+      {
+        "lat": 28.37673,
+        "lng": 36.547531,
+        "t": "2026-04-17T17:51:47.819Z"
+      },
+      {
+        "lat": 28.375445,
+        "lng": 36.549073,
+        "t": "2026-04-17T17:52:22.834Z"
+      },
+      {
+        "lat": 28.375591,
+        "lng": 36.547145,
+        "t": "2026-04-17T17:52:27.837Z"
+      },
+      {
+        "lat": 28.376421,
+        "lng": 36.547967,
+        "t": "2026-04-17T17:54:37.904Z"
+      },
+      {
+        "lat": 28.375532,
+        "lng": 36.549457,
+        "t": "2026-04-17T17:54:42.907Z"
+      },
+      {
+        "lat": 28.377267,
+        "lng": 36.551037,
+        "t": "2026-04-17T17:55:12.923Z"
+      },
+      {
+        "lat": 28.3766,
+        "lng": 36.551354,
+        "t": "2026-04-17T17:55:17.924Z"
+      },
+      {
+        "lat": 28.375193,
+        "lng": 36.54925,
+        "t": "2026-04-17T17:55:37.934Z"
+      },
+      {
+        "lat": 28.375809,
+        "lng": 36.547544,
+        "t": "2026-04-17T17:55:47.939Z"
+      },
+      {
+        "lat": 28.375613,
+        "lng": 36.54535,
+        "t": "2026-04-17T17:56:07.943Z"
+      },
+      {
+        "lat": 28.377912,
+        "lng": 36.547745,
+        "t": "2026-04-17T17:56:17.947Z"
+      },
+      {
+        "lat": 28.379066,
+        "lng": 36.547346,
+        "t": "2026-04-17T17:56:47.964Z"
+      },
+      {
+        "lat": 28.380231,
+        "lng": 36.546028,
+        "t": "2026-04-17T17:56:57.967Z"
+      },
+      {
+        "lat": 28.37861,
+        "lng": 36.544428,
+        "t": "2026-04-17T17:57:07.977Z"
+      },
+      {
+        "lat": 28.377856,
+        "lng": 36.546286,
+        "t": "2026-04-17T17:57:12.977Z"
+      },
+      {
+        "lat": 28.375446,
+        "lng": 36.545922,
+        "t": "2026-04-17T17:57:52.994Z"
+      },
+      {
+        "lat": 28.377696,
+        "lng": 36.546445,
+        "t": "2026-04-17T17:58:02.998Z"
+      },
+      {
+        "lat": 28.379744,
+        "lng": 36.545635,
+        "t": "2026-04-17T17:58:08.000Z"
+      },
+      {
+        "lat": 28.380525,
+        "lng": 36.544171,
+        "t": "2026-04-17T17:58:28.008Z"
+      },
+      {
+        "lat": 28.382896,
+        "lng": 36.542819,
+        "t": "2026-04-17T17:59:13.029Z"
+      },
+      {
+        "lat": 28.383786,
+        "lng": 36.542611,
+        "t": "2026-04-17T17:59:33.038Z"
+      },
+      {
+        "lat": 28.384965,
+        "lng": 36.544679,
+        "t": "2026-04-17T17:59:53.045Z"
+      },
+      {
+        "lat": 28.386765,
+        "lng": 36.544258,
+        "t": "2026-04-17T17:59:58.049Z"
+      },
+      {
+        "lat": 28.384396,
+        "lng": 36.545916,
+        "t": "2026-04-17T18:00:03.049Z"
+      },
+      {
+        "lat": 28.386701,
+        "lng": 36.547322,
+        "t": "2026-04-17T18:00:28.061Z"
+      },
+      {
+        "lat": 28.389069,
+        "lng": 36.545736,
+        "t": "2026-04-17T18:00:43.069Z"
+      },
+      {
+        "lat": 28.387527,
+        "lng": 36.545782,
+        "t": "2026-04-17T18:00:53.073Z"
+      },
+      {
+        "lat": 28.387182,
+        "lng": 36.547891,
+        "t": "2026-04-17T18:01:23.087Z"
+      },
+      {
+        "lat": 28.387656,
+        "lng": 36.548288,
+        "t": "2026-04-17T18:01:48.098Z"
+      },
+      {
+        "lat": 28.385292,
+        "lng": 36.548419,
+        "t": "2026-04-17T18:01:53.101Z"
+      },
+      {
+        "lat": 28.387588,
+        "lng": 36.54977,
+        "t": "2026-04-17T18:01:58.104Z"
+      },
+      {
+        "lat": 28.389673,
+        "lng": 36.548482,
+        "t": "2026-04-17T18:02:18.114Z"
+      },
+      {
+        "lat": 28.387397,
+        "lng": 36.548153,
+        "t": "2026-04-17T18:04:03.160Z"
+      },
+      {
+        "lat": 28.388171,
+        "lng": 36.549854,
+        "t": "2026-04-17T18:04:08.162Z"
+      },
+      {
+        "lat": 28.390087,
+        "lng": 36.547972,
+        "t": "2026-04-17T18:04:38.177Z"
+      },
+      {
+        "lat": 28.392096,
+        "lng": 36.548113,
+        "t": "2026-04-17T18:04:43.180Z"
+      },
+      {
+        "lat": 28.394414,
+        "lng": 36.545717,
+        "t": "2026-04-17T18:05:18.192Z"
+      },
+      {
+        "lat": 28.39283,
+        "lng": 36.546525,
+        "t": "2026-04-17T18:06:23.223Z"
+      },
+      {
+        "lat": 28.392595,
+        "lng": 36.544776,
+        "t": "2026-04-17T18:06:58.240Z"
+      },
+      {
+        "lat": 28.394987,
+        "lng": 36.542584,
+        "t": "2026-04-17T18:07:13.243Z"
+      },
+      {
+        "lat": 28.395649,
+        "lng": 36.542591,
+        "t": "2026-04-17T18:07:18.244Z"
+      },
+      {
+        "lat": 28.396165,
+        "lng": 36.540512,
+        "t": "2026-04-17T18:07:33.248Z"
+      },
+      {
+        "lat": 28.394143,
+        "lng": 36.541447,
+        "t": "2026-04-17T18:08:03.263Z"
+      },
+      {
+        "lat": 28.393552,
+        "lng": 36.543176,
+        "t": "2026-04-17T18:08:33.279Z"
+      },
+      {
+        "lat": 28.395269,
+        "lng": 36.544943,
+        "t": "2026-04-17T18:08:38.282Z"
+      },
+      {
+        "lat": 28.395527,
+        "lng": 36.545821,
+        "t": "2026-04-17T18:09:03.291Z"
+      },
+      {
+        "lat": 28.393078,
+        "lng": 36.543604,
+        "t": "2026-04-17T18:09:13.295Z"
+      },
+      {
+        "lat": 28.392219,
+        "lng": 36.542098,
+        "t": "2026-04-17T18:10:08.323Z"
+      },
+      {
+        "lat": 28.393128,
+        "lng": 36.542667,
+        "t": "2026-04-17T18:10:38.337Z"
+      },
+      {
+        "lat": 28.395018,
+        "lng": 36.541249,
+        "t": "2026-04-17T18:10:48.341Z"
+      },
+      {
+        "lat": 28.395741,
+        "lng": 36.539168,
+        "t": "2026-04-17T18:11:18.356Z"
+      },
+      {
+        "lat": 28.396566,
+        "lng": 36.540182,
+        "t": "2026-04-17T18:11:23.356Z"
+      },
+      {
+        "lat": 28.394266,
+        "lng": 36.541994,
+        "t": "2026-04-17T18:11:43.369Z"
+      },
+      {
+        "lat": 28.395664,
+        "lng": 36.541684,
+        "t": "2026-04-17T18:12:18.382Z"
+      },
+      {
+        "lat": 28.39667,
+        "lng": 36.540839,
+        "t": "2026-04-17T18:13:03.404Z"
+      },
+      {
+        "lat": 28.396792,
+        "lng": 36.541068,
+        "t": "2026-04-17T18:13:28.416Z"
+      },
+      {
+        "lat": 28.396431,
+        "lng": 36.541567,
+        "t": "2026-04-17T18:13:33.417Z"
+      },
+      {
+        "lat": 28.394646,
+        "lng": 36.543125,
+        "t": "2026-04-17T18:13:38.420Z"
+      },
+      {
+        "lat": 28.394818,
+        "lng": 36.541949,
+        "t": "2026-04-17T18:13:48.423Z"
+      },
+      {
+        "lat": 28.392441,
+        "lng": 36.539817,
+        "t": "2026-04-17T18:14:08.435Z"
+      },
+      {
+        "lat": 28.392304,
+        "lng": 36.54184,
+        "t": "2026-04-17T18:14:23.441Z"
+      },
+      {
+        "lat": 28.390868,
+        "lng": 36.54121,
+        "t": "2026-04-17T18:14:28.445Z"
+      },
+      {
+        "lat": 28.390303,
+        "lng": 36.542286,
+        "t": "2026-04-17T18:14:33.447Z"
+      },
+      {
+        "lat": 28.391808,
+        "lng": 36.543718,
+        "t": "2026-04-17T18:15:13.464Z"
+      },
+      {
+        "lat": 28.391588,
+        "lng": 36.544056,
+        "t": "2026-04-17T18:15:18.464Z"
+      },
+      {
+        "lat": 28.390943,
+        "lng": 36.546136,
+        "t": "2026-04-17T18:15:28.470Z"
+      },
+      {
+        "lat": 28.389021,
+        "lng": 36.543722,
+        "t": "2026-04-17T18:15:33.474Z"
+      },
+      {
+        "lat": 28.388269,
+        "lng": 36.544198,
+        "t": "2026-04-17T18:16:13.494Z"
+      },
+      {
+        "lat": 28.38961,
+        "lng": 36.546679,
+        "t": "2026-04-17T18:16:28.501Z"
+      },
+      {
+        "lat": 28.387874,
+        "lng": 36.54639,
+        "t": "2026-04-17T18:16:48.511Z"
+      },
+      {
+        "lat": 28.389,
+        "lng": 36.547954,
+        "t": "2026-04-17T18:17:13.524Z"
+      }
+    ],
+    "v8": [
+      {
+        "lat": 26.315693,
+        "lng": 43.98527,
+        "t": "2026-04-17T17:35:27.369Z"
+      },
+      {
+        "lat": 26.316778,
+        "lng": 43.98405,
+        "t": "2026-04-17T17:35:32.371Z"
+      },
+      {
+        "lat": 26.317965,
+        "lng": 43.983996,
+        "t": "2026-04-17T17:36:27.399Z"
+      },
+      {
+        "lat": 26.31865,
+        "lng": 43.986268,
+        "t": "2026-04-17T17:36:37.404Z"
+      },
+      {
+        "lat": 26.316965,
+        "lng": 43.98572,
+        "t": "2026-04-17T17:36:57.409Z"
+      },
+      {
+        "lat": 26.317415,
+        "lng": 43.98638,
+        "t": "2026-04-17T17:38:02.436Z"
+      },
+      {
+        "lat": 26.316056,
+        "lng": 43.985848,
+        "t": "2026-04-17T17:38:07.440Z"
+      },
+      {
+        "lat": 26.315089,
+        "lng": 43.984905,
+        "t": "2026-04-17T17:38:12.442Z"
+      },
+      {
+        "lat": 26.31578,
+        "lng": 43.982721,
+        "t": "2026-04-17T17:39:52.487Z"
+      },
+      {
+        "lat": 26.313576,
+        "lng": 43.981714,
+        "t": "2026-04-17T17:40:07.495Z"
+      },
+      {
+        "lat": 26.315751,
+        "lng": 43.97995,
+        "t": "2026-04-17T17:40:27.502Z"
+      },
+      {
+        "lat": 26.31503,
+        "lng": 43.981915,
+        "t": "2026-04-17T17:40:42.511Z"
+      },
+      {
+        "lat": 26.314295,
+        "lng": 43.982736,
+        "t": "2026-04-17T17:41:17.523Z"
+      },
+      {
+        "lat": 26.316633,
+        "lng": 43.980683,
+        "t": "2026-04-17T17:41:22.527Z"
+      },
+      {
+        "lat": 26.319054,
+        "lng": 43.982987,
+        "t": "2026-04-17T17:42:22.565Z"
+      },
+      {
+        "lat": 26.317801,
+        "lng": 43.980747,
+        "t": "2026-04-17T17:42:57.581Z"
+      },
+      {
+        "lat": 26.319842,
+        "lng": 43.980487,
+        "t": "2026-04-17T17:43:27.595Z"
+      },
+      {
+        "lat": 26.320552,
+        "lng": 43.978327,
+        "t": "2026-04-17T17:44:02.607Z"
+      },
+      {
+        "lat": 26.321106,
+        "lng": 43.977789,
+        "t": "2026-04-17T17:44:12.611Z"
+      },
+      {
+        "lat": 26.320794,
+        "lng": 43.976154,
+        "t": "2026-04-17T17:44:27.616Z"
+      },
+      {
+        "lat": 26.321427,
+        "lng": 43.976095,
+        "t": "2026-04-17T17:44:52.628Z"
+      },
+      {
+        "lat": 26.320028,
+        "lng": 43.97558,
+        "t": "2026-04-17T17:45:47.648Z"
+      },
+      {
+        "lat": 26.318356,
+        "lng": 43.977789,
+        "t": "2026-04-17T17:45:52.648Z"
+      },
+      {
+        "lat": 26.316393,
+        "lng": 43.977772,
+        "t": "2026-04-17T17:45:57.652Z"
+      },
+      {
+        "lat": 26.315746,
+        "lng": 43.978689,
+        "t": "2026-04-17T17:46:22.669Z"
+      },
+      {
+        "lat": 26.314526,
+        "lng": 43.979005,
+        "t": "2026-04-17T17:47:02.691Z"
+      },
+      {
+        "lat": 26.312523,
+        "lng": 43.980336,
+        "t": "2026-04-17T17:47:12.694Z"
+      },
+      {
+        "lat": 26.314641,
+        "lng": 43.980259,
+        "t": "2026-04-17T17:47:32.705Z"
+      },
+      {
+        "lat": 26.316165,
+        "lng": 43.979141,
+        "t": "2026-04-17T17:48:02.717Z"
+      },
+      {
+        "lat": 26.317494,
+        "lng": 43.978184,
+        "t": "2026-04-17T17:48:12.724Z"
+      },
+      {
+        "lat": 26.318145,
+        "lng": 43.980231,
+        "t": "2026-04-17T17:49:22.753Z"
+      },
+      {
+        "lat": 26.319442,
+        "lng": 43.981158,
+        "t": "2026-04-17T17:49:27.755Z"
+      },
+      {
+        "lat": 26.317224,
+        "lng": 43.97969,
+        "t": "2026-04-17T17:49:32.756Z"
+      },
+      {
+        "lat": 26.315893,
+        "lng": 43.980624,
+        "t": "2026-04-17T17:49:57.770Z"
+      },
+      {
+        "lat": 26.318164,
+        "lng": 43.982456,
+        "t": "2026-04-17T17:50:37.786Z"
+      },
+      {
+        "lat": 26.319952,
+        "lng": 43.983756,
+        "t": "2026-04-17T17:51:02.797Z"
+      },
+      {
+        "lat": 26.318736,
+        "lng": 43.983634,
+        "t": "2026-04-17T17:51:12.802Z"
+      },
+      {
+        "lat": 26.319237,
+        "lng": 43.981348,
+        "t": "2026-04-17T17:51:22.807Z"
+      },
+      {
+        "lat": 26.317679,
+        "lng": 43.979057,
+        "t": "2026-04-17T17:52:12.829Z"
+      },
+      {
+        "lat": 26.317777,
+        "lng": 43.980017,
+        "t": "2026-04-17T17:52:52.849Z"
+      },
+      {
+        "lat": 26.317667,
+        "lng": 43.980513,
+        "t": "2026-04-17T17:53:27.867Z"
+      },
+      {
+        "lat": 26.319509,
+        "lng": 43.979039,
+        "t": "2026-04-17T17:53:52.881Z"
+      },
+      {
+        "lat": 26.320733,
+        "lng": 43.976986,
+        "t": "2026-04-17T17:54:22.894Z"
+      },
+      {
+        "lat": 26.3199,
+        "lng": 43.977571,
+        "t": "2026-04-17T17:54:47.908Z"
+      },
+      {
+        "lat": 26.321625,
+        "lng": 43.977357,
+        "t": "2026-04-17T17:54:52.912Z"
+      },
+      {
+        "lat": 26.319727,
+        "lng": 43.978332,
+        "t": "2026-04-17T17:55:02.915Z"
+      },
+      {
+        "lat": 26.319806,
+        "lng": 43.977723,
+        "t": "2026-04-17T17:55:22.927Z"
+      },
+      {
+        "lat": 26.31774,
+        "lng": 43.97829,
+        "t": "2026-04-17T17:55:42.938Z"
+      },
+      {
+        "lat": 26.317382,
+        "lng": 43.979382,
+        "t": "2026-04-17T17:55:57.943Z"
+      },
+      {
+        "lat": 26.317225,
+        "lng": 43.980396,
+        "t": "2026-04-17T17:56:22.950Z"
+      },
+      {
+        "lat": 26.316842,
+        "lng": 43.981177,
+        "t": "2026-04-17T17:57:02.974Z"
+      },
+      {
+        "lat": 26.315817,
+        "lng": 43.980697,
+        "t": "2026-04-17T17:57:27.985Z"
+      },
+      {
+        "lat": 26.3156,
+        "lng": 43.982949,
+        "t": "2026-04-17T17:57:32.988Z"
+      },
+      {
+        "lat": 26.314611,
+        "lng": 43.984184,
+        "t": "2026-04-17T17:58:48.017Z"
+      },
+      {
+        "lat": 26.313428,
+        "lng": 43.981954,
+        "t": "2026-04-17T17:59:08.026Z"
+      },
+      {
+        "lat": 26.315903,
+        "lng": 43.980661,
+        "t": "2026-04-17T17:59:23.031Z"
+      },
+      {
+        "lat": 26.316146,
+        "lng": 43.979949,
+        "t": "2026-04-17T17:59:48.042Z"
+      },
+      {
+        "lat": 26.31575,
+        "lng": 43.982286,
+        "t": "2026-04-17T18:00:08.053Z"
+      },
+      {
+        "lat": 26.317009,
+        "lng": 43.982767,
+        "t": "2026-04-17T18:00:13.055Z"
+      },
+      {
+        "lat": 26.31787,
+        "lng": 43.984466,
+        "t": "2026-04-17T18:01:13.083Z"
+      },
+      {
+        "lat": 26.317366,
+        "lng": 43.983577,
+        "t": "2026-04-17T18:01:33.091Z"
+      },
+      {
+        "lat": 26.315219,
+        "lng": 43.984584,
+        "t": "2026-04-17T18:01:43.097Z"
+      },
+      {
+        "lat": 26.316055,
+        "lng": 43.983275,
+        "t": "2026-04-17T18:02:33.121Z"
+      },
+      {
+        "lat": 26.314451,
+        "lng": 43.981975,
+        "t": "2026-04-17T18:02:38.122Z"
+      },
+      {
+        "lat": 26.316417,
+        "lng": 43.981016,
+        "t": "2026-04-17T18:02:43.126Z"
+      },
+      {
+        "lat": 26.314725,
+        "lng": 43.980419,
+        "t": "2026-04-17T18:03:08.136Z"
+      },
+      {
+        "lat": 26.313508,
+        "lng": 43.982089,
+        "t": "2026-04-17T18:03:43.151Z"
+      },
+      {
+        "lat": 26.31508,
+        "lng": 43.983772,
+        "t": "2026-04-17T18:03:48.153Z"
+      },
+      {
+        "lat": 26.313283,
+        "lng": 43.985255,
+        "t": "2026-04-17T18:04:18.168Z"
+      },
+      {
+        "lat": 26.312725,
+        "lng": 43.983649,
+        "t": "2026-04-17T18:04:58.185Z"
+      },
+      {
+        "lat": 26.3111,
+        "lng": 43.983931,
+        "t": "2026-04-17T18:05:08.189Z"
+      },
+      {
+        "lat": 26.31154,
+        "lng": 43.986319,
+        "t": "2026-04-17T18:05:23.195Z"
+      },
+      {
+        "lat": 26.313544,
+        "lng": 43.986365,
+        "t": "2026-04-17T18:05:33.201Z"
+      },
+      {
+        "lat": 26.314135,
+        "lng": 43.986172,
+        "t": "2026-04-17T18:06:28.226Z"
+      },
+      {
+        "lat": 26.31182,
+        "lng": 43.987809,
+        "t": "2026-04-17T18:07:38.250Z"
+      },
+      {
+        "lat": 26.311418,
+        "lng": 43.989625,
+        "t": "2026-04-17T18:08:08.267Z"
+      },
+      {
+        "lat": 26.310331,
+        "lng": 43.99111,
+        "t": "2026-04-17T18:08:53.287Z"
+      },
+      {
+        "lat": 26.310806,
+        "lng": 43.990376,
+        "t": "2026-04-17T18:09:08.294Z"
+      },
+      {
+        "lat": 26.31287,
+        "lng": 43.992482,
+        "t": "2026-04-17T18:09:23.297Z"
+      },
+      {
+        "lat": 26.313785,
+        "lng": 43.993628,
+        "t": "2026-04-17T18:09:33.303Z"
+      },
+      {
+        "lat": 26.315946,
+        "lng": 43.994007,
+        "t": "2026-04-17T18:09:48.309Z"
+      },
+      {
+        "lat": 26.313835,
+        "lng": 43.993505,
+        "t": "2026-04-17T18:09:53.313Z"
+      },
+      {
+        "lat": 26.315878,
+        "lng": 43.992133,
+        "t": "2026-04-17T18:09:58.317Z"
+      },
+      {
+        "lat": 26.315156,
+        "lng": 43.992153,
+        "t": "2026-04-17T18:10:28.332Z"
+      },
+      {
+        "lat": 26.316047,
+        "lng": 43.991922,
+        "t": "2026-04-17T18:10:58.346Z"
+      },
+      {
+        "lat": 26.314322,
+        "lng": 43.993419,
+        "t": "2026-04-17T18:11:13.353Z"
+      },
+      {
+        "lat": 26.313844,
+        "lng": 43.99122,
+        "t": "2026-04-17T18:11:28.360Z"
+      },
+      {
+        "lat": 26.315877,
+        "lng": 43.992582,
+        "t": "2026-04-17T18:11:33.363Z"
+      },
+      {
+        "lat": 26.316048,
+        "lng": 43.990778,
+        "t": "2026-04-17T18:11:48.371Z"
+      },
+      {
+        "lat": 26.318032,
+        "lng": 43.992052,
+        "t": "2026-04-17T18:12:03.377Z"
+      },
+      {
+        "lat": 26.317503,
+        "lng": 43.991238,
+        "t": "2026-04-17T18:12:28.386Z"
+      },
+      {
+        "lat": 26.317492,
+        "lng": 43.991374,
+        "t": "2026-04-17T18:12:53.398Z"
+      },
+      {
+        "lat": 26.317407,
+        "lng": 43.991952,
+        "t": "2026-04-17T18:13:08.405Z"
+      },
+      {
+        "lat": 26.31662,
+        "lng": 43.992496,
+        "t": "2026-04-17T18:15:23.467Z"
+      },
+      {
+        "lat": 26.318652,
+        "lng": 43.990504,
+        "t": "2026-04-17T18:15:58.485Z"
+      },
+      {
+        "lat": 26.317626,
+        "lng": 43.989711,
+        "t": "2026-04-17T18:16:08.491Z"
+      },
+      {
+        "lat": 26.315393,
+        "lng": 43.988502,
+        "t": "2026-04-17T18:16:18.496Z"
+      },
+      {
+        "lat": 26.314742,
+        "lng": 43.986791,
+        "t": "2026-04-17T18:16:23.498Z"
+      },
+      {
+        "lat": 26.314287,
+        "lng": 43.989006,
+        "t": "2026-04-17T18:16:43.508Z"
+      },
+      {
+        "lat": 26.313486,
+        "lng": 43.990604,
+        "t": "2026-04-17T18:16:53.514Z"
       }
     ]
   }
