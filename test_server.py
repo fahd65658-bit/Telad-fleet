@@ -99,7 +99,7 @@ class TestTeladFleet(unittest.TestCase):
                     }
                     alert_count = connection.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
                     latest_alert = connection.execute(
-                        "SELECT message FROM alerts ORDER BY datetime(created_at) DESC, id DESC LIMIT 1"
+                        "SELECT message FROM alerts ORDER BY id DESC LIMIT 1"
                     ).fetchone()[0]
 
                 self.assertEqual(updated_statuses, {"maintenance"})
