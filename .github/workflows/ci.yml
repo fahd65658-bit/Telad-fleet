@@ -1,6 +1,6 @@
-# ═══════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════��═════════[...]
 # TELAD FLEET – Node.js CI
-# ═══════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════[...]
 name: CI
 
 on:
@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@c2f7d6a75d9de3144a923a0ca6b77cbf10c1b5c0
 
       - name: Set up Node.js 18
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@3ea46f4c1d8bfb8b6d3c6c1f4a0ef0baf4d8a4d6
         with:
           node-version: '18'
           cache: 'npm'
@@ -44,7 +44,7 @@ jobs:
         run: npm run lint
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@d849f3cdd0b5b6f1d8d1f9f6f7b2c0d5a8b0a9f1
         with:
           python-version: '3.12'
 
