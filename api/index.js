@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const pathModule = require('path');
+const { generateFleetAnswer } = require('../lib/ai-chat');
 
 const BASE_DIR = pathModule.join(__dirname, '..');
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -227,6 +228,35 @@ function buildDashboardSummary() {
   };
 }
 
+function buildAiQueryFallback(question) {
+  const q = String(question || '').toLowerCase();
+  const vehicles = fleetVehicles();
+  const active = vehicles.filter((item) => item.status === 'active').length;
+  const charging = vehicles.filter((item) => item.status === 'charging').length;
+  const maintenance = vehicles.filter((item) => item.status === 'maintenance').length;
+
+  if (q.includes('مركب') || q.includes('vehicle') || q.includes('نشط') || q.includes('حالة')) {
+    return {
+      answer: `إجمالي المركبات ${vehicles.length} — النشطة ${active} — قيد الشحن ${charging} — في الصيانة ${maintenance}.`,
+      data: { total: vehicles.length, active, charging, maintenance },
+    };
+  }
+
+  if (q.includes('تنبيه') || q.includes('alert')) {
+    return {
+      answer: state.alerts.length
+        ? `يوجد ${state.alerts.length} تنبيهًا، وأحدثها: ${state.alerts[0]}`
+        : 'لا توجد تنبيهات نشطة حاليًا.',
+      data: { totalAlerts: state.alerts.length, latestAlert: state.alerts[0] || null },
+    };
+  }
+
+  return {
+    answer: `ملخص الأسطول الحالي: ${vehicles.length} مركبات، منها ${active} نشطة و${charging} قيد الشحن و${maintenance} في الصيانة.`,
+    data: { total: vehicles.length, active, charging, maintenance },
+  };
+}
+
 function readBody(req) {
   return new Promise((resolve) => {
     let raw = '';
@@ -351,6 +381,36 @@ module.exports = async (req, res) => {
       status: 'OK',
       model: 'telad-fleet-edge',
     });
+  }
+
+  if (req.method === 'POST' && path === '/ai/query') {
+    const user = currentUser(req);
+    if (!user) {
+      return sendJson(res, 401, { error: 'غير مصرح — يرجى تسجيل الدخول' });
+    }
+    if (!['admin', 'supervisor'].includes(user.role)) {
+      return sendJson(res, 403, { error: 'لا تملك الصلاحية الكافية لهذا الإجراء' });
+    }
+
+    const body = await readBody(req);
+    const fallbackResult = buildAiQueryFallback(body.question);
+    const snapshot = {
+      vehicles: fleetVehicles().map(({ name, driver, status, statusLabel, location }) => ({
+        name,
+        driver,
+        status,
+        statusLabel,
+        location,
+      })),
+      alerts: state.alerts.slice(0, 6),
+      summary: buildDashboardSummary(),
+    };
+    const result = await generateFleetAnswer({
+      question: body.question,
+      snapshot,
+      fallbackResult,
+    });
+    return sendJson(res, 200, result);
   }
 
   return sendJson(res, 404, { error: 'Route not found', path });

@@ -20,6 +20,7 @@ const bcrypt    = require('bcryptjs');
 const jwt       = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
+const { generateFleetAnswer } = require('../lib/ai-chat');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
@@ -594,7 +595,7 @@ function formatDaysAgo(past, now) {
 // ═══════════════════════════════════════════════════════════════════════════
 // AI CHAT / QUERY  (supervisor+)
 // ═══════════════════════════════════════════════════════════════════════════
-app.post('/ai/query', supervisorUp, (req, res) => {
+app.post('/ai/query', supervisorUp, async (req, res) => {
   const q = (req.body?.question || '').toLowerCase();
   let answer, data;
 
@@ -643,7 +644,52 @@ app.post('/ai/query', supervisorUp, (req, res) => {
     data   = { vehicles: vehicles.length, drivers: drivers.length, pendingMaintenance: maintenanceJobs.filter(m => m.status !== 'completed').length, unpaidViolations: violations.filter(v => v.status === 'unpaid').length, openAccidents: accidents.filter(a => a.status === 'open').length };
   }
 
-  res.json({ answer, data });
+  const fallbackResult = { answer, data };
+  const snapshot = {
+    vehicles: {
+      total: vehicles.length,
+      active: vehicles.filter(v => v.status === 'active').length,
+      maintenance: vehicles.filter(v => v.status === 'maintenance').length,
+      inactive: vehicles.filter(v => v.status === 'inactive').length,
+    },
+    drivers: {
+      total: drivers.length,
+      active: drivers.filter(d => d.status === 'active').length,
+      expiredLicenses: drivers.filter(d => d.licenseExpiry && new Date(d.licenseExpiry) < new Date()).length,
+    },
+    maintenance: {
+      total: maintenanceJobs.length,
+      pending: maintenanceJobs.filter(m => m.status === 'pending').length,
+      completed: maintenanceJobs.filter(m => m.status === 'completed').length,
+    },
+    violations: {
+      total: violations.length,
+      unpaid: violations.filter(v => v.status === 'unpaid').length,
+      paid: violations.filter(v => v.status === 'paid').length,
+      totalAmount: +violations.reduce((s, v) => s + (Number(v.amount) || 0), 0).toFixed(2),
+    },
+    accidents: {
+      total: accidents.length,
+      open: accidents.filter(a => a.status === 'open').length,
+      closed: accidents.filter(a => a.status === 'closed').length,
+      totalDamage: +accidents.reduce((s, a) => s + (Number(a.damageAmount) || 0), 0).toFixed(2),
+    },
+    financial: {
+      totalAmount: +financialItems.reduce((s, f) => s + (Number(f.amount) || 0), 0).toFixed(2),
+      byType: financialItems.reduce((acc, item) => {
+        const key = item.type || 'other';
+        acc[key] = +((acc[key] || 0) + (Number(item.amount) || 0)).toFixed(2);
+        return acc;
+      }, {}),
+    },
+  };
+
+  const result = await generateFleetAnswer({
+    question: req.body?.question,
+    snapshot,
+    fallbackResult,
+  });
+  res.json(result);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -268,7 +268,10 @@ python3 server.py
 - `PORT` (يتجاهله Vercel غالبًا ويُدار تلقائيًا)
 - `ADMIN_USERNAME` (افتراضي: `F`)
 - `ADMIN_EMAIL` (افتراضي: `admin@fna.sa`)
-- `OPENAI_API_KEY` (اختياري فقط عند استخدام التكامل)
+- `OPENAI_API_KEY` (اختياري فقط عند استخدام تكامل AI SDK)
+- `OPENAI_MODEL` (اختياري — الافتراضي `gpt-4o-mini`)
+
+عند ضبط `OPENAI_API_KEY` يستخدم `/ai/query` تكامل **AI SDK** داخل الـ Node API الحالي بدون الحاجة إلى Next.js أو Nuxt أو Svelte، ومع غياب المفتاح يستمر الرد المحلي الاحتياطي الحالي بدون كسر السلوك.
 
 > ملاحظة أمنية: لا تحفظ أي أسرار حقيقية داخل المستودع. أضفها من لوحة Vercel فقط.
 
