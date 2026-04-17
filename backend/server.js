@@ -1030,6 +1030,15 @@ function classifyDevRequest(text) {
 }
 
 // ─── Create GitHub Issue (fire-and-forget; never throws) ─────────────────────
+/**
+ * Opens a GitHub Issue via the REST API.
+ * Requires GITHUB_TOKEN (Personal Access Token with repo:write or Issues:write)
+ * and GITHUB_REPO ("owner/repo") to be set in the environment.
+ *
+ * @returns {object|null} GitHub API response object on success, or null on any
+ *   error (missing credentials, network failure, API error).  Callers should
+ *   check for truthiness before accessing response fields.
+ */
 async function createGitHubIssue(title, body, labels) {
   const token = process.env.GITHUB_TOKEN;
   const repo  = process.env.GITHUB_REPO;   // e.g. "fahd65658-bit/Telad-fleet"
