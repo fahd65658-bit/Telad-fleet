@@ -7,6 +7,9 @@ node_modules/
 backend/.env
 *.local
 
+# Runtime data (JSON persistence) — excluded from VCS; stored on server volume
+backend/data/
+
 # Logs
 logs/
 *.log

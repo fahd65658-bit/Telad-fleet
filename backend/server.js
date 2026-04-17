@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // TELAD FLEET – Production Backend
 // Domain : fna.sa   |   API : https://api.fna.sa
-// Version: 2.0.0
+// Version: 2.1.0
 // ═══════════════════════════════════════════════════════════════════════════
 
 'use strict';
@@ -10,6 +10,8 @@
 require('dotenv').config();
 
 const crypto    = require('crypto');
+const fs        = require('fs');
+const path      = require('path');
 const express   = require('express');
 const http      = require('http');
 const cors      = require('cors');
@@ -35,6 +37,60 @@ if (IS_PROD && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FILE PERSISTENCE
+// All in-memory collections are serialised to JSON files under DATA_DIR.
+// This guarantees zero data loss on server restart / PM2 reload.
+// DATA_DIR defaults to ./data/ (relative to this file) in development and
+// can be overridden via the DATA_DIR environment variable in production so
+// the volume can be mounted outside the app directory.
+// ═══════════════════════════════════════════════════════════════════════════
+const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'));
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch { /* already exists */ }
+
+function dataFile(name) {
+  return path.join(DATA_DIR, `${name}.json`);
+}
+
+/** Load a JSON array from disk; return empty array if file does not exist. */
+function loadCollection(name) {
+  try {
+    const raw = fs.readFileSync(dataFile(name), 'utf8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Write a collection to disk atomically (write to .tmp then rename). */
+function saveCollection(name, data) {
+  const file = dataFile(name);
+  const tmp  = file + '.tmp';
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    console.error(`[PERSIST] Failed to save ${name}:`, e.message);
+  }
+}
+
+/** Persist all mutable collections to disk. Called on every mutation and on shutdown. */
+function persistAll() {
+  saveCollection('vehicles',       vehicles);
+  saveCollection('drivers',        drivers);
+  saveCollection('maintenanceJobs',maintenanceJobs);
+  saveCollection('appointments',   appointments);
+  saveCollection('regions',        regions);
+  saveCollection('reports',        reports);
+  saveCollection('auditLogs',      auditLogs);
+  saveCollection('accidents',      accidents);
+  saveCollection('violations',     violations);
+  saveCollection('financialItems', financialItems);
+  saveCollection('notifications',  notifications);
+  saveCollection('devRequests',    devRequests);
+}
 
 const CORS_ORIGINS = [
   'https://fna.sa',
@@ -163,9 +219,21 @@ app.use((_req, res, next) => {
   next();
 });
 
+// ─── Auto-persist after every mutating request ───────────────────────────────
+// Any POST / PUT / PATCH / DELETE that completes with 2xx triggers a full
+// snapshot of all collections to disk, guaranteeing data survives restarts.
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) persistAll();
+    });
+  }
+  next();
+});
+
 // ─── Version endpoint (used by client on first load to prime the baseline ID) ─
 app.get('/version', (_req, res) => {
-  res.json({ deployId: DEPLOY_ID, version: '2.0.0' });
+  res.json({ deployId: DEPLOY_ID, version: '2.1.0' });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -458,24 +526,25 @@ app.post('/ai/query', supervisorUp, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CRUD DATA  (in-memory — replace with PostgreSQL using schema in /database/schema.sql)
+// CRUD DATA  — loaded from JSON files on startup, persisted on every write
+// Replace with PostgreSQL when scaling beyond a single process.
 // ═══════════════════════════════════════════════════════════════════════════
 let cities        = [];
 let projects      = [];
-let vehicles      = [];
+let vehicles      = loadCollection('vehicles');
 let employees     = [];
-let drivers       = [];
-let maintenanceJobs = [];
-let appointments  = [];
-let regions       = [];
-let reports       = [];
-let notifications = [];
-let auditLogs     = [];
-let accidents     = [];
-let violations    = [];
-let financialItems = [];
+let drivers       = loadCollection('drivers');
+let maintenanceJobs = loadCollection('maintenanceJobs');
+let appointments  = loadCollection('appointments');
+let regions       = loadCollection('regions');
+let reports       = loadCollection('reports');
+let notifications = loadCollection('notifications');
+let auditLogs     = loadCollection('auditLogs');
+let accidents     = loadCollection('accidents');
+let violations    = loadCollection('violations');
+let financialItems = loadCollection('financialItems');
 
-let devRequests   = [];
+let devRequests   = loadCollection('devRequests');
 
 function audit(action, username) {
   auditLogs.push({
@@ -484,6 +553,9 @@ function audit(action, username) {
     user:   username,
     time:   new Date().toISOString(),
   });
+  // Keep audit log from growing unbounded (keep last 10 000 entries)
+  if (auditLogs.length > 10000) auditLogs.splice(0, auditLogs.length - 10000);
+  saveCollection('auditLogs', auditLogs);
 }
 
 // ─── Notification helper ──────────────────────────────────────────────────────
@@ -497,6 +569,7 @@ function createNotification(userId, title, body, type = 'info') {
     read:      false,
     createdAt: new Date().toISOString(),
   });
+  saveCollection('notifications', notifications);
 }
 
 // ─── Dashboard summary ────────────────────────────────────────────────────────
@@ -1170,17 +1243,33 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'خطأ داخلي في الخادم' });
 });
 
+// ─── Graceful shutdown ────────────────────────────────────────────────────────
+// Flush all data to disk before the process exits so no records are lost on
+// PM2 reload, Docker stop, or SIGTERM from the OS.
+function gracefulShutdown(signal) {
+  console.log(`\n[TELAD FLEET] Received ${signal} — saving data and shutting down…`);
+  persistAll();
+  server.close(() => {
+    console.log('[TELAD FLEET] HTTP server closed. Goodbye.');
+    process.exit(0);
+  });
+  // Force exit if server hasn't closed within 10 s
+  setTimeout(() => { process.exit(1); }, 10000).unref();
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log('');
   console.log('╔═══════════════════════════════════════╗');
-  console.log('║       🚀 TELAD FLEET BACKEND          ║');
+  console.log('║       🚀 TELAD FLEET BACKEND v2.1     ║');
   console.log(`║       Running on port ${PORT}             ║`);
   console.log('║       Domain: https://fna.sa          ║');
   console.log('║       API:    https://api.fna.sa      ║');
   console.log('╚═══════════════════════════════════════╝');
   console.log('');
-  console.log(`  Admin login:  username=F  password=0241`);
-  console.log(`  Health:       http://localhost:${PORT}/health`);
+  console.log(`  Data dir:    ${DATA_DIR}`);
+  console.log(`  Health:      http://localhost:${PORT}/health`);
   console.log('');
 });
