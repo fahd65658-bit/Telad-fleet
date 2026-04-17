@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Telad Fleet",
+      "type": "shell",
+      "command": "python3",
+      "args": ["server.py"],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build Telad Fleet Docker",
+      "type": "shell",
+      "command": "docker",
+      "args": ["build", "-t", "telad-fleet", "."],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Telad Fleet Docker",
+      "type": "shell",
+      "command": "docker",
+      "args": ["run", "--rm", "-p", "3000:3000", "--name", "telad-fleet-app", "telad-fleet"],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

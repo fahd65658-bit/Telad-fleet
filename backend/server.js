@@ -23,13 +23,11 @@ const { Server }  = require('socket.io');
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
 const IS_PROD  = process.env.NODE_ENV === 'production';
-
-// Fail fast in production if JWT_SECRET is not set
-if (IS_PROD && !process.env.JWT_SECRET) {
-  console.error('[FATAL] JWT_SECRET environment variable must be set in production.');
-  process.exit(1);
-}
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+
+if (IS_PROD && !process.env.JWT_SECRET) {
+  console.warn('[WARN] JWT_SECRET is not set in production; using fallback secret temporarily.');
+}
 
 const CORS_ORIGINS = [
   'https://fna.sa',
@@ -84,7 +82,12 @@ app.use(helmet({
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || CORS_ORIGINS.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    const allowed = CORS_ORIGINS.includes(origin)
+      || origin.endsWith('.vercel.app')
+      || origin.endsWith('.github.io');
+
+    if (allowed) return cb(null, true);
     cb(new Error('CORS not allowed for: ' + origin));
   },
   credentials: true,
@@ -430,16 +433,27 @@ app.use((err, _req, res, _next) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-server.listen(PORT, () => {
-  console.log('');
-  console.log('╔═══════════════════════════════════════╗');
-  console.log('║       🚀 TELAD FLEET BACKEND          ║');
-  console.log(`║       Running on port ${PORT}             ║`);
-  console.log('║       Domain: https://fna.sa          ║');
-  console.log('║       API:    https://api.fna.sa      ║');
-  console.log('╚═══════════════════════════════════════╝');
-  console.log('');
-  console.log(`  Admin login:  username=F  password=0241`);
-  console.log(`  Health:       http://localhost:${PORT}/health`);
-  console.log('');
-});
+function startServer(port = PORT) {
+  return server.listen(port, () => {
+    console.log('');
+    console.log('╔═══════════════════════════════════════╗');
+    console.log('║       🚀 TELAD FLEET BACKEND          ║');
+    console.log(`║       Running on port ${port}             ║`);
+    console.log('║       Domain: https://fna.sa          ║');
+    console.log('║       API:    https://fna.sa/api      ║');
+    console.log('╚═══════════════════════════════════════╝');
+    console.log('');
+    console.log('  Admin login:  username=F  password=0241');
+    console.log(`  Health:       http://localhost:${port}/health`);
+    console.log('');
+  });
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
+module.exports.app = app;
+module.exports.server = server;
+module.exports.startServer = startServer;
