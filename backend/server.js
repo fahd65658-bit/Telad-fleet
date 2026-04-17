@@ -278,16 +278,162 @@ app.post('/gps', requireAuth(['admin', 'supervisor', 'operator']), (req, res) =>
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AI PREDICT  (supervisor+)
+// AI INSIGHTS  (supervisor+)
 // ═══════════════════════════════════════════════════════════════════════════
 app.get('/ai/predict', supervisorUp, (req, res) => {
-  // Replace with real ML model in production
-  res.json({
-    risk:       +(Math.random() * 100).toFixed(1),
-    confidence: +(50 + Math.random() * 50).toFixed(1),
-    status:     'OK',
-    model:      'telad-fleet-ai-v1',
+  // Legacy endpoint — kept for backward compatibility
+  res.json({ risk: 0, confidence: 100, status: 'OK', model: 'telad-fleet-ai-v2' });
+});
+
+app.get('/ai/insights', supervisorUp, (_req, res) => {
+  const now         = new Date();
+  const in30Days    = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const alerts      = [];
+  const recommendations = [];
+
+  // License expiry alerts
+  drivers.forEach(d => {
+    if (d.licenseExpiry) {
+      const exp = new Date(d.licenseExpiry);
+      if (exp <= now) {
+        alerts.push({ type: 'danger', message: `رخصة السائق ${d.name} منتهية الصلاحية منذ ${formatDaysAgo(exp, now)}` });
+      } else if (exp <= in30Days) {
+        alerts.push({ type: 'warning', message: `رخصة السائق ${d.name} ستنتهي خلال ${Math.ceil((exp - now) / 86400000)} يوم` });
+      }
+    }
   });
+
+  // Pending maintenance alerts
+  const pendingMaint = maintenanceJobs.filter(m => m.status === 'pending');
+  if (pendingMaint.length > 0) {
+    alerts.push({ type: 'warning', message: `يوجد ${pendingMaint.length} مهمة صيانة معلّقة` });
+  }
+
+  // Unpaid violations alerts
+  const unpaidViolations = violations.filter(v => v.status === 'unpaid');
+  if (unpaidViolations.length > 0) {
+    const totalAmount = unpaidViolations.reduce((s, v) => s + (Number(v.amount) || 0), 0);
+    alerts.push({ type: 'danger', message: `يوجد ${unpaidViolations.length} مخالفة غير مسددة بإجمالي ${totalAmount.toFixed(2)} ر.س` });
+  }
+
+  // Open accidents alerts
+  const openAccidents = accidents.filter(a => a.status === 'open');
+  if (openAccidents.length > 0) {
+    alerts.push({ type: 'warning', message: `يوجد ${openAccidents.length} حادث مفتوح يحتاج إلى متابعة` });
+  }
+
+  // AI Recommendations
+  const vehiclesInMaint = vehicles.filter(v => v.status === 'maintenance').length;
+  const activeVehicles  = vehicles.filter(v => v.status === 'active').length;
+  if (vehicles.length > 0 && vehiclesInMaint > vehicles.length * 0.3) {
+    recommendations.push({ icon: '🔧', message: 'نسبة المركبات في الصيانة مرتفعة — يُنصح بمراجعة جدول الصيانة الوقائية' });
+  }
+
+  const last30Start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recentFuelCost = financialItems
+    .filter(f => f.type === 'fuel' && f.date >= last30Start)
+    .reduce((s, f) => s + (Number(f.amount) || 0), 0);
+  if (recentFuelCost > 5000) {
+    recommendations.push({ icon: '⛽', message: `تكاليف الوقود الشهرية مرتفعة (${recentFuelCost.toFixed(2)} ر.س) — يُنصح بمراجعة استهلاك الوقود` });
+  }
+
+  if (violations.length > 5) {
+    recommendations.push({ icon: '🚦', message: 'عدد المخالفات مرتفع — يُنصح بتعزيز برامج توعية السائقين بقواعد المرور' });
+  }
+
+  if (pendingMaint.length === 0 && unpaidViolations.length === 0 && openAccidents.length === 0) {
+    recommendations.push({ icon: '✅', message: 'الأسطول في حالة ممتازة — استمر في الصيانة الوقائية المنتظمة' });
+  }
+
+  // Fleet health score (0-100)
+  let score = 100;
+  if (vehicles.length > 0) {
+    const inactiveRatio = (vehicles.length - activeVehicles) / vehicles.length;
+    score -= Math.round(inactiveRatio * 30);
+  }
+  if (maintenanceJobs.length > 0) {
+    const pendingRatio = pendingMaint.length / maintenanceJobs.length;
+    score -= Math.round(pendingRatio * 20);
+  }
+  score -= Math.min(unpaidViolations.length * 3, 20);
+  score -= Math.min(openAccidents.length * 5, 20);
+  score -= drivers.filter(d => d.licenseExpiry && new Date(d.licenseExpiry) <= now).length * 5;
+  score  = Math.max(0, Math.min(100, score));
+
+  // Trends (last 3 months maintenance cost)
+  const trends = [];
+  for (let i = 2; i >= 0; i--) {
+    const d     = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = d.toLocaleString('ar', { month: 'long', year: 'numeric' });
+    const from  = d.toISOString().slice(0, 7);
+    const cost  = maintenanceJobs
+      .filter(m => m.completedDate && m.completedDate.slice(0, 7) === from && m.cost)
+      .reduce((s, m) => s + (Number(m.cost) || 0), 0);
+    trends.push({ month: label, maintenanceCost: +cost.toFixed(2) });
+  }
+
+  res.json({ alerts, recommendations, summary: { healthScore: score, totalVehicles: vehicles.length, activeVehicles, pendingMaintenance: pendingMaint.length, unpaidViolations: unpaidViolations.length, openAccidents: openAccidents.length }, trends });
+});
+
+// ─── AI helper ────────────────────────────────────────────────────────────────
+function formatDaysAgo(past, now) {
+  const days = Math.floor((now - past) / 86400000);
+  return days === 0 ? 'اليوم' : `${days} يوم`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI CHAT / QUERY  (supervisor+)
+// ═══════════════════════════════════════════════════════════════════════════
+app.post('/ai/query', supervisorUp, (req, res) => {
+  const q = (req.body?.question || '').toLowerCase();
+  let answer, data;
+
+  if (q.includes('مركب') || q.includes('vehicle')) {
+    const active      = vehicles.filter(v => v.status === 'active').length;
+    const inMaint     = vehicles.filter(v => v.status === 'maintenance').length;
+    const inactive    = vehicles.filter(v => v.status === 'inactive').length;
+    answer = `إجمالي المركبات: ${vehicles.length} — نشطة: ${active} — في الصيانة: ${inMaint} — غير نشطة: ${inactive}`;
+    data   = { total: vehicles.length, active, inMaintenance: inMaint, inactive };
+  } else if (q.includes('سائق') || q.includes('driver')) {
+    const active   = drivers.filter(d => d.status === 'active').length;
+    const expired  = drivers.filter(d => d.licenseExpiry && new Date(d.licenseExpiry) < new Date()).length;
+    answer = `إجمالي السائقين: ${drivers.length} — نشطون: ${active} — رخصة منتهية: ${expired}`;
+    data   = { total: drivers.length, active, expiredLicense: expired };
+  } else if (q.includes('صيان') || q.includes('maintenance')) {
+    const pending   = maintenanceJobs.filter(m => m.status === 'pending').length;
+    const completed = maintenanceJobs.filter(m => m.status === 'completed').length;
+    answer = `مهام الصيانة: ${maintenanceJobs.length} — معلّقة: ${pending} — مكتملة: ${completed}`;
+    data   = { total: maintenanceJobs.length, pending, completed };
+  } else if (q.includes('مخالف') || q.includes('violation')) {
+    const unpaid  = violations.filter(v => v.status === 'unpaid').length;
+    const paid    = violations.filter(v => v.status === 'paid').length;
+    const total   = violations.reduce((s, v) => s + (Number(v.amount) || 0), 0);
+    answer = `المخالفات: ${violations.length} — غير مسددة: ${unpaid} — مسددة: ${paid} — الإجمالي: ${total.toFixed(2)} ر.س`;
+    data   = { total: violations.length, unpaid, paid, totalAmount: +total.toFixed(2) };
+  } else if (q.includes('حادث') || q.includes('accident')) {
+    const open   = accidents.filter(a => a.status === 'open').length;
+    const closed = accidents.filter(a => a.status === 'closed').length;
+    const damage = accidents.reduce((s, a) => s + (Number(a.damageAmount) || 0), 0);
+    answer = `الحوادث: ${accidents.length} — مفتوحة: ${open} — مغلقة: ${closed} — إجمالي الأضرار: ${damage.toFixed(2)} ر.س`;
+    data   = { total: accidents.length, open, closed, totalDamage: +damage.toFixed(2) };
+  } else if (q.includes('مال') || q.includes('financial') || q.includes('مصروف')) {
+    const total   = financialItems.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+    const byType  = {};
+    financialItems.forEach(f => { byType[f.type] = (byType[f.type] || 0) + (Number(f.amount) || 0); });
+    answer = `إجمالي المصروفات: ${total.toFixed(2)} ر.س — وقود: ${(byType.fuel || 0).toFixed(2)} — صيانة: ${(byType.maintenance || 0).toFixed(2)} — مخالفات: ${(byType.violation || 0).toFixed(2)}`;
+    data   = { total: +total.toFixed(2), byType };
+  } else if (q.includes('تنبيه') || q.includes('تحذير') || q.includes('alert')) {
+    const expiredLicenses = drivers.filter(d => d.licenseExpiry && new Date(d.licenseExpiry) < new Date()).length;
+    const unpaid = violations.filter(v => v.status === 'unpaid').length;
+    const pendingMaint = maintenanceJobs.filter(m => m.status === 'pending').length;
+    answer = `التنبيهات النشطة — رخص منتهية: ${expiredLicenses} — مخالفات غير مسددة: ${unpaid} — صيانة معلّقة: ${pendingMaint}`;
+    data   = { expiredLicenses, unpaidViolations: unpaid, pendingMaintenance: pendingMaint };
+  } else {
+    answer = `ملخص الأسطول: ${vehicles.length} مركبة — ${drivers.length} سائق — ${maintenanceJobs.filter(m => m.status !== 'completed').length} صيانة معلّقة — ${violations.filter(v => v.status === 'unpaid').length} مخالفة غير مسددة — ${accidents.filter(a => a.status === 'open').length} حادث مفتوح`;
+    data   = { vehicles: vehicles.length, drivers: drivers.length, pendingMaintenance: maintenanceJobs.filter(m => m.status !== 'completed').length, unpaidViolations: violations.filter(v => v.status === 'unpaid').length, openAccidents: accidents.filter(a => a.status === 'open').length };
+  }
+
+  res.json({ answer, data });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -304,6 +450,9 @@ let regions       = [];
 let reports       = [];
 let notifications = [];
 let auditLogs     = [];
+let accidents     = [];
+let violations    = [];
+let financialItems = [];
 
 function audit(action, username) {
   auditLogs.push({
@@ -314,19 +463,41 @@ function audit(action, username) {
   });
 }
 
+// ─── Notification helper ──────────────────────────────────────────────────────
+function createNotification(userId, title, body, type = 'info') {
+  notifications.push({
+    id:        newId(),
+    userId,
+    title,
+    body,
+    type,
+    read:      false,
+    createdAt: new Date().toISOString(),
+  });
+}
+
 // ─── Dashboard summary ────────────────────────────────────────────────────────
-app.get('/dashboard', authAll, (_req, res) =>
+app.get('/dashboard', authAll, (_req, res) => {
+  const now       = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const financialThisMonth = financialItems
+    .filter(f => f.date >= monthStart.slice(0, 10))
+    .reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+
   res.json({
-    cities:       cities.length,
-    projects:     projects.length,
-    vehicles:     vehicles.length,
-    employees:    employees.length,
-    drivers:      drivers.length,
-    maintenance:  maintenanceJobs.filter(m => m.status !== 'completed').length,
-    appointments: appointments.filter(a => a.status === 'pending').length,
-    regions:      regions.length,
-  })
-);
+    cities:           cities.length,
+    projects:         projects.length,
+    vehicles:         vehicles.length,
+    employees:        employees.length,
+    drivers:          drivers.length,
+    maintenance:      maintenanceJobs.filter(m => m.status !== 'completed').length,
+    appointments:     appointments.filter(a => a.status === 'pending').length,
+    regions:          regions.length,
+    accidents:        accidents.length,
+    violationsUnpaid: violations.filter(v => v.status === 'unpaid').length,
+    financialMonth:   +financialThisMonth.toFixed(2),
+  });
+});
 
 // ─── Cities ───────────────────────────────────────────────────────────────────
 app.post('/cities', supervisorUp, (req, res) => {
@@ -644,6 +815,155 @@ app.get('/reports/analytics', authAll, (_req, res) => {
 
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACCIDENTS
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/accidents', authAll, (_req, res) => res.json(accidents));
+app.post('/accidents', supervisorUp, (req, res) => {
+  const { vehicleId, driverId, date, location, description, injuriesCount, damageAmount } = req.body || {};
+  if (!vehicleId || !description) return res.status(400).json({ error: 'معرّف المركبة والوصف مطلوبان' });
+  const acc = {
+    id:           newId(),
+    vehicleId,
+    driverId:     driverId     || null,
+    date:         date         || new Date().toISOString().slice(0, 10),
+    location:     location     || '',
+    description,
+    injuriesCount: Number(injuriesCount) || 0,
+    damageAmount:  Number(damageAmount)  || 0,
+    status:       'open',
+    createdAt:    new Date().toISOString(),
+    createdBy:    req.user.username,
+  };
+  accidents.push(acc);
+  audit(`تسجيل حادث: ${description.slice(0, 30)}`, req.user.username);
+  res.status(201).json(acc);
+});
+app.put('/accidents/:id', supervisorUp, (req, res) => {
+  const idx = accidents.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الحادث غير موجود' });
+  const allowed = ['vehicleId','driverId','date','location','description','injuriesCount','damageAmount','status'];
+  allowed.forEach(k => { if (req.body[k] !== undefined) accidents[idx][k] = req.body[k]; });
+  accidents[idx].updatedAt = new Date().toISOString();
+  audit(`تعديل حادث: ${accidents[idx].id}`, req.user.username);
+  res.json(accidents[idx]);
+});
+app.delete('/accidents/:id', supervisorUp, (req, res) => {
+  const idx = accidents.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الحادث غير موجود' });
+  accidents.splice(idx, 1);
+  audit('حذف حادث', req.user.username);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VIOLATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/violations', authAll, (_req, res) => res.json(violations));
+app.post('/violations', supervisorUp, (req, res) => {
+  const { vehicleId, driverId, date, type, amount, description } = req.body || {};
+  if (!vehicleId || !type || amount == null) return res.status(400).json({ error: 'معرّف المركبة والنوع والمبلغ مطلوبة' });
+  const vio = {
+    id:          newId(),
+    vehicleId,
+    driverId:    driverId || null,
+    date:        date     || new Date().toISOString().slice(0, 10),
+    type,
+    amount:      Number(amount) || 0,
+    description: description || '',
+    status:      'unpaid',
+    paidAt:      null,
+    createdAt:   new Date().toISOString(),
+    createdBy:   req.user.username,
+  };
+  violations.push(vio);
+  audit(`تسجيل مخالفة: ${type}`, req.user.username);
+  res.status(201).json(vio);
+});
+app.put('/violations/:id', supervisorUp, (req, res) => {
+  const idx = violations.findIndex(v => v.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المخالفة غير موجودة' });
+  const allowed = ['vehicleId','driverId','date','type','amount','description','status'];
+  allowed.forEach(k => { if (req.body[k] !== undefined) violations[idx][k] = req.body[k]; });
+  violations[idx].updatedAt = new Date().toISOString();
+  audit(`تعديل مخالفة: ${violations[idx].type}`, req.user.username);
+  res.json(violations[idx]);
+});
+app.post('/violations/:id/pay', supervisorUp, (req, res) => {
+  const idx = violations.findIndex(v => v.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المخالفة غير موجودة' });
+  violations[idx].status = 'paid';
+  violations[idx].paidAt = new Date().toISOString();
+  audit(`تسديد مخالفة: ${violations[idx].type}`, req.user.username);
+  res.json(violations[idx]);
+});
+app.delete('/violations/:id', supervisorUp, (req, res) => {
+  const idx = violations.findIndex(v => v.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المخالفة غير موجودة' });
+  violations.splice(idx, 1);
+  audit('حذف مخالفة', req.user.username);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FINANCIAL
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/financial', authAll, (_req, res) => res.json(financialItems));
+app.post('/financial', supervisorUp, (req, res) => {
+  const { type, amount, description, vehicleId, driverId, date, receiptNo } = req.body || {};
+  if (!type || amount == null || !description) return res.status(400).json({ error: 'النوع والمبلغ والوصف مطلوبة' });
+  const valid = ['fuel','maintenance','violation','salary','other'];
+  if (!valid.includes(type)) return res.status(400).json({ error: 'نوع غير صالح' });
+  const fin = {
+    id:          newId(),
+    type,
+    amount:      Number(amount) || 0,
+    description,
+    vehicleId:   vehicleId  || null,
+    driverId:    driverId   || null,
+    date:        date       || new Date().toISOString().slice(0, 10),
+    receiptNo:   receiptNo  || '',
+    createdAt:   new Date().toISOString(),
+    createdBy:   req.user.username,
+  };
+  financialItems.push(fin);
+  audit(`إضافة معاملة مالية: ${type} ${amount} ر.س`, req.user.username);
+  res.status(201).json(fin);
+});
+app.put('/financial/:id', supervisorUp, (req, res) => {
+  const idx = financialItems.findIndex(f => f.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المعاملة غير موجودة' });
+  const allowed = ['type','amount','description','vehicleId','driverId','date','receiptNo'];
+  allowed.forEach(k => { if (req.body[k] !== undefined) financialItems[idx][k] = req.body[k]; });
+  financialItems[idx].updatedAt = new Date().toISOString();
+  audit(`تعديل معاملة مالية: ${financialItems[idx].id}`, req.user.username);
+  res.json(financialItems[idx]);
+});
+app.delete('/financial/:id', supervisorUp, (req, res) => {
+  const idx = financialItems.findIndex(f => f.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المعاملة غير موجودة' });
+  financialItems.splice(idx, 1);
+  audit('حذف معاملة مالية', req.user.username);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/notifications', authAll, (req, res) => {
+  res.json(notifications.filter(n => n.userId === req.user.id));
+});
+app.post('/notifications/read-all', authAll, (req, res) => {
+  notifications.filter(n => n.userId === req.user.id).forEach(n => { n.read = true; });
+  res.json({ ok: true });
+});
+app.post('/notifications/read/:id', authAll, (req, res) => {
+  const n = notifications.find(x => x.id === req.params.id && x.userId === req.user.id);
+  if (!n) return res.status(404).json({ error: 'الإشعار غير موجود' });
+  n.read = true;
+  res.json(n);
+});
 
 // ─── 404 fallback ─────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'المسار غير موجود' }));

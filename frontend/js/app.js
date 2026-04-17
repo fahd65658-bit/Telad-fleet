@@ -163,11 +163,19 @@ function navigateTo(section) {
     maintenance:  loadMaintenance,
     appointments: loadAppointments,
     regions:      loadRegions,
+    accidents:    loadAccidents,
+    violations:   loadViolations,
+    financial:    loadFinancial,
     reports:      loadReports,
     users:        loadUsers,
     logs:         loadLogs,
   };
   if (loaders[section]) loaders[section]();
+
+  if (section === 'map') {
+    initMap();
+    connectGPS();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -205,6 +213,9 @@ async function loadDashboardStats() {
     set('stat-cities',       d.cities);
     set('stat-projects',     d.projects);
     set('stat-regions',      d.regions);
+    set('stat-accidents',    d.accidents);
+    set('stat-violations',   d.violationsUnpaid);
+    set('stat-financial',    d.financialMonth);
   } catch { /* backend may not be running in dev */ }
 }
 
@@ -686,5 +697,376 @@ document.addEventListener('click', async (e) => {
     case 'delete-user':
       await deleteUser(id);
       break;
+    case 'close-accident':
+      await closeAccident(id);
+      break;
+    case 'delete-accident':
+      await deleteAccident(id);
+      break;
+    case 'pay-violation':
+      await payViolation(id);
+      break;
+    case 'delete-violation':
+      await deleteViolation(id);
+      break;
+    case 'delete-financial':
+      await deleteFinancial(id);
+      break;
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════════
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
+  toast.style.cssText = `background:${bg};color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);font-size:14px;min-width:200px;transition:opacity .3s`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACCIDENTS
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadAccidents() {
+  const tbody = document.getElementById('accidents-tbody');
+  if (!tbody) return;
+  try {
+    const res  = await apiFetch('/accidents');
+    if (!res.ok) return;
+    const list = await res.json();
+    const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
+    tbody.innerHTML = list.length === 0
+      ? '<tr><td colspan="8" class="tbl-empty">لا توجد حوادث مسجّلة</td></tr>'
+      : list.map(a => `
+          <tr>
+            <td>${escHtml(a.vehicleId || '—')}</td>
+            <td>${escHtml(a.date || '—')}</td>
+            <td>${escHtml(a.location || '—')}</td>
+            <td>${escHtml(a.description || '—')}</td>
+            <td>${a.injuriesCount ?? 0}</td>
+            <td>${(Number(a.damageAmount) || 0).toFixed(2)}</td>
+            <td><span class="badge-${a.status === 'open' ? 'active' : 'inactive'}">${a.status === 'open' ? '🔴 مفتوح' : '✅ مغلق'}</span></td>
+            <td>${canEdit
+              ? `${a.status === 'open' ? `<button class="btn-sm btn-warn" data-action="close-accident" data-id="${escHtml(String(a.id))}">إغلاق</button> ` : ''}
+                 <button class="btn-sm btn-danger" data-action="delete-accident" data-id="${escHtml(String(a.id))}">حذف</button>`
+              : '—'
+            }</td>
+          </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+  }
+}
+
+async function addAccident(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('accident-form-error');
+  errEl.textContent = '';
+  const vehicleId  = document.getElementById('acc-vehicleId').value.trim();
+  const description = document.getElementById('acc-description').value.trim();
+  if (!vehicleId || !description) { errEl.textContent = 'معرّف المركبة والوصف مطلوبان'; return; }
+  const body = {
+    vehicleId,
+    date:         document.getElementById('acc-date').value,
+    location:     document.getElementById('acc-location').value.trim(),
+    description,
+    injuriesCount: Number(document.getElementById('acc-injuries').value) || 0,
+    damageAmount:  Number(document.getElementById('acc-damage').value)   || 0,
+  };
+  const res = await apiFetch('/accidents', { method: 'POST', body: JSON.stringify(body) });
+  if (res.ok) {
+    document.getElementById('form-accident').reset();
+    loadAccidents();
+    loadDashboardStats();
+    showToast('تم تسجيل الحادث بنجاح');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'حدث خطأ';
+  }
+}
+
+async function closeAccident(id) {
+  if (!confirm('هل تريد إغلاق هذا الحادث؟')) return;
+  const res = await apiFetch('/accidents/' + id, { method: 'PUT', body: JSON.stringify({ status: 'closed' }) });
+  if (res.ok) { loadAccidents(); showToast('تم إغلاق الحادث'); }
+}
+
+async function deleteAccident(id) {
+  if (!confirm('هل تريد حذف هذا الحادث؟')) return;
+  const res = await apiFetch('/accidents/' + id, { method: 'DELETE' });
+  if (res.ok) { loadAccidents(); loadDashboardStats(); showToast('تم حذف الحادث', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VIOLATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadViolations() {
+  const tbody = document.getElementById('violations-tbody');
+  if (!tbody) return;
+  try {
+    const res  = await apiFetch('/violations');
+    if (!res.ok) return;
+    const list = await res.json();
+    const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
+    const statusLabel = { unpaid: '⚠️ غير مسددة', paid: '✅ مسددة', disputed: '⚖️ متنازع عليها' };
+    tbody.innerHTML = list.length === 0
+      ? '<tr><td colspan="7" class="tbl-empty">لا توجد مخالفات مسجّلة</td></tr>'
+      : list.map(v => `
+          <tr>
+            <td>${escHtml(v.vehicleId || '—')}</td>
+            <td>${escHtml(v.date || '—')}</td>
+            <td>${escHtml(v.type || '—')}</td>
+            <td>${(Number(v.amount) || 0).toFixed(2)} ر.س</td>
+            <td>${escHtml(v.description || '—')}</td>
+            <td>${statusLabel[v.status] || v.status}</td>
+            <td>${canEdit
+              ? `${v.status === 'unpaid' ? `<button class="btn-sm btn-warn" data-action="pay-violation" data-id="${escHtml(String(v.id))}">تسديد</button> ` : ''}
+                 <button class="btn-sm btn-danger" data-action="delete-violation" data-id="${escHtml(String(v.id))}">حذف</button>`
+              : '—'
+            }</td>
+          </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+  }
+}
+
+async function addViolation(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('violation-form-error');
+  errEl.textContent = '';
+  const vehicleId = document.getElementById('vio-vehicleId').value.trim();
+  const type      = document.getElementById('vio-type').value.trim();
+  const amount    = document.getElementById('vio-amount').value;
+  if (!vehicleId || !type || !amount) { errEl.textContent = 'معرّف المركبة والنوع والمبلغ مطلوبة'; return; }
+  const body = {
+    vehicleId,
+    date:        document.getElementById('vio-date').value,
+    type,
+    amount:      Number(amount),
+    description: document.getElementById('vio-description').value.trim(),
+  };
+  const res = await apiFetch('/violations', { method: 'POST', body: JSON.stringify(body) });
+  if (res.ok) {
+    document.getElementById('form-violation').reset();
+    loadViolations();
+    loadDashboardStats();
+    showToast('تم تسجيل المخالفة بنجاح');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'حدث خطأ';
+  }
+}
+
+async function payViolation(id) {
+  if (!confirm('هل تريد تسديد هذه المخالفة؟')) return;
+  const res = await apiFetch('/violations/' + id + '/pay', { method: 'POST', body: JSON.stringify({}) });
+  if (res.ok) { loadViolations(); loadDashboardStats(); showToast('تم تسديد المخالفة'); }
+}
+
+async function deleteViolation(id) {
+  if (!confirm('هل تريد حذف هذه المخالفة؟')) return;
+  const res = await apiFetch('/violations/' + id, { method: 'DELETE' });
+  if (res.ok) { loadViolations(); loadDashboardStats(); showToast('تم حذف المخالفة', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FINANCIAL
+// ═══════════════════════════════════════════════════════════════════════════
+const FIN_LABELS = { fuel: 'وقود', maintenance: 'صيانة', violation: 'مخالفة', salary: 'راتب', other: 'أخرى' };
+
+async function loadFinancial() {
+  const tbody = document.getElementById('financial-tbody');
+  const summary = document.getElementById('financial-summary');
+  if (!tbody) return;
+  try {
+    const res  = await apiFetch('/financial');
+    if (!res.ok) return;
+    const list = await res.json();
+    const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
+
+    // Summary
+    const total  = list.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+    const byType = {};
+    list.forEach(f => { byType[f.type] = (byType[f.type] || 0) + (Number(f.amount) || 0); });
+    if (summary) {
+      summary.innerHTML = `<div class="cards">` +
+        Object.entries(byType).map(([t, v]) => `
+          <div class="card"><div class="card-icon">💳</div>
+            <div class="card-label">${FIN_LABELS[t] || t}</div>
+            <div class="card-value">${v.toFixed(2)} ر.س</div>
+          </div>`).join('') +
+        `<div class="card"><div class="card-icon">💰</div>
+            <div class="card-label">الإجمالي</div>
+            <div class="card-value">${total.toFixed(2)} ر.س</div>
+          </div></div>`;
+    }
+
+    tbody.innerHTML = list.length === 0
+      ? '<tr><td colspan="7" class="tbl-empty">لا توجد معاملات مالية</td></tr>'
+      : [...list].reverse().map(f => `
+          <tr>
+            <td>${FIN_LABELS[f.type] || f.type}</td>
+            <td>${(Number(f.amount) || 0).toFixed(2)} ر.س</td>
+            <td>${escHtml(f.description || '—')}</td>
+            <td>${escHtml(f.vehicleId || '—')}</td>
+            <td>${escHtml(f.date || '—')}</td>
+            <td>${escHtml(f.receiptNo || '—')}</td>
+            <td>${canEdit
+              ? `<button class="btn-sm btn-danger" data-action="delete-financial" data-id="${escHtml(String(f.id))}">حذف</button>`
+              : '—'
+            }</td>
+          </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+  }
+}
+
+async function addFinancial(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('financial-form-error');
+  errEl.textContent = '';
+  const amount      = document.getElementById('fin-amount').value;
+  const description = document.getElementById('fin-description').value.trim();
+  const date        = document.getElementById('fin-date').value;
+  if (!amount || !description || !date) { errEl.textContent = 'المبلغ والوصف والتاريخ مطلوبة'; return; }
+  const body = {
+    type:        document.getElementById('fin-type').value,
+    amount:      Number(amount),
+    description,
+    vehicleId:   document.getElementById('fin-vehicleId').value.trim() || null,
+    date,
+    receiptNo:   document.getElementById('fin-receiptNo').value.trim(),
+  };
+  const res = await apiFetch('/financial', { method: 'POST', body: JSON.stringify(body) });
+  if (res.ok) {
+    document.getElementById('form-financial').reset();
+    loadFinancial();
+    loadDashboardStats();
+    showToast('تمت إضافة المعاملة المالية');
+  } else {
+    const d = await res.json();
+    errEl.textContent = d.error || 'حدث خطأ';
+  }
+}
+
+async function deleteFinancial(id) {
+  if (!confirm('هل تريد حذف هذه المعاملة المالية؟')) return;
+  const res = await apiFetch('/financial/' + id, { method: 'DELETE' });
+  if (res.ok) { loadFinancial(); loadDashboardStats(); showToast('تم حذف المعاملة', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI INSIGHTS & CHAT
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadAIInsights() {
+  try {
+    const res = await apiFetch('/ai/insights');
+    if (!res.ok) { showToast('تعذّر تحميل التحليلات', 'error'); return; }
+    const d = await res.json();
+
+    // Summary cards
+    const cardsEl = document.getElementById('ai-summary-cards');
+    const s = d.summary || {};
+    const scoreColor = s.healthScore >= 80 ? '#22c55e' : s.healthScore >= 50 ? '#f59e0b' : '#ef4444';
+    if (cardsEl) {
+      cardsEl.innerHTML = [
+        { icon: '💪', label: 'صحة الأسطول', val: `<span style="color:${scoreColor};font-size:1.4em;font-weight:700">${s.healthScore ?? 0}%</span>` },
+        { icon: '🚗', label: 'المركبات النشطة', val: `${s.activeVehicles ?? 0} / ${s.totalVehicles ?? 0}` },
+        { icon: '🔧', label: 'صيانة معلّقة', val: s.pendingMaintenance ?? 0 },
+        { icon: '🚦', label: 'مخالفات غير مسددة', val: s.unpaidViolations ?? 0 },
+        { icon: '⚠️', label: 'حوادث مفتوحة', val: s.openAccidents ?? 0 },
+      ].map(c => `
+        <div class="card">
+          <div class="card-icon">${c.icon}</div>
+          <div class="card-label">${c.label}</div>
+          <div class="card-value">${c.val}</div>
+        </div>`).join('');
+    }
+    document.getElementById('ai-health-panel').style.display = 'block';
+
+    // Alerts
+    const alertsEl   = document.getElementById('ai-alerts-list');
+    const alertsWrap = document.getElementById('ai-alerts-wrap');
+    if (alertsEl && d.alerts?.length) {
+      alertsEl.innerHTML = d.alerts.map(a => `
+        <div style="padding:10px 16px;margin-bottom:8px;border-radius:6px;background:${a.type === 'danger' ? '#fee2e2' : '#fef3c7'};border-right:4px solid ${a.type === 'danger' ? '#ef4444' : '#f59e0b'}">
+          ${a.type === 'danger' ? '🔴' : '⚠️'} ${escHtml(a.message)}
+        </div>`).join('');
+      alertsWrap.style.display = 'block';
+    } else if (alertsWrap) {
+      alertsWrap.style.display = 'none';
+    }
+
+    // Recommendations
+    const recsEl   = document.getElementById('ai-recommendations-list');
+    const recsWrap = document.getElementById('ai-recommendations-wrap');
+    if (recsEl && d.recommendations?.length) {
+      recsEl.innerHTML = d.recommendations.map(r => `
+        <div style="padding:10px 16px;margin-bottom:8px;border-radius:6px;background:#eff6ff;border-right:4px solid #3b82f6">
+          ${escHtml(r.icon || '💡')} ${escHtml(r.message)}
+        </div>`).join('');
+      recsWrap.style.display = 'block';
+    } else if (recsWrap) {
+      recsWrap.style.display = 'none';
+    }
+  } catch {
+    showToast('خطأ في تحميل التحليلات', 'error');
+  }
+}
+
+async function askAI() {
+  const input   = document.getElementById('ai-question');
+  const answerEl = document.getElementById('ai-answer');
+  const question = input?.value.trim();
+  if (!question) { showToast('يرجى كتابة سؤالك', 'info'); return; }
+  answerEl.style.display = 'none';
+  try {
+    const res = await apiFetch('/ai/query', { method: 'POST', body: JSON.stringify({ question }) });
+    if (!res.ok) { showToast('تعذّر الحصول على إجابة', 'error'); return; }
+    const d = await res.json();
+    answerEl.textContent   = d.answer || 'لا توجد إجابة';
+    answerEl.style.display = 'block';
+  } catch {
+    showToast('خطأ في الاتصال', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GPS MAP
+// ═══════════════════════════════════════════════════════════════════════════
+let fleetMap = null;
+const vehicleMarkers = {};
+let gpsSocketConnected = false;
+
+function initMap() {
+  if (fleetMap) { fleetMap.invalidateSize(); return; }
+  if (typeof L === 'undefined') return;
+  fleetMap = L.map('fleet-map').setView([24.7136, 46.6753], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+  }).addTo(fleetMap);
+}
+
+function connectGPS() {
+  if (gpsSocketConnected || typeof io === 'undefined') return;
+  gpsSocketConnected = true;
+  try {
+    const socket = io(API_BASE, { transports: ['websocket', 'polling'] });
+    socket.on('gps-stream', data => {
+      if (!fleetMap) return;
+      const { vehicleId, lat, lng, label } = data;
+      if (!lat || !lng) return;
+      if (vehicleMarkers[vehicleId]) {
+        vehicleMarkers[vehicleId].setLatLng([lat, lng]);
+      } else {
+        vehicleMarkers[vehicleId] = L.marker([lat, lng])
+          .addTo(fleetMap)
+          .bindPopup(label || vehicleId);
+      }
+    });
+  } catch { gpsSocketConnected = false; }
+}

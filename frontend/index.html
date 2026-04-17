@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TELAD FLEET – نظام إدارة الأسطول</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
 
@@ -164,6 +165,21 @@
           <div class="card-label">المناطق</div>
           <div class="card-value" id="stat-regions">—</div>
         </div>
+        <div class="card">
+          <div class="card-icon">⚠️</div>
+          <div class="card-label">الحوادث</div>
+          <div class="card-value" id="stat-accidents">—</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🚦</div>
+          <div class="card-label">مخالفات غير مسددة</div>
+          <div class="card-value" id="stat-violations">—</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">💰</div>
+          <div class="card-label">مصروفات الشهر (ر.س)</div>
+          <div class="card-value" id="stat-financial">—</div>
+        </div>
       </div>
       <div class="map-placeholder">
         🛰&nbsp; خريطة الأسطول المباشرة – TELAD Fleet Live Map
@@ -172,11 +188,8 @@
 
     <!-- ── خريطة الأسطول ─────────────────────────────── -->
     <div id="sec-map" class="section" style="display:none">
-      <h2 class="sec-title">خريطة الأسطول</h2>
-      <div class="map-placeholder" style="height:520px">
-        🛰&nbsp; خريطة الأسطول التفاعلية<br>
-        <small style="color:#475569;margin-top:10px;display:block">Fleet Live Map – قيد التطوير</small>
-      </div>
+      <h2 class="sec-title">خريطة الأسطول المباشرة</h2>
+      <div id="fleet-map" style="height:520px;border-radius:8px;overflow:hidden"></div>
     </div>
 
     <!-- ── المركبات ──────────────────────────────────── -->
@@ -266,8 +279,28 @@
 
     <!-- ── الحوادث ───────────────────────────────────── -->
     <div id="sec-accidents" class="section" style="display:none">
-      <h2 class="sec-title">الحوادث</h2>
-      <div class="coming-soon">⚠️ قيد التطوير</div>
+      <h2 class="sec-title">إدارة الحوادث</h2>
+      <div id="accident-form-wrap">
+        <form id="form-accident" class="data-form" onsubmit="addAccident(event)">
+          <h3>تسجيل حادث جديد</h3>
+          <div class="form-row">
+            <div class="form-group"><label>معرّف المركبة</label><input id="acc-vehicleId" required placeholder="Vehicle ID"></div>
+            <div class="form-group"><label>التاريخ</label><input id="acc-date" type="date" required></div>
+            <div class="form-group"><label>الموقع</label><input id="acc-location" placeholder="الموقع"></div>
+            <div class="form-group"><label>الوصف</label><input id="acc-description" required placeholder="وصف الحادث"></div>
+            <div class="form-group"><label>عدد الإصابات</label><input id="acc-injuries" type="number" min="0" value="0"></div>
+            <div class="form-group"><label>قيمة الضرر (ر.س)</label><input id="acc-damage" type="number" min="0" step="0.01"></div>
+          </div>
+          <p id="accident-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">➕ تسجيل</button>
+        </form>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>المركبة</th><th>التاريخ</th><th>الموقع</th><th>الوصف</th><th>الإصابات</th><th>الضرر (ر.س)</th><th>الحالة</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="accidents-tbody"><tr><td colspan="8" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+      </table>
     </div>
 
     <!-- ── السائقون ──────────────────────────────────── -->
@@ -381,14 +414,62 @@
 
     <!-- ── المخالفات ─────────────────────────────────── -->
     <div id="sec-violations" class="section" style="display:none">
-      <h2 class="sec-title">المخالفات</h2>
-      <div class="coming-soon">🚦 قيد التطوير</div>
+      <h2 class="sec-title">إدارة المخالفات</h2>
+      <div id="violation-form-wrap">
+        <form id="form-violation" class="data-form" onsubmit="addViolation(event)">
+          <h3>تسجيل مخالفة جديدة</h3>
+          <div class="form-row">
+            <div class="form-group"><label>معرّف المركبة</label><input id="vio-vehicleId" required placeholder="Vehicle ID"></div>
+            <div class="form-group"><label>التاريخ</label><input id="vio-date" type="date" required></div>
+            <div class="form-group"><label>نوع المخالفة</label><input id="vio-type" required placeholder="مثال: تجاوز سرعة"></div>
+            <div class="form-group"><label>المبلغ (ر.س)</label><input id="vio-amount" type="number" min="0" step="0.01" required></div>
+            <div class="form-group"><label>الوصف</label><input id="vio-description" placeholder="تفاصيل اختيارية"></div>
+          </div>
+          <p id="violation-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">➕ تسجيل</button>
+        </form>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>المركبة</th><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>الحالة</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="violations-tbody"><tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+      </table>
     </div>
 
     <!-- ── العهد المالية ─────────────────────────────── -->
     <div id="sec-financial" class="section" style="display:none">
-      <h2 class="sec-title">العهد المالية</h2>
-      <div class="coming-soon">💰 قيد التطوير</div>
+      <h2 class="sec-title">العهد والمصروفات المالية</h2>
+      <div id="financial-form-wrap">
+        <form id="form-financial" class="data-form" onsubmit="addFinancial(event)">
+          <h3>إضافة معاملة مالية</h3>
+          <div class="form-row">
+            <div class="form-group"><label>النوع</label>
+              <select id="fin-type">
+                <option value="fuel">وقود</option>
+                <option value="maintenance">صيانة</option>
+                <option value="violation">مخالفة</option>
+                <option value="salary">راتب</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+            <div class="form-group"><label>المبلغ (ر.س)</label><input id="fin-amount" type="number" min="0" step="0.01" required></div>
+            <div class="form-group"><label>الوصف</label><input id="fin-description" required placeholder="وصف المعاملة"></div>
+            <div class="form-group"><label>معرّف المركبة</label><input id="fin-vehicleId" placeholder="اختياري"></div>
+            <div class="form-group"><label>التاريخ</label><input id="fin-date" type="date" required></div>
+            <div class="form-group"><label>رقم الإيصال</label><input id="fin-receiptNo" placeholder="اختياري"></div>
+          </div>
+          <p id="financial-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+      </div>
+      <div id="financial-summary" style="margin-bottom:16px"></div>
+      <table class="data-table">
+        <thead>
+          <tr><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>المركبة</th><th>التاريخ</th><th>الإيصال</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody id="financial-tbody"><tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+      </table>
     </div>
 
     <!-- ── التقارير ──────────────────────────────────── -->
@@ -435,8 +516,41 @@
 
     <!-- ── الذكاء الاصطناعي ──────────────────────────── -->
     <div id="sec-ai" class="section" style="display:none">
-      <h2 class="sec-title">نظام الذكاء الاصطناعي</h2>
-      <div class="coming-soon">🧠 قيد التطوير</div>
+      <h2 class="sec-title">مركز الذكاء الاصطناعي</h2>
+
+      <div id="ai-health-wrap" style="margin-bottom:24px">
+        <button class="btn-primary" onclick="loadAIInsights()">🔄 تحليل الأسطول بالذكاء الاصطناعي</button>
+      </div>
+      <div id="ai-health-panel" style="display:none">
+        <div class="cards" id="ai-summary-cards"></div>
+      </div>
+
+      <div id="ai-alerts-wrap" style="display:none;margin-top:24px">
+        <h3 class="sub-title">⚠️ التنبيهات العاجلة</h3>
+        <div id="ai-alerts-list"></div>
+      </div>
+
+      <div id="ai-recommendations-wrap" style="display:none;margin-top:24px">
+        <h3 class="sub-title">💡 التوصيات الذكية</h3>
+        <div id="ai-recommendations-list"></div>
+      </div>
+
+      <div style="margin-top:32px">
+        <h3 class="sub-title">🤖 المساعد الذكي — اسأل عن أسطولك</h3>
+        <div class="data-form">
+          <div class="form-row" style="align-items:flex-end">
+            <div class="form-group" style="flex:1">
+              <label>اكتب سؤالك</label>
+              <input id="ai-question" placeholder="مثال: كم عدد المركبات النشطة؟ أو ما هي المخالفات غير المسددة؟"
+                     onkeydown="if(event.key==='Enter')askAI()">
+            </div>
+            <div class="form-group" style="flex:none">
+              <button class="btn-primary" onclick="askAI()" style="margin-top:20px">🔍 سؤال</button>
+            </div>
+          </div>
+          <div id="ai-answer" style="display:none;margin-top:16px;padding:16px;background:#f1f5f9;border-radius:8px;border-right:4px solid #3b82f6"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ── سجل العمليات (admin) ──────────────────────── -->
@@ -523,6 +637,9 @@
 
 </div><!-- /#page-dashboard -->
 
+<div id="toast-container" style="position:fixed;bottom:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
