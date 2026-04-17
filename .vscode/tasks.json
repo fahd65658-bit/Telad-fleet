@@ -4,8 +4,8 @@
     {
       "label": "Run Telad Fleet",
       "type": "shell",
-      "command": "python3",
-      "args": ["server.py"],
+      "command": "node",
+      "args": ["server.js"],
       "isBackground": true,
       "presentation": {
         "reveal": "always",
