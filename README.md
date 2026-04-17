@@ -57,7 +57,7 @@ python3 server.py
 ### مطلوبة للإنتاج على Vercel
 
 - `NODE_ENV=production`
-- `ADMIN_PASSWORD` (مطلوب للإنتاج لتفعيل تسجيل دخول المدير الافتراضي)
+- `ADMIN_PASSWORD` (مطلوب للإنتاج — سيفشل تشغيل API بدون هذا المتغير)
 
 ### اختيارية
 
