@@ -24,11 +24,20 @@ const { analyzeVehicleDamage, formatReportText } = require('./lib/ai-vision');
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const PORT           = parseInt(process.env.PORT || '3000', 10);
+const IS_PROD        = process.env.NODE_ENV === 'production';
 const JWT_SECRET     = process.env.JWT_SECRET || 'telad-fleet-super-secret-jwt-2024!';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
 const ADMIN_PASS     = process.env.ADMIN_PASSWORD || 'telad2024';
-const DEPLOY_ID      = Date.now().toString();
+const DEPLOY_ID      = process.env.DEPLOY_ID || Date.now().toString();
 const FRONTEND_DIR   = path.join(__dirname, 'frontend');
+
+if (IS_PROD && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET is required in production.');
+}
+
+if (IS_PROD && !process.env.ADMIN_PASSWORD) {
+  throw new Error('ADMIN_PASSWORD is required in production.');
+}
 
 // ── bcrypt bootstrap ───────────────────────────────────────────────────────
 async function ensurePasswords() {
@@ -436,7 +445,21 @@ app.get('/api/gps/positions/:id', auth(), gps.routeGetVehiclePosition);
 // ══════════════════════════════════════════════════════════════════════════
 // HEALTH & VERSION
 // ══════════════════════════════════════════════════════════════════════════
-app.get('/api/health',  (_req, res) => res.json({ status:'ok', service:'telad-fleet', pg: !!process.env.DATABASE_URL, time:db.nowIso() }));
+app.get(['/healthz', '/api/health'], (_req, res) => {
+  const persistence = db.getPersistenceStatus();
+  res.json({
+    status: 'ok',
+    service: 'telad-fleet',
+    time: db.nowIso(),
+    deployId: DEPLOY_ID,
+    persistence,
+    database: {
+      mode: 'json-file',
+      postgresConfigured: Boolean(process.env.DATABASE_URL),
+      postgresActive: false,
+    },
+  });
+});
 app.get('/api/version', (_req, res) => res.json({ version:'3.1.0', deployId:DEPLOY_ID, node:process.version }));
 
 // ── Static frontend ─────────────────────────────────────────────────────
@@ -562,10 +585,10 @@ async function start() {
     console.log(`\n✅ TELAD FLEET v3.1 → http://localhost:${PORT}`);
     console.log(`   Deploy ID : ${DEPLOY_ID}`);
     console.log(`   Admin     : admin / ${ADMIN_PASS}`);
+    console.log(`   Data Dir  : ${db.getPersistenceStatus().dataDir}`);
     console.log(`   Socket.IO : enabled`);
     console.log(`   GPS Sim   : ${process.env.NODE_ENV!=='production'?'ON':'OFF'}\n`);
   });
 }
 
 start().catch(err => { console.error('Startup error:', err); process.exit(1); });
-
