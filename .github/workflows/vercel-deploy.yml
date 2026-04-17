@@ -1,43 +1,15 @@
-name: Deploy to Vercel Production
+name: Vercel production disabled
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: vercel-production
-  cancel-in-progress: true
-
 jobs:
-  deploy:
-    name: Deploy → Vercel Production
+  disabled:
+    name: Explain production backend
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --omit=dev
-
-      - name: Verify server syntax
-        run: node --check server.js && node --check api/index.js
-
-      - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Vercel deploys are disabled
         run: |
-          npm install -g vercel@latest --silent
-          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          echo "Production write traffic must not go to api/index.js on Vercel."
+          echo "Use deployment/deploy.sh or deployment/docker-compose.yml with root server.js and persistent DATA_DIR."

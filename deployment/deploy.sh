@@ -17,6 +17,8 @@
 set -euo pipefail
 
 DEPLOY_DIR="/var/www/telad-fleet"
+DATA_DIR="${DATA_DIR:-/var/www/telad-fleet/data}"
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/telad-fleet}"
 ADMIN_EMAIL="admin@fna.sa"
 DOMAIN_FRONTEND="fna.sa"
 DOMAIN_WWW="www.fna.sa"
@@ -66,18 +68,18 @@ fi
 
 # ─── 5. Deploy directory ─────────────────────────────────────────────────────
 log "Preparing deploy directory: $DEPLOY_DIR"
-mkdir -p "$DEPLOY_DIR/logs"
+mkdir -p "$DEPLOY_DIR/logs" "$DATA_DIR" "$BACKUP_DIR"
 
-# ─── 6. Backend dependencies ─────────────────────────────────────────────────
-log "Installing backend dependencies…"
-cd "$DEPLOY_DIR/backend"
+# ─── 6. App dependencies ─────────────────────────────────────────────────────
+log "Installing application dependencies…"
+cd "$DEPLOY_DIR"
 npm ci --omit=dev
 
 # ─── 7. .env from example (if not already set) ───────────────────────────────
-if [[ ! -f "$DEPLOY_DIR/backend/.env" ]]; then
+if [[ ! -f "$DEPLOY_DIR/.env" ]]; then
   warn ".env not found — copying from .env.example"
-  cp "$DEPLOY_DIR/backend/.env.example" "$DEPLOY_DIR/backend/.env"
-  warn "⚠️  IMPORTANT: Edit $DEPLOY_DIR/backend/.env and set JWT_SECRET before going live!"
+  cp "$DEPLOY_DIR/.env.example" "$DEPLOY_DIR/.env"
+  warn "⚠️  IMPORTANT: Edit $DEPLOY_DIR/.env and set JWT_SECRET + ADMIN_PASSWORD before going live!"
 fi
 
 # ─── 8. nginx config ─────────────────────────────────────────────────────────
@@ -123,6 +125,15 @@ pm2 startup systemd -u root --hp /root | tail -1 | bash || true
 # ─── 12. Reload nginx (after SSL) ────────────────────────────────────────────
 systemctl reload nginx
 
+# ─── 13. Daily backup cron ────────────────────────────────────────────────────
+log "Installing daily backup cron…"
+cat >/etc/cron.d/telad-fleet-backup <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 2 * * * root DATA_DIR=$DATA_DIR BACKUP_DIR=$BACKUP_DIR /bin/bash $DEPLOY_DIR/deployment/backup.sh >> /var/log/telad-fleet-backup.log 2>&1
+EOF
+chmod 644 /etc/cron.d/telad-fleet-backup
+
 # ─── Done ────────────────────────────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════╗"
@@ -131,8 +142,10 @@ echo "╠═══════════════════════�
 echo "║  🌐 Dashboard : https://fna.sa           ║"
 echo "║  🔌 API       : https://api.fna.sa       ║"
 echo "║  📊 PM2 logs  : pm2 logs telad-fleet     ║"
+echo "║  💾 Data dir  : $DATA_DIR                 ║"
+echo "║  🗂  Backups  : $BACKUP_DIR               ║"
 echo "╠══════════════════════════════════════════╣"
-echo "║  Admin login  : F  /  0241               ║"
+echo "║  Admin login  : admin / from .env        ║"
 echo "║  ⚠️  Change password after first login!   ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""

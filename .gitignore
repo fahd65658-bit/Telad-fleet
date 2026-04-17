@@ -9,6 +9,7 @@ backend/.env
 
 # Runtime data (JSON persistence) — excluded from VCS; stored on server volume
 backend/data/
+data/
 
 # Logs
 logs/

@@ -10,44 +10,30 @@ services:
   # ── Backend API ────────────────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: ../deployment/Dockerfile
+      context: ..
+      dockerfile: Dockerfile
+      target: backend
     container_name: telad-fleet-backend
     restart: unless-stopped
-    env_file: ./backend/.env
+    env_file: ../.env
     environment:
       NODE_ENV: production
       PORT: 5000
+      DATA_DIR: /app/data
+      BACKUP_DIR: /app/backups
     ports:
       - "127.0.0.1:5000:5000"   # Only expose to localhost (nginx proxies externally)
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - telad-net
     volumes:
+      - telad-data:/app/data
+      - telad-backups:/app/backups
       - backend-logs:/app/logs
-
-  # ── PostgreSQL Database ────────────────────────────────────────────────
-  db:
-    image: postgres:16-alpine
-    container_name: telad-fleet-db
-    restart: unless-stopped
-    env_file: ./backend/.env
-    environment:
-      POSTGRES_DB:       ${DB_NAME:-telad_fleet}
-      POSTGRES_USER:     ${DB_USER:-telad_user}
-      POSTGRES_PASSWORD: ${DB_PASS}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-telad_user}"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/api/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - telad-net
 
   # ── Nginx (SSL termination + static frontend) ──────────────────────────
   nginx:
@@ -58,8 +44,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./deployment/nginx.conf:/etc/nginx/conf.d/telad-fleet.conf:ro
-      - ./frontend:/var/www/telad-fleet/frontend:ro
+      - ./nginx.conf:/etc/nginx/conf.d/telad-fleet.conf:ro
+      - ../frontend:/var/www/telad-fleet/frontend:ro
       - letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
@@ -67,7 +53,8 @@ services:
       - telad-net
 
 volumes:
-  pgdata:
+  telad-data:
+  telad-backups:
   backend-logs:
   letsencrypt:
 

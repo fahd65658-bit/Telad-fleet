@@ -11,7 +11,7 @@ module.exports = {
   apps: [
     {
       name:        'telad-fleet',
-      script:      './backend/server.js',
+      script:      './server.js',
       cwd:         '/var/www/telad-fleet',
       instances:   1,            // increase to 'max' when migrating to PostgreSQL
       exec_mode:   'fork',       // use 'cluster' with real DB
@@ -21,10 +21,8 @@ module.exports = {
       env_production: {
         NODE_ENV:  'production',
         PORT:      5000,
-        // DATA_DIR: persistent volume path — survives deployments/restarts.
-        // Must be an absolute path on the host (or a mounted Docker volume).
-        // Default (when unset): backend/data/ relative to the repo root.
         DATA_DIR:  '/var/www/telad-fleet/data',
+        BACKUP_DIR: '/var/backups/telad-fleet',
       },
 
       env_development: {
@@ -38,9 +36,8 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       merge_logs:      true,
 
-      // Auto-restart — PM2 will send SIGTERM first, giving gracefulShutdown()
-      // time to flush data before the process exits.
-      kill_timeout:  10000,   // ms — matches the 10 s hard-exit in gracefulShutdown
+      // Auto-restart — PM2 will send SIGTERM first, allowing JSON flush.
+      kill_timeout:  10000,
       autorestart:   true,
       restart_delay: 3000,
       min_uptime:    '10s',
