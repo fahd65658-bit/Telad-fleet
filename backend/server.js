@@ -592,6 +592,10 @@ function formatDaysAgo(past, now) {
   return days === 0 ? 'اليوم' : `${days} يوم`;
 }
 
+function roundToTwo(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // AI CHAT / QUERY  (supervisor+)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -666,19 +670,19 @@ app.post('/ai/query', supervisorUp, async (req, res) => {
       total: violations.length,
       unpaid: violations.filter(v => v.status === 'unpaid').length,
       paid: violations.filter(v => v.status === 'paid').length,
-      totalAmount: +violations.reduce((s, v) => s + (Number(v.amount) || 0), 0).toFixed(2),
+      totalAmount: roundToTwo(violations.reduce((s, v) => s + (Number(v.amount) || 0), 0)),
     },
     accidents: {
       total: accidents.length,
       open: accidents.filter(a => a.status === 'open').length,
       closed: accidents.filter(a => a.status === 'closed').length,
-      totalDamage: +accidents.reduce((s, a) => s + (Number(a.damageAmount) || 0), 0).toFixed(2),
+      totalDamage: roundToTwo(accidents.reduce((s, a) => s + (Number(a.damageAmount) || 0), 0)),
     },
     financial: {
-      totalAmount: +financialItems.reduce((s, f) => s + (Number(f.amount) || 0), 0).toFixed(2),
+      totalAmount: roundToTwo(financialItems.reduce((s, f) => s + (Number(f.amount) || 0), 0)),
       byType: financialItems.reduce((acc, item) => {
         const key = item.type || 'other';
-        acc[key] = +((acc[key] || 0) + (Number(item.amount) || 0)).toFixed(2);
+        acc[key] = roundToTwo((acc[key] || 0) + (Number(item.amount) || 0));
         return acc;
       }, {}),
     },
