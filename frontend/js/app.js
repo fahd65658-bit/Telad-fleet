@@ -1,7 +1,7 @@
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TELAD FLEET – Frontend Application
-// Domain: fna.sa  |  Version: 2.0.0
+// Domain: fna.sa  |  Version: 3.0.0
 // ═══════════════════════════════════════════════════════════════════════════
 
 'use strict';
@@ -10,17 +10,8 @@
 const API_BASE = (() => {
   const host = window.location.hostname;
   const override = new URLSearchParams(window.location.search).get('api');
-
-  if (override) {
-    return override.replace(/\/$/, '');
-  }
-
-  // Empty hostname occurs when the page is opened via file:// (dev only)
-  if (host === 'localhost' || host === '127.0.0.1' || host === '') {
-    return 'http://localhost:5000';
-  }
-
-  // All production environments connect directly to the backend server
+  if (override) return override.replace(/\/$/, '');
+  if (host === 'localhost' || host === '127.0.0.1' || host === '') return 'http://localhost:3000';
   return 'https://api.fna.sa';
 })();
 
@@ -81,12 +72,218 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════════════════════
+function initTheme() {
+  const saved = localStorage.getItem('telad_theme') || 'dark';
+  applyTheme(saved);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
+  localStorage.setItem('telad_theme', theme);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem('telad_theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMMAND PALETTE
+// ═══════════════════════════════════════════════════════════════════════════
+const CMD_ITEMS = [
+  { icon: '📊', label: 'لوحة التحكم',           section: 'dashboard' },
+  { icon: '🗺️', label: 'خريطة الأسطول',         section: 'map' },
+  { icon: '🚗', label: 'المركبات',               section: 'vehicles' },
+  { icon: '🧑‍✈️', label: 'السائقون',             section: 'drivers' },
+  { icon: '🔧', label: 'الصيانة',               section: 'maintenance' },
+  { icon: '📅', label: 'المواعيد',              section: 'appointments' },
+  { icon: '🗺️', label: 'المناطق',               section: 'regions' },
+  { icon: '⚠️', label: 'الحوادث',              section: 'accidents' },
+  { icon: '🚦', label: 'المخالفات',             section: 'violations' },
+  { icon: '💰', label: 'العهد المالية',          section: 'financial' },
+  { icon: '📈', label: 'التقارير',              section: 'reports' },
+  { icon: '🧠', label: 'الذكاء الاصطناعي',       section: 'ai' },
+  { icon: '📜', label: 'سجل العمليات',          section: 'logs' },
+  { icon: '👥', label: 'إدارة المستخدمين',       section: 'users' },
+  { icon: '🛠️', label: 'طلبات التطوير',         section: 'devRequests' },
+  { icon: '☀️', label: 'تبديل الثيم',            action: toggleTheme },
+];
+
+let cmdSelectedIdx = -1;
+
+function openCmdPalette() {
+  const el = document.getElementById('cmd-palette');
+  if (!el) return;
+  el.classList.add('open');
+  const inp = document.getElementById('cmd-input');
+  if (inp) { inp.value = ''; inp.focus(); }
+  renderCmdResults('');
+}
+
+function closeCmdPalette() {
+  const el = document.getElementById('cmd-palette');
+  if (el) el.classList.remove('open');
+  cmdSelectedIdx = -1;
+}
+
+function renderCmdResults(query) {
+  const container = document.getElementById('cmd-results');
+  if (!container) return;
+  const q = query.toLowerCase();
+  const allowed = ROLE_SECTIONS[currentUser?.role] || [];
+  const filtered = CMD_ITEMS.filter(item => {
+    if (item.section && !allowed.includes(item.section)) return false;
+    return item.label.includes(q) || (item.section && item.section.toLowerCase().includes(q));
+  });
+  container.innerHTML = filtered.map((item, i) => `
+    <div class="cmd-item${i === cmdSelectedIdx ? ' selected' : ''}"
+         data-idx="${i}" onclick="cmdSelectItem(${i})">
+      <span class="cmd-item-icon">${item.icon}</span>
+      <span>${item.label}</span>
+      ${item.section ? `<span class="cmd-hint">${item.section}</span>` : ''}
+    </div>`).join('');
+  container._filtered = filtered;
+}
+
+function cmdSelectItem(idx) {
+  const container = document.getElementById('cmd-results');
+  const item = container?._filtered?.[idx];
+  if (!item) return;
+  closeCmdPalette();
+  if (item.section) navigateTo(item.section);
+  else if (item.action) item.action();
+}
+
+function cmdKeyNav(e) {
+  const container = document.getElementById('cmd-results');
+  if (!container) return;
+  const items = container.querySelectorAll('.cmd-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    cmdSelectedIdx = Math.min(cmdSelectedIdx + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    cmdSelectedIdx = Math.max(cmdSelectedIdx - 1, -1);
+  } else if (e.key === 'Enter') {
+    if (cmdSelectedIdx >= 0) cmdSelectItem(cmdSelectedIdx);
+    return;
+  } else if (e.key === 'Escape') {
+    closeCmdPalette();
+    return;
+  }
+  items.forEach((el, i) => el.classList.toggle('selected', i === cmdSelectedIdx));
+  if (cmdSelectedIdx >= 0) items[cmdSelectedIdx]?.scrollIntoView({ block: 'nearest' });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════════════════
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Don't fire if focused in input/textarea
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      // Allow Escape and Ctrl+K even in inputs
+      if (e.key === 'Escape') {
+        closeCmdPalette();
+        return;
+      }
+      if (e.ctrlKey && e.key === 'k') { e.preventDefault(); openCmdPalette(); return; }
+      // Navigation within cmd palette
+      const palette = document.getElementById('cmd-palette');
+      if (palette?.classList.contains('open')) cmdKeyNav(e);
+      return;
+    }
+
+    // Ctrl+K — command palette
+    if (e.ctrlKey && e.key === 'k') { e.preventDefault(); openCmdPalette(); return; }
+
+    // Alt+T — toggle theme
+    if (e.altKey && e.key === 't') { e.preventDefault(); toggleTheme(); return; }
+
+    // Alt+R — refresh current section
+    if (e.altKey && e.key === 'r') {
+      e.preventDefault();
+      const active = document.querySelector('.nav-link.active');
+      if (active?.dataset.section) navigateTo(active.dataset.section);
+      return;
+    }
+
+    // ? — shortcuts panel
+    if (e.key === '?') {
+      const panel = document.getElementById('shortcuts-panel');
+      if (panel) panel.classList.toggle('visible');
+      return;
+    }
+
+    // Escape — close panels
+    if (e.key === 'Escape') {
+      closeCmdPalette();
+      const panel = document.getElementById('shortcuts-panel');
+      if (panel) panel.classList.remove('visible');
+      return;
+    }
+
+    // Alt+1..9 — navigate sections
+    if (e.altKey && !e.ctrlKey) {
+      const sections = ['dashboard', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial'];
+      const idx = parseInt(e.key) - 1;
+      if (idx >= 0 && idx < sections.length) {
+        e.preventDefault();
+        const allowed = ROLE_SECTIONS[currentUser?.role] || [];
+        if (allowed.includes(sections[idx])) navigateTo(sections[idx]);
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SIDEBAR (mobile)
+// ═══════════════════════════════════════════════════════════════════════════
+function openSidebar() {
+  document.querySelector('.sidebar')?.classList.add('open');
+  document.getElementById('sidebar-overlay')?.classList.add('visible');
+}
+
+function closeSidebar() {
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+async function refreshNotifications() {
+  try {
+    const res = await apiFetch('/alerts');
+    if (!res.ok) return;
+    const data = await res.json();
+    const list  = Array.isArray(data) ? data : (data.alerts || []);
+    _updateNotifBadge(list.length);
+  } catch { /* ignore */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // ── Skew Protection: prime the baseline deploy ID before any auth call ──
-  // Uses a fire-and-forget fetch to /version so the very first response sets
-  // _serverDeployId.  Subsequent apiFetch() calls then detect any change.
+  // Init theme & shortcuts immediately
+  initTheme();
+  initKeyboardShortcuts();
+
+  // Wire UI controls
+  document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
+  document.getElementById('sidebar-toggle-btn')?.addEventListener('click', openSidebar);
+  document.getElementById('cmd-input')?.addEventListener('input', e => renderCmdResults(e.target.value));
+  document.getElementById('cmd-input')?.addEventListener('keydown', cmdKeyNav);
+  document.getElementById('cmd-palette')?.addEventListener('click', e => { if (e.target === document.getElementById('cmd-palette')) closeCmdPalette(); });
+  document.getElementById('skew-reload-btn')?.addEventListener('click', () => location.reload());
+
+  // ── Skew Protection: prime the baseline deploy ID ──
   fetch(API_BASE + '/version').then(r => { _checkDeployId(r); }).catch(() => {});
 
   const token = localStorage.getItem('telad_token');
@@ -96,6 +293,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         currentUser = await res.json();
         renderDashboard();
+        // Start notification refresh + real-time socket
+        refreshNotifications();
+        setInterval(refreshNotifications, 60000);
+        connectRealtimeSocket();
         return;
       }
     } catch { /* network error – fall through to login */ }
@@ -170,6 +371,7 @@ async function login(e) {
     localStorage.setItem('telad_token', data.token);
     currentUser = data.user;
     renderDashboard();
+    connectRealtimeSocket();
   } catch {
     errEl.textContent = 'تعذّر الاتصال بالخادم — تحقق من تشغيل الـ Backend';
   } finally {
@@ -180,6 +382,7 @@ async function login(e) {
 
 function logout() {
   if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  _disconnectSocket();
   localStorage.removeItem('telad_token');
   currentUser = null;
   renderLogin();
@@ -191,6 +394,8 @@ function logout() {
 function navigateTo(section) {
   const allowed = ROLE_SECTIONS[currentUser?.role] || [];
   if (!allowed.includes(section)) return;
+
+  closeSidebar(); // close mobile sidebar
 
   // Hide all sections
   document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
@@ -256,10 +461,7 @@ async function loadDashboardStats() {
     const res = await apiFetch('/dashboard');
     if (!res.ok) return;
     const d = await res.json();
-    const set = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val ?? 0;
-    };
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
     set('stat-vehicles',     d.vehicles);
     set('stat-drivers',      d.drivers);
     set('stat-employees',    d.employees);
@@ -271,6 +473,7 @@ async function loadDashboardStats() {
     set('stat-accidents',    d.accidents);
     set('stat-violations',   d.violationsUnpaid);
     set('stat-financial',    d.financialMonth);
+    _updateNotifBadge(d.alerts || 0);
   } catch { /* backend may not be running in dev */ }
 }
 
@@ -783,11 +986,11 @@ function showToast(message, type = 'success') {
   const container = document.getElementById('toast-container');
   if (!container) return;
   const toast = document.createElement('div');
-  const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
-  toast.style.cssText = `background:${bg};color:#fff;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);font-size:14px;min-width:200px;transition:opacity .3s`;
-  toast.textContent = message;
+  toast.className = `toast toast-${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+  toast.innerHTML = `<span>${icons[type] || ''}</span><span>${escHtml(message)}</span>`;
   container.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(8px)'; setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1099,9 +1302,8 @@ async function askAI() {
 // ═══════════════════════════════════════════════════════════════════════════
 // GPS MAP
 // ═══════════════════════════════════════════════════════════════════════════
-let fleetMap = null;
+let fleetMap     = null;
 const vehicleMarkers = {};
-let gpsSocketConnected = false;
 
 function initMap() {
   if (fleetMap) { fleetMap.invalidateSize(); return; }
@@ -1109,27 +1311,113 @@ function initMap() {
   fleetMap = L.map('fleet-map').setView([24.7136, 46.6753], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
   }).addTo(fleetMap);
 }
 
+function _updateMapMarker(vehicleId, lat, lng, label) {
+  if (!fleetMap || !lat || !lng) return;
+  if (vehicleMarkers[vehicleId]) {
+    vehicleMarkers[vehicleId].setLatLng([lat, lng]);
+  } else {
+    vehicleMarkers[vehicleId] = L.marker([lat, lng])
+      .addTo(fleetMap)
+      .bindPopup(label || vehicleId);
+  }
+}
+
 function connectGPS() {
-  if (gpsSocketConnected || typeof io === 'undefined') return;
-  gpsSocketConnected = true;
+  connectRealtimeSocket(); // delegate to the full real-time connection
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REAL-TIME SOCKET.IO
+// ═══════════════════════════════════════════════════════════════════════════
+let _rtSocket      = null;
+let _rtConnecting  = false;
+
+function connectRealtimeSocket() {
+  if (_rtSocket || _rtConnecting || typeof io === 'undefined') return;
+  const token = localStorage.getItem('telad_token');
+  if (!token) return;
+  _rtConnecting = true;
   try {
-    const socket = io(API_BASE, { transports: ['websocket', 'polling'] });
-    socket.on('gps-stream', data => {
-      if (!fleetMap) return;
-      const { vehicleId, lat, lng, label } = data;
-      if (!lat || !lng) return;
-      if (vehicleMarkers[vehicleId]) {
-        vehicleMarkers[vehicleId].setLatLng([lat, lng]);
-      } else {
-        vehicleMarkers[vehicleId] = L.marker([lat, lng])
-          .addTo(fleetMap)
-          .bindPopup(label || vehicleId);
-      }
+    _rtSocket = io(API_BASE, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 3000,
     });
-  } catch { gpsSocketConnected = false; }
+
+    _rtSocket.on('connect', () => {
+      _rtConnecting = false;
+      console.log('[RT] Socket connected');
+      showToast('متصل بالخادم – البيانات مباشرة', 'success');
+    });
+
+    _rtSocket.on('connect_error', (err) => {
+      _rtConnecting = false;
+      console.warn('[RT] Socket error:', err.message);
+    });
+
+    // Initial state snapshot
+    _rtSocket.on('init', (data) => {
+      if (data.vehicles) {
+        data.vehicles.forEach(v => _updateMapMarker(v.id, v.lat, v.lng, v.name));
+      }
+      if (data.alerts) _updateNotifBadge(data.alerts.length);
+    });
+
+    // Live GPS updates
+    _rtSocket.on('gps:update', ({ vehicleId, lat, lng }) => {
+      _updateMapMarker(vehicleId, lat, lng);
+    });
+
+    // Dashboard push (every 30s from server)
+    _rtSocket.on('dashboard:update', (d) => {
+      _applyDashboardData(d);
+    });
+
+    // Vehicle add/update events
+    _rtSocket.on('vehicles:new',    () => { if (_isActive('vehicles'))    loadVehicles();    });
+    _rtSocket.on('vehicles:update', () => { if (_isActive('vehicles'))    loadVehicles();    });
+
+    // Maintenance events
+    _rtSocket.on('maintenance:new',      () => { if (_isActive('maintenance')) loadMaintenance(); });
+    _rtSocket.on('maintenance:complete', () => { if (_isActive('maintenance')) loadMaintenance(); });
+
+    // Appointments
+    _rtSocket.on('appointments:new', () => { if (_isActive('appointments')) loadAppointments(); });
+
+    _rtSocket.on('disconnect', () => {
+      console.log('[RT] Socket disconnected');
+      _rtSocket = null;
+    });
+  } catch (e) {
+    _rtConnecting = false;
+    console.warn('[RT] Socket init failed:', e.message);
+  }
+}
+
+function _isActive(section) {
+  return !!document.querySelector(`.nav-link[data-section="${section}"].active`);
+}
+
+function _updateNotifBadge(count) {
+  const badge = document.getElementById('notif-count');
+  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
+}
+
+function _applyDashboardData(d) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+  set('stat-vehicles',    d.vehicles);
+  set('stat-drivers',     d.drivers);
+  set('stat-maintenance', d.maintenance);
+}
+
+// Disconnect on logout
+function _disconnectSocket() {
+  if (_rtSocket) { _rtSocket.disconnect(); _rtSocket = null; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

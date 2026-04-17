@@ -1,0 +1,22 @@
+{
+  "name": "TELAD FLEET – نظام إدارة الأسطول",
+  "short_name": "TELAD FLEET",
+  "description": "نظام إدارة الأسطول المتكامل – fna.sa",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#020617",
+  "orientation": "any",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/logo.svg",     "sizes": "any",     "type": "image/svg+xml", "purpose": "maskable any" }
+  ],
+  "shortcuts": [
+    { "name": "لوحة التحكم",   "url": "/?section=dashboard",   "icons": [{ "src": "assets/logo.svg", "type": "image/svg+xml" }] },
+    { "name": "المركبات",      "url": "/?section=vehicles",    "icons": [{ "src": "assets/logo.svg", "type": "image/svg+xml" }] },
+    { "name": "الصيانة",      "url": "/?section=maintenance", "icons": [{ "src": "assets/logo.svg", "type": "image/svg+xml" }] }
+  ]
+}

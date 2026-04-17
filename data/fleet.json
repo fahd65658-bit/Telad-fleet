@@ -1,0 +1,1740 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "مدير النظام",
+      "username": "admin",
+      "email": "admin@fna.sa",
+      "passwordHash": "$2a$10$dqCX37n2kSm.bAlp5GjONOuD6DvmX3ptzjw0yhrTEi7Waj/csVjKi",
+      "role": "admin",
+      "active": true,
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "u2",
+      "name": "أحمد المشرف",
+      "username": "supervisor1",
+      "email": "sup@fna.sa",
+      "passwordHash": "$2a$10$iOy/gx7Y56EFa1g0Del.kOcnrFQj6X3XaV/NhMzQPX9hQXAaizgOq",
+      "role": "supervisor",
+      "active": true,
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "u3",
+      "name": "سالم المشغّل",
+      "username": "operator1",
+      "email": "op@fna.sa",
+      "passwordHash": "$2a$10$UIg4e56JBygDD7b6AYffr.SOBsHFtjmCZ99DB0HaR8a1z5eSq3KOa",
+      "role": "operator",
+      "active": true,
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "v1",
+      "name": "تويوتا لاندكروزر",
+      "plate": "أ ب ج 1234",
+      "city": "الرياض",
+      "driver": "أحمد سالم",
+      "status": "active",
+      "location": "الرياض",
+      "lat": 24.708983,
+      "lng": 46.684068,
+      "km": 45200,
+      "fuelLevel": 78,
+      "year": 2022,
+      "color": "أبيض",
+      "createdAt": "2026-04-17T15:39:49.551Z",
+      "lastGps": "2026-04-17T15:49:42.502Z"
+    },
+    {
+      "id": "v2",
+      "name": "فورد F-150",
+      "plate": "د هـ و 5678",
+      "city": "جدة",
+      "driver": "سارة علي",
+      "status": "charging",
+      "location": "جدة",
+      "lat": 21.4858,
+      "lng": 39.1925,
+      "km": 31500,
+      "fuelLevel": 45,
+      "year": 2023,
+      "color": "أسود",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "v3",
+      "name": "شيفروليه سيلفرادو",
+      "plate": "ز ح ط 9012",
+      "city": "الدمام",
+      "driver": "خالد حسن",
+      "status": "maintenance",
+      "location": "الدمام",
+      "lat": 26.4207,
+      "lng": 50.0888,
+      "km": 62100,
+      "fuelLevel": 20,
+      "year": 2021,
+      "color": "رمادي",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "v4",
+      "name": "تويوتا هايلوكس",
+      "plate": "ي ك ل 3456",
+      "city": "المدينة",
+      "driver": "منى فهد",
+      "status": "active",
+      "location": "المدينة",
+      "lat": 24.525806,
+      "lng": 39.569161,
+      "km": 28900,
+      "fuelLevel": 92,
+      "year": 2023,
+      "color": "أبيض",
+      "createdAt": "2026-04-17T15:39:49.551Z",
+      "lastGps": "2026-04-17T15:48:32.476Z"
+    },
+    {
+      "id": "v5",
+      "name": "نيسان باترول",
+      "plate": "م ن س 7890",
+      "city": "مكة",
+      "driver": "علي ناصر",
+      "status": "active",
+      "location": "مكة",
+      "lat": 21.385134,
+      "lng": 39.856792,
+      "km": 19400,
+      "fuelLevel": 65,
+      "year": 2024,
+      "color": "أزرق",
+      "createdAt": "2026-04-17T15:39:49.551Z",
+      "lastGps": "2026-04-17T15:49:22.495Z"
+    },
+    {
+      "id": "v6",
+      "name": "مرسيدس سبرينتر",
+      "plate": "ع غ ف 1122",
+      "city": "أبها",
+      "driver": "هند راشد",
+      "status": "charging",
+      "location": "أبها",
+      "lat": 18.2164,
+      "lng": 42.5053,
+      "km": 54300,
+      "fuelLevel": 30,
+      "year": 2022,
+      "color": "أبيض",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "v7",
+      "name": "كيا سورينتو",
+      "plate": "ق ر س 3311",
+      "city": "تبوك",
+      "driver": "فيصل عمر",
+      "status": "active",
+      "location": "تبوك",
+      "lat": 28.392962,
+      "lng": 36.567268,
+      "km": 12700,
+      "fuelLevel": 88,
+      "year": 2024,
+      "color": "أحمر",
+      "createdAt": "2026-04-17T15:39:49.551Z",
+      "lastGps": "2026-04-17T15:49:52.509Z"
+    },
+    {
+      "id": "v8",
+      "name": "هيوندا توسون",
+      "plate": "ت ث ج 7744",
+      "city": "القصيم",
+      "driver": "نورة سعد",
+      "status": "active",
+      "location": "القصيم",
+      "lat": 26.326039,
+      "lng": 43.976614,
+      "km": 8900,
+      "fuelLevel": 71,
+      "year": 2025,
+      "color": "أخضر",
+      "createdAt": "2026-04-17T15:39:49.551Z",
+      "lastGps": "2026-04-17T15:49:47.506Z"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "d1",
+      "name": "أحمد سالم",
+      "phone": "0501234567",
+      "licenseNo": "SA-101",
+      "licenseExpiry": "2027-06-01",
+      "nationalId": "1012345678",
+      "status": "active",
+      "vehicleId": "v1",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "d2",
+      "name": "سارة علي",
+      "phone": "0509876543",
+      "licenseNo": "SA-102",
+      "licenseExpiry": "2026-12-31",
+      "nationalId": "1098765432",
+      "status": "active",
+      "vehicleId": "v2",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "d3",
+      "name": "خالد حسن",
+      "phone": "0505551234",
+      "licenseNo": "SA-103",
+      "licenseExpiry": "2028-03-15",
+      "nationalId": "1056781234",
+      "status": "active",
+      "vehicleId": "v3",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "d4",
+      "name": "منى فهد",
+      "phone": "0502223344",
+      "licenseNo": "SA-104",
+      "licenseExpiry": "2027-09-20",
+      "nationalId": "1023344556",
+      "status": "active",
+      "vehicleId": "v4",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "d5",
+      "name": "علي ناصر",
+      "phone": "0507778899",
+      "licenseNo": "SA-105",
+      "licenseExpiry": "2026-08-10",
+      "nationalId": "1077889900",
+      "status": "active",
+      "vehicleId": "v5",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "d6",
+      "name": "هند راشد",
+      "phone": "0503334455",
+      "licenseNo": "SA-106",
+      "licenseExpiry": "2027-04-30",
+      "nationalId": "1033445566",
+      "status": "active",
+      "vehicleId": "v6",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "maintenance": [
+    {
+      "id": "m1",
+      "vehicleId": "v3",
+      "type": "تغيير زيت",
+      "description": "تغيير زيت المحرك الدوري",
+      "scheduledDate": "2026-04-20",
+      "cost": 350,
+      "status": "pending",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "m2",
+      "vehicleId": "v1",
+      "type": "فحص إطارات",
+      "description": "ضخ وفحص الإطارات الأربع",
+      "scheduledDate": "2026-04-22",
+      "cost": 200,
+      "status": "pending",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "m3",
+      "vehicleId": "v6",
+      "type": "تبديل فلتر",
+      "description": "فلتر هواء وفلتر وقود",
+      "scheduledDate": "2026-03-10",
+      "cost": 180,
+      "status": "completed",
+      "completedAt": "2026-03-10",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "m4",
+      "vehicleId": "v2",
+      "type": "صيانة شاملة",
+      "description": "فحص كامل للمركبة",
+      "scheduledDate": "2026-04-28",
+      "cost": 1200,
+      "status": "pending",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "a1",
+      "vehicleId": "v1",
+      "type": "فحص دوري حكومي",
+      "scheduledAt": "2026-04-25T09:00",
+      "notes": "تجديد استمارة المرور",
+      "status": "pending",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "a2",
+      "vehicleId": "v2",
+      "type": "صيانة دورية",
+      "scheduledAt": "2026-04-28T11:00",
+      "notes": "",
+      "status": "confirmed",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "a3",
+      "vehicleId": "v5",
+      "type": "تجديد رخصة",
+      "scheduledAt": "2026-05-05T10:00",
+      "notes": "إحضار الوثائق الأصلية",
+      "status": "pending",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "regions": [
+    {
+      "id": "r1",
+      "name": "منطقة الرياض",
+      "description": "العاصمة والمناطق المحيطة",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "r2",
+      "name": "منطقة جدة",
+      "description": "ميناء جدة والمناطق الغربية",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "r3",
+      "name": "المنطقة الشرقية",
+      "description": "الدمام والخبر والظهران",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "r4",
+      "name": "منطقة مكة",
+      "description": "مكة المكرمة والطائف وجدة",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "r5",
+      "name": "منطقة المدينة",
+      "description": "المدينة المنورة والمناطق المحيطة",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "accidents": [],
+  "violations": [],
+  "financial": [
+    {
+      "id": "f1",
+      "type": "fuel",
+      "amount": 4250,
+      "description": "وقود الأسطول - مارس 2026",
+      "vehicleId": null,
+      "date": "2026-03-31",
+      "receiptNo": "REC-001",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "f2",
+      "type": "maintenance",
+      "amount": 2100,
+      "description": "صيانة شاملة - تويوتا لاندكروزر",
+      "vehicleId": "v1",
+      "date": "2026-03-15",
+      "receiptNo": "REC-002",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "f3",
+      "type": "salary",
+      "amount": 18500,
+      "description": "رواتب السائقين - مارس 2026",
+      "vehicleId": null,
+      "date": "2026-03-31",
+      "receiptNo": "REC-003",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "f4",
+      "type": "fuel",
+      "amount": 3800,
+      "description": "وقود الأسطول - أبريل 2026",
+      "vehicleId": null,
+      "date": "2026-04-15",
+      "receiptNo": "REC-004",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "reports": [
+    {
+      "type": "vehicles",
+      "from": "2026-01-01",
+      "to": "2026-12-31",
+      "data": {
+        "total": 8,
+        "byStatus": {
+          "active": 5,
+          "charging": 2,
+          "maintenance": 1
+        },
+        "byCity": {
+          "الرياض": 1,
+          "جدة": 1,
+          "الدمام": 1,
+          "المدينة": 1,
+          "مكة": 1,
+          "أبها": 1,
+          "تبوك": 1,
+          "القصيم": 1
+        }
+      },
+      "generatedBy": "admin",
+      "id": "mo331mtmdg3c",
+      "createdAt": "2026-04-17T15:48:19.786Z"
+    },
+    {
+      "type": "financial",
+      "from": "2026-01-01",
+      "to": "2026-12-31",
+      "data": {
+        "total": 28650,
+        "byType": {
+          "fuel": 2,
+          "maintenance": 1,
+          "salary": 1
+        }
+      },
+      "generatedBy": "admin",
+      "id": "mo331mtt3dj4",
+      "createdAt": "2026-04-17T15:48:19.793Z"
+    },
+    {
+      "type": "maintenance",
+      "data": {
+        "total": 4,
+        "byStatus": {
+          "pending": 3,
+          "completed": 1
+        },
+        "totalCost": 1930
+      },
+      "generatedBy": "admin",
+      "id": "mo331mty93ah",
+      "createdAt": "2026-04-17T15:48:19.798Z"
+    }
+  ],
+  "devRequests": [],
+  "alerts": [
+    {
+      "id": "mo331mjg6lju",
+      "message": "مخالفة جديدة: سرعة",
+      "type": "warning",
+      "createdAt": "2026-04-17T15:48:19.420Z"
+    },
+    {
+      "id": "mo331mj8nxvr",
+      "message": "حادث جديد للمركبة: v1",
+      "type": "danger",
+      "createdAt": "2026-04-17T15:48:19.412Z"
+    },
+    {
+      "id": "mo331mi8eqvk",
+      "message": "اكتملت الصيانة: فحص شامل",
+      "type": "success",
+      "createdAt": "2026-04-17T15:48:19.376Z"
+    },
+    {
+      "id": "mo331mhzma9r",
+      "message": "طلب صيانة: فحص شامل",
+      "type": "info",
+      "createdAt": "2026-04-17T15:48:19.367Z"
+    },
+    {
+      "id": "mo331mhtul1q",
+      "message": "تم إضافة سائق: سائق فحص",
+      "type": "success",
+      "createdAt": "2026-04-17T15:48:19.361Z"
+    },
+    {
+      "id": "mo331mhfs1yc",
+      "message": "تم إضافة مركبة: تيست فحص",
+      "type": "success",
+      "createdAt": "2026-04-17T15:48:19.347Z"
+    },
+    {
+      "id": "al1",
+      "message": "المركبة TLD-204 بحاجة إلى فحص دوري خلال 24 ساعة.",
+      "type": "warning",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "al2",
+      "message": "تم اكتمال صيانة المركبة مرسيدس سبرينتر بنجاح.",
+      "type": "success",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "al3",
+      "message": "تنبيه: مستوى الوقود في شيفروليه سيلفرادو منخفض (20%).",
+      "type": "danger",
+      "createdAt": "2026-04-17T15:39:49.551Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "l1",
+      "action": "تهيئة النظام وتحميل البيانات",
+      "user": "system",
+      "ip": "127.0.0.1",
+      "time": "2026-04-17T15:39:49.551Z"
+    },
+    {
+      "id": "mo32rpyze26a",
+      "action": "GET /health",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:37.307Z"
+    },
+    {
+      "id": "mo32rpzp5d5r",
+      "action": "GET /version",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:37.333Z"
+    },
+    {
+      "id": "mo32rq189m4z",
+      "action": "POST /auth/login",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:37.388Z"
+    },
+    {
+      "id": "mo32rq4h7v53",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:37.505Z"
+    },
+    {
+      "id": "mo32rq5c4ct8",
+      "action": "GET /dashboard",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:37.536Z"
+    },
+    {
+      "id": "mo32rqjkq0yb",
+      "action": "GET /vehicles",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:38.048Z"
+    },
+    {
+      "id": "mo32rqklr2sh",
+      "action": "GET /alerts",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:40:38.085Z"
+    },
+    {
+      "id": "mo32sxt4g4j5",
+      "action": "POST /auth/login",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:41:34.120Z"
+    },
+    {
+      "id": "mo32sxvpjeob",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T15:41:34.213Z"
+    },
+    {
+      "id": "mo32sxwfqpfs",
+      "action": "GET /ai/insights",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:41:34.239Z"
+    },
+    {
+      "id": "mo32sxx8ui77",
+      "action": "GET /reports/analytics",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:41:34.268Z"
+    },
+    {
+      "id": "mo32zi74j19x",
+      "action": "POST /auth/login",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:40.480Z"
+    },
+    {
+      "id": "mo32zi9w7nk1",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:40.580Z"
+    },
+    {
+      "id": "mo32zip0fyra",
+      "action": "GET /health",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.124Z"
+    },
+    {
+      "id": "mo32zip3k8e2",
+      "action": "GET /version",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.127Z"
+    },
+    {
+      "id": "mo32zip5dqco",
+      "action": "GET /auth/me",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.129Z"
+    },
+    {
+      "id": "mo32zip7m2st",
+      "action": "GET /auth/users",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.131Z"
+    },
+    {
+      "id": "mo32zip8y12f",
+      "action": "GET /dashboard",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.132Z"
+    },
+    {
+      "id": "mo32zipav1h3",
+      "action": "GET /vehicles",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.134Z"
+    },
+    {
+      "id": "mo32zipck32d",
+      "action": "GET /drivers",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.136Z"
+    },
+    {
+      "id": "mo32zipeqq6q",
+      "action": "GET /maintenance",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.138Z"
+    },
+    {
+      "id": "mo32ziphst5t",
+      "action": "GET /appointments",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.141Z"
+    },
+    {
+      "id": "mo32zipjs2a1",
+      "action": "GET /regions",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.143Z"
+    },
+    {
+      "id": "mo32zipkihzk",
+      "action": "GET /accidents",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.144Z"
+    },
+    {
+      "id": "mo32zipl50ak",
+      "action": "GET /violations",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.145Z"
+    },
+    {
+      "id": "mo32zipmiwky",
+      "action": "GET /financial",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.146Z"
+    },
+    {
+      "id": "mo32zipnscps",
+      "action": "GET /reports",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.147Z"
+    },
+    {
+      "id": "mo32zipo980l",
+      "action": "GET /reports/analytics",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.148Z"
+    },
+    {
+      "id": "mo32zipqahgu",
+      "action": "GET /ai/insights",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.150Z"
+    },
+    {
+      "id": "mo32ziprznbx",
+      "action": "GET /alerts",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.151Z"
+    },
+    {
+      "id": "mo32ziptv4e4",
+      "action": "GET /logs",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.153Z"
+    },
+    {
+      "id": "mo32zipu8d43",
+      "action": "GET /dev-requests",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.154Z"
+    },
+    {
+      "id": "mo32zipwwlqq",
+      "action": "POST /vehicles",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.156Z"
+    },
+    {
+      "id": "mo32zipx83ps",
+      "action": "POST /drivers",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.157Z"
+    },
+    {
+      "id": "mo32zipztsiz",
+      "action": "POST /maintenance",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.159Z"
+    },
+    {
+      "id": "mo32ziq0juxr",
+      "action": "POST /financial",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.160Z"
+    },
+    {
+      "id": "mo32ziq193ae",
+      "action": "POST /ai/query",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.161Z"
+    },
+    {
+      "id": "mo32ziq3ecu5",
+      "action": "POST /reports/generate",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:46:41.163Z"
+    },
+    {
+      "id": "mo331mb187ay",
+      "action": "POST /auth/login",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.117Z"
+    },
+    {
+      "id": "mo331mfpanqh",
+      "action": "تسجيل دخول: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.285Z"
+    },
+    {
+      "id": "mo331mfvb2jr",
+      "action": "GET /health",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.291Z"
+    },
+    {
+      "id": "mo331mfyrnp6",
+      "action": "GET /version",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.294Z"
+    },
+    {
+      "id": "mo331mg2hvee",
+      "action": "GET /auth/me",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.298Z"
+    },
+    {
+      "id": "mo331mg7arn2",
+      "action": "GET /auth/users",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.303Z"
+    },
+    {
+      "id": "mo331mga4dpz",
+      "action": "GET /dashboard",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.306Z"
+    },
+    {
+      "id": "mo331mgdix43",
+      "action": "GET /vehicles",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.309Z"
+    },
+    {
+      "id": "mo331mgfidqs",
+      "action": "GET /drivers",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.311Z"
+    },
+    {
+      "id": "mo331mghbw7f",
+      "action": "GET /maintenance",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.313Z"
+    },
+    {
+      "id": "mo331mgkej7n",
+      "action": "GET /appointments",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.316Z"
+    },
+    {
+      "id": "mo331mgm0xvc",
+      "action": "GET /regions",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.318Z"
+    },
+    {
+      "id": "mo331mgq6cec",
+      "action": "GET /accidents",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.322Z"
+    },
+    {
+      "id": "mo331mgsthat",
+      "action": "GET /violations",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.324Z"
+    },
+    {
+      "id": "mo331mgvwyl0",
+      "action": "GET /financial",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.327Z"
+    },
+    {
+      "id": "mo331mgx1vc6",
+      "action": "GET /reports",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.329Z"
+    },
+    {
+      "id": "mo331mh0kkp1",
+      "action": "GET /reports/analytics",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.332Z"
+    },
+    {
+      "id": "mo331mh2do8u",
+      "action": "GET /ai/insights",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.334Z"
+    },
+    {
+      "id": "mo331mh5pi9v",
+      "action": "GET /alerts",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.337Z"
+    },
+    {
+      "id": "mo331mh78w28",
+      "action": "GET /logs",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.339Z"
+    },
+    {
+      "id": "mo331mhbco7c",
+      "action": "GET /dev-requests",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.343Z"
+    },
+    {
+      "id": "mo331mhecr7w",
+      "action": "POST /vehicles",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.346Z"
+    },
+    {
+      "id": "mo331mhjuhr6",
+      "action": "PUT /vehicles/mo331mhfjn4u",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.351Z"
+    },
+    {
+      "id": "mo331mhmxy4k",
+      "action": "DELETE /vehicles/mo331mhfjn4u",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.354Z"
+    },
+    {
+      "id": "mo331mhs5o91",
+      "action": "POST /drivers",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.360Z"
+    },
+    {
+      "id": "mo331mhx5d09",
+      "action": "DELETE /drivers/mo331mhtjkba",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.365Z"
+    },
+    {
+      "id": "mo331mhzc9t6",
+      "action": "POST /maintenance",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.367Z"
+    },
+    {
+      "id": "mo331mi7jnsg",
+      "action": "POST /maintenance/mo331mhzj36c/complete",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.375Z"
+    },
+    {
+      "id": "mo331miaioao",
+      "action": "DELETE /maintenance/mo331mhzj36c",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.378Z"
+    },
+    {
+      "id": "mo331mifi9jr",
+      "action": "POST /appointments",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.383Z"
+    },
+    {
+      "id": "mo331mijzf52",
+      "action": "POST /appointments/mo331mif8dcg/confirm",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.387Z"
+    },
+    {
+      "id": "mo331minc1s5",
+      "action": "POST /appointments/mo331mif8dcg/cancel",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.391Z"
+    },
+    {
+      "id": "mo331miq6pq8",
+      "action": "DELETE /appointments/mo331mif8dcg",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.394Z"
+    },
+    {
+      "id": "mo331mixvww1",
+      "action": "POST /financial",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.401Z"
+    },
+    {
+      "id": "mo331mizccjd",
+      "action": "DELETE /financial/mo331mixnqlv",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.403Z"
+    },
+    {
+      "id": "mo331mj1on9g",
+      "action": "POST /regions",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.405Z"
+    },
+    {
+      "id": "mo331mj3lx3d",
+      "action": "PUT /regions/mo331mj2ndet",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.407Z"
+    },
+    {
+      "id": "mo331mj5aerr",
+      "action": "DELETE /regions/mo331mj2ndet",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.409Z"
+    },
+    {
+      "id": "mo331mj8vbp9",
+      "action": "POST /accidents",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.412Z"
+    },
+    {
+      "id": "mo331mj9zd77",
+      "action": "PUT /accidents/mo331mj84nuo",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.413Z"
+    },
+    {
+      "id": "mo331mjcuqre",
+      "action": "DELETE /accidents/mo331mj84nuo",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.416Z"
+    },
+    {
+      "id": "mo331mjg1ct8",
+      "action": "POST /violations",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.420Z"
+    },
+    {
+      "id": "mo331mjiwetj",
+      "action": "POST /violations/mo331mjgexf3/pay",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.422Z"
+    },
+    {
+      "id": "mo331mjj0rgp",
+      "action": "DELETE /violations/mo331mjgexf3",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.423Z"
+    },
+    {
+      "id": "mo331mjm0d2q",
+      "action": "POST /ai/query",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.426Z"
+    },
+    {
+      "id": "mo331mtfsrmv",
+      "action": "POST /ai/query",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.779Z"
+    },
+    {
+      "id": "mo331mtj4v5v",
+      "action": "POST /reports/generate",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.783Z"
+    },
+    {
+      "id": "mo331mtto8tl",
+      "action": "POST /reports/generate",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.793Z"
+    },
+    {
+      "id": "mo331mtwultf",
+      "action": "POST /reports/generate",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.796Z"
+    },
+    {
+      "id": "mo331mu6x6jb",
+      "action": "POST /auth/users",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.806Z"
+    },
+    {
+      "id": "mo331mwl6e5j",
+      "action": "PUT /auth/users/mo331mwjxlvs",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.893Z"
+    },
+    {
+      "id": "mo331mwn7wpe",
+      "action": "DELETE /auth/users/mo331mwjxlvs",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.895Z"
+    },
+    {
+      "id": "mo331mwo82yw",
+      "action": "POST /dev-requests",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.896Z"
+    },
+    {
+      "id": "mo331mwqo9l2",
+      "action": "PUT /dev-requests/mo331mwobnkr/status",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.898Z"
+    },
+    {
+      "id": "mo331mwtx2gi",
+      "action": "DELETE /dev-requests/mo331mwobnkr",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.901Z"
+    },
+    {
+      "id": "mo331mwviyov",
+      "action": "GET /alerts",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.903Z"
+    },
+    {
+      "id": "mo331mwx7475",
+      "action": "DELETE /alerts/al4",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.905Z"
+    },
+    {
+      "id": "mo331mx0u55d",
+      "action": "POST /auth/logout",
+      "user": "anon",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.908Z"
+    },
+    {
+      "id": "mo331mx0l58q",
+      "action": "تسجيل خروج: admin",
+      "user": "admin",
+      "ip": "::1",
+      "time": "2026-04-17T15:48:19.908Z"
+    }
+  ],
+  "gpsHistory": {
+    "v4": [
+      {
+        "lat": 24.525122,
+        "lng": 39.571691,
+        "t": "2026-04-17T15:39:54.556Z"
+      },
+      {
+        "lat": 24.524465,
+        "lng": 39.57342,
+        "t": "2026-04-17T15:40:09.563Z"
+      },
+      {
+        "lat": 24.52693,
+        "lng": 39.572357,
+        "t": "2026-04-17T15:40:19.564Z"
+      },
+      {
+        "lat": 24.525481,
+        "lng": 39.570589,
+        "t": "2026-04-17T15:40:59.577Z"
+      },
+      {
+        "lat": 24.527667,
+        "lng": 39.573013,
+        "t": "2026-04-17T15:41:14.582Z"
+      },
+      {
+        "lat": 24.528244,
+        "lng": 39.571921,
+        "t": "2026-04-17T15:41:44.594Z"
+      },
+      {
+        "lat": 24.529768,
+        "lng": 39.573179,
+        "t": "2026-04-17T15:42:04.599Z"
+      },
+      {
+        "lat": 24.529866,
+        "lng": 39.573486,
+        "t": "2026-04-17T15:42:14.603Z"
+      },
+      {
+        "lat": 24.532348,
+        "lng": 39.57431,
+        "t": "2026-04-17T15:42:39.613Z"
+      },
+      {
+        "lat": 24.53074,
+        "lng": 39.573782,
+        "t": "2026-04-17T15:43:39.641Z"
+      },
+      {
+        "lat": 24.530523,
+        "lng": 39.571418,
+        "t": "2026-04-17T15:43:44.643Z"
+      },
+      {
+        "lat": 24.529817,
+        "lng": 39.569533,
+        "t": "2026-04-17T15:44:19.656Z"
+      },
+      {
+        "lat": 24.528043,
+        "lng": 39.57025,
+        "t": "2026-04-17T15:45:52.413Z"
+      },
+      {
+        "lat": 24.528667,
+        "lng": 39.570268,
+        "t": "2026-04-17T15:47:02.441Z"
+      },
+      {
+        "lat": 24.526878,
+        "lng": 39.568565,
+        "t": "2026-04-17T15:47:32.453Z"
+      },
+      {
+        "lat": 24.528753,
+        "lng": 39.567218,
+        "t": "2026-04-17T15:47:57.462Z"
+      },
+      {
+        "lat": 24.527865,
+        "lng": 39.568003,
+        "t": "2026-04-17T15:48:02.466Z"
+      },
+      {
+        "lat": 24.525806,
+        "lng": 39.569161,
+        "t": "2026-04-17T15:48:32.476Z"
+      }
+    ],
+    "v1": [
+      {
+        "lat": 24.713207,
+        "lng": 46.674319,
+        "t": "2026-04-17T15:39:59.557Z"
+      },
+      {
+        "lat": 24.715104,
+        "lng": 46.674655,
+        "t": "2026-04-17T15:40:14.563Z"
+      },
+      {
+        "lat": 24.717107,
+        "lng": 46.67317,
+        "t": "2026-04-17T15:40:49.575Z"
+      },
+      {
+        "lat": 24.7162,
+        "lng": 46.673845,
+        "t": "2026-04-17T15:41:04.578Z"
+      },
+      {
+        "lat": 24.718128,
+        "lng": 46.67561,
+        "t": "2026-04-17T15:41:19.581Z"
+      },
+      {
+        "lat": 24.715849,
+        "lng": 46.677448,
+        "t": "2026-04-17T15:41:34.589Z"
+      },
+      {
+        "lat": 24.714361,
+        "lng": 46.67912,
+        "t": "2026-04-17T15:42:24.605Z"
+      },
+      {
+        "lat": 24.715538,
+        "lng": 46.67769,
+        "t": "2026-04-17T15:43:04.622Z"
+      },
+      {
+        "lat": 24.716542,
+        "lng": 46.676186,
+        "t": "2026-04-17T15:43:54.645Z"
+      },
+      {
+        "lat": 24.714863,
+        "lng": 46.677638,
+        "t": "2026-04-17T15:43:59.649Z"
+      },
+      {
+        "lat": 24.712453,
+        "lng": 46.678538,
+        "t": "2026-04-17T15:44:04.653Z"
+      },
+      {
+        "lat": 24.710573,
+        "lng": 46.679742,
+        "t": "2026-04-17T15:44:09.652Z"
+      },
+      {
+        "lat": 24.711246,
+        "lng": 46.681081,
+        "t": "2026-04-17T15:44:14.656Z"
+      },
+      {
+        "lat": 24.710678,
+        "lng": 46.683156,
+        "t": "2026-04-17T15:46:02.417Z"
+      },
+      {
+        "lat": 24.713177,
+        "lng": 46.682357,
+        "t": "2026-04-17T15:46:27.427Z"
+      },
+      {
+        "lat": 24.713957,
+        "lng": 46.683506,
+        "t": "2026-04-17T15:46:32.430Z"
+      },
+      {
+        "lat": 24.713115,
+        "lng": 46.682833,
+        "t": "2026-04-17T15:47:12.444Z"
+      },
+      {
+        "lat": 24.712524,
+        "lng": 46.681162,
+        "t": "2026-04-17T15:47:17.447Z"
+      },
+      {
+        "lat": 24.711174,
+        "lng": 46.682244,
+        "t": "2026-04-17T15:47:22.449Z"
+      },
+      {
+        "lat": 24.713563,
+        "lng": 46.680005,
+        "t": "2026-04-17T15:47:47.458Z"
+      },
+      {
+        "lat": 24.711536,
+        "lng": 46.680372,
+        "t": "2026-04-17T15:48:17.470Z"
+      },
+      {
+        "lat": 24.710908,
+        "lng": 46.681033,
+        "t": "2026-04-17T15:48:22.471Z"
+      },
+      {
+        "lat": 24.708914,
+        "lng": 46.679642,
+        "t": "2026-04-17T15:48:37.477Z"
+      },
+      {
+        "lat": 24.710628,
+        "lng": 46.681212,
+        "t": "2026-04-17T15:48:42.481Z"
+      },
+      {
+        "lat": 24.711646,
+        "lng": 46.682699,
+        "t": "2026-04-17T15:49:02.489Z"
+      },
+      {
+        "lat": 24.712446,
+        "lng": 46.685021,
+        "t": "2026-04-17T15:49:27.498Z"
+      },
+      {
+        "lat": 24.709954,
+        "lng": 46.684815,
+        "t": "2026-04-17T15:49:37.501Z"
+      },
+      {
+        "lat": 24.708983,
+        "lng": 46.684068,
+        "t": "2026-04-17T15:49:42.502Z"
+      }
+    ],
+    "v8": [
+      {
+        "lat": 26.325889,
+        "lng": 43.975322,
+        "t": "2026-04-17T15:40:04.560Z"
+      },
+      {
+        "lat": 26.323874,
+        "lng": 43.976925,
+        "t": "2026-04-17T15:40:39.573Z"
+      },
+      {
+        "lat": 26.323922,
+        "lng": 43.977556,
+        "t": "2026-04-17T15:41:39.592Z"
+      },
+      {
+        "lat": 26.322309,
+        "lng": 43.975355,
+        "t": "2026-04-17T15:42:09.601Z"
+      },
+      {
+        "lat": 26.323889,
+        "lng": 43.974237,
+        "t": "2026-04-17T15:42:34.609Z"
+      },
+      {
+        "lat": 26.325926,
+        "lng": 43.973005,
+        "t": "2026-04-17T15:42:49.617Z"
+      },
+      {
+        "lat": 26.326373,
+        "lng": 43.975316,
+        "t": "2026-04-17T15:42:54.619Z"
+      },
+      {
+        "lat": 26.328142,
+        "lng": 43.975745,
+        "t": "2026-04-17T15:43:19.628Z"
+      },
+      {
+        "lat": 26.326889,
+        "lng": 43.973762,
+        "t": "2026-04-17T15:43:29.633Z"
+      },
+      {
+        "lat": 26.32579,
+        "lng": 43.97456,
+        "t": "2026-04-17T15:43:34.637Z"
+      },
+      {
+        "lat": 26.328057,
+        "lng": 43.975836,
+        "t": "2026-04-17T15:43:49.644Z"
+      },
+      {
+        "lat": 26.326912,
+        "lng": 43.975328,
+        "t": "2026-04-17T15:45:47.410Z"
+      },
+      {
+        "lat": 26.327052,
+        "lng": 43.977204,
+        "t": "2026-04-17T15:47:37.453Z"
+      },
+      {
+        "lat": 26.325254,
+        "lng": 43.974938,
+        "t": "2026-04-17T15:47:42.457Z"
+      },
+      {
+        "lat": 26.323881,
+        "lng": 43.977275,
+        "t": "2026-04-17T15:48:47.484Z"
+      },
+      {
+        "lat": 26.324417,
+        "lng": 43.977477,
+        "t": "2026-04-17T15:48:52.485Z"
+      },
+      {
+        "lat": 26.324436,
+        "lng": 43.97553,
+        "t": "2026-04-17T15:49:07.490Z"
+      },
+      {
+        "lat": 26.326039,
+        "lng": 43.976614,
+        "t": "2026-04-17T15:49:47.506Z"
+      }
+    ],
+    "v5": [
+      {
+        "lat": 21.389279,
+        "lng": 39.856479,
+        "t": "2026-04-17T15:40:24.566Z"
+      },
+      {
+        "lat": 21.390674,
+        "lng": 39.855594,
+        "t": "2026-04-17T15:40:34.572Z"
+      },
+      {
+        "lat": 21.393005,
+        "lng": 39.857155,
+        "t": "2026-04-17T15:40:44.575Z"
+      },
+      {
+        "lat": 21.395197,
+        "lng": 39.855997,
+        "t": "2026-04-17T15:40:54.575Z"
+      },
+      {
+        "lat": 21.3946,
+        "lng": 39.855342,
+        "t": "2026-04-17T15:41:24.584Z"
+      },
+      {
+        "lat": 21.393126,
+        "lng": 39.854961,
+        "t": "2026-04-17T15:41:29.588Z"
+      },
+      {
+        "lat": 21.393841,
+        "lng": 39.855523,
+        "t": "2026-04-17T15:42:19.604Z"
+      },
+      {
+        "lat": 21.394702,
+        "lng": 39.857724,
+        "t": "2026-04-17T15:42:29.607Z"
+      },
+      {
+        "lat": 21.392486,
+        "lng": 39.856467,
+        "t": "2026-04-17T15:42:59.622Z"
+      },
+      {
+        "lat": 21.392216,
+        "lng": 39.856985,
+        "t": "2026-04-17T15:44:29.660Z"
+      },
+      {
+        "lat": 21.390879,
+        "lng": 39.855863,
+        "t": "2026-04-17T15:44:34.662Z"
+      },
+      {
+        "lat": 21.38973,
+        "lng": 39.855343,
+        "t": "2026-04-17T15:46:07.418Z"
+      },
+      {
+        "lat": 21.392039,
+        "lng": 39.85495,
+        "t": "2026-04-17T15:46:12.421Z"
+      },
+      {
+        "lat": 21.391411,
+        "lng": 39.855986,
+        "t": "2026-04-17T15:46:42.431Z"
+      },
+      {
+        "lat": 21.3897,
+        "lng": 39.857166,
+        "t": "2026-04-17T15:46:52.434Z"
+      },
+      {
+        "lat": 21.38733,
+        "lng": 39.855845,
+        "t": "2026-04-17T15:46:57.438Z"
+      },
+      {
+        "lat": 21.386646,
+        "lng": 39.853906,
+        "t": "2026-04-17T15:47:52.461Z"
+      },
+      {
+        "lat": 21.385087,
+        "lng": 39.853391,
+        "t": "2026-04-17T15:48:12.467Z"
+      },
+      {
+        "lat": 21.387277,
+        "lng": 39.855585,
+        "t": "2026-04-17T15:48:57.487Z"
+      },
+      {
+        "lat": 21.385134,
+        "lng": 39.856792,
+        "t": "2026-04-17T15:49:22.495Z"
+      }
+    ],
+    "v7": [
+      {
+        "lat": 28.383879,
+        "lng": 36.567762,
+        "t": "2026-04-17T15:40:29.570Z"
+      },
+      {
+        "lat": 28.385252,
+        "lng": 36.570223,
+        "t": "2026-04-17T15:41:09.581Z"
+      },
+      {
+        "lat": 28.383293,
+        "lng": 36.571032,
+        "t": "2026-04-17T15:41:49.595Z"
+      },
+      {
+        "lat": 28.381442,
+        "lng": 36.568602,
+        "t": "2026-04-17T15:41:54.596Z"
+      },
+      {
+        "lat": 28.383028,
+        "lng": 36.568622,
+        "t": "2026-04-17T15:41:59.597Z"
+      },
+      {
+        "lat": 28.382942,
+        "lng": 36.566729,
+        "t": "2026-04-17T15:42:44.617Z"
+      },
+      {
+        "lat": 28.384111,
+        "lng": 36.567794,
+        "t": "2026-04-17T15:43:09.625Z"
+      },
+      {
+        "lat": 28.385469,
+        "lng": 36.567506,
+        "t": "2026-04-17T15:43:14.627Z"
+      },
+      {
+        "lat": 28.384392,
+        "lng": 36.56501,
+        "t": "2026-04-17T15:43:24.632Z"
+      },
+      {
+        "lat": 28.382027,
+        "lng": 36.566863,
+        "t": "2026-04-17T15:44:24.658Z"
+      },
+      {
+        "lat": 28.383055,
+        "lng": 36.567261,
+        "t": "2026-04-17T15:45:42.409Z"
+      },
+      {
+        "lat": 28.385296,
+        "lng": 36.567429,
+        "t": "2026-04-17T15:45:57.416Z"
+      },
+      {
+        "lat": 28.385812,
+        "lng": 36.565918,
+        "t": "2026-04-17T15:46:17.423Z"
+      },
+      {
+        "lat": 28.385097,
+        "lng": 36.567539,
+        "t": "2026-04-17T15:46:22.426Z"
+      },
+      {
+        "lat": 28.385103,
+        "lng": 36.56799,
+        "t": "2026-04-17T15:46:37.430Z"
+      },
+      {
+        "lat": 28.387048,
+        "lng": 36.56857,
+        "t": "2026-04-17T15:46:47.432Z"
+      },
+      {
+        "lat": 28.389473,
+        "lng": 36.568559,
+        "t": "2026-04-17T15:47:07.440Z"
+      },
+      {
+        "lat": 28.38747,
+        "lng": 36.567525,
+        "t": "2026-04-17T15:47:27.452Z"
+      },
+      {
+        "lat": 28.387252,
+        "lng": 36.565983,
+        "t": "2026-04-17T15:48:07.466Z"
+      },
+      {
+        "lat": 28.386664,
+        "lng": 36.567022,
+        "t": "2026-04-17T15:48:27.474Z"
+      },
+      {
+        "lat": 28.38747,
+        "lng": 36.567629,
+        "t": "2026-04-17T15:49:12.492Z"
+      },
+      {
+        "lat": 28.389856,
+        "lng": 36.567166,
+        "t": "2026-04-17T15:49:17.492Z"
+      },
+      {
+        "lat": 28.391101,
+        "lng": 36.566829,
+        "t": "2026-04-17T15:49:32.501Z"
+      },
+      {
+        "lat": 28.392962,
+        "lng": 36.567268,
+        "t": "2026-04-17T15:49:52.509Z"
+      }
+    ]
+  }
+}

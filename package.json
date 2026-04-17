@@ -5,8 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon backend/server.js",
-    "lint": "node --check server.js && node --check api/index.js && node --check backend/server.js && python3 -m py_compile server.py test_server.py",
+    "dev": "NODE_ENV=development node server.js",
+    "lint": "node --check server.js && node --check lib/db.js",
     "build": "npm run lint",
     "test": "python3 -m unittest discover -s . -p \"test*.py\" -v"
   },
