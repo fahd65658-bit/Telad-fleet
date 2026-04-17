@@ -24,7 +24,6 @@ const { Server } = require('socket.io');
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
 const IS_PROD  = process.env.NODE_ENV === 'production';
-const DEFAULT_ADMIN_PASSWORD_HASH = bcrypt.hashSync('0241', 10);
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
 // value.  Falls back to a random hex string so every cold start gets its own ID
@@ -37,15 +36,19 @@ if (IS_PROD && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+let defaultAdminPasswordHash = null;
 
 function buildDefaultUsers() {
+  if (!defaultAdminPasswordHash) {
+    defaultAdminPasswordHash = bcrypt.hashSync('0241', 10);
+  }
   return [
     {
       id: 1,
       name: 'مدير النظام',
       username: 'F',
       email: 'admin@fna.sa',
-      passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
+      passwordHash: defaultAdminPasswordHash,
       role: 'admin',
       active: true,
       createdAt: new Date().toISOString(),
