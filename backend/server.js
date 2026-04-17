@@ -9,15 +9,16 @@
 
 require('dotenv').config();
 
-const crypto    = require('crypto');
-const express   = require('express');
-const http      = require('http');
-const cors      = require('cors');
-const helmet    = require('helmet');
-const bcrypt    = require('bcryptjs');
-const jwt       = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-const { Server } = require('socket.io');
+const crypto      = require('crypto');
+const express     = require('express');
+const http        = require('http');
+const cors        = require('cors');
+const helmet      = require('helmet');
+const compression = require('compression');
+const bcrypt      = require('bcryptjs');
+const jwt         = require('jsonwebtoken');
+const rateLimit   = require('express-rate-limit');
+const { Server }  = require('socket.io');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
@@ -46,6 +47,24 @@ const io     = new Server(server, {
 });
 
 app.set('trust proxy', 1);
+
+// ─── Gzip compression ────────────────────────────────────────────────────────
+app.use(compression({ threshold: 512 }));
+
+// ─── Response-time header ────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  const start = Date.now();
+  const origEnd = res.end;
+  let called = false;
+  res.end = function (...args) {
+    if (!called && !res.headersSent) {
+      called = true;
+      res.setHeader('X-Response-Time', `${Date.now() - start}ms`);
+    }
+    return origEnd.apply(this, args);
+  };
+  next();
+});
 
 // Helmet with API-appropriate CSP (no HTML is served, but set safe defaults)
 app.use(helmet({
@@ -148,19 +167,54 @@ const authAll      = requireAuth();
 const adminOnly    = requireAuth(['admin']);
 const supervisorUp = requireAuth(['admin', 'supervisor']);
 
+// ─── Cache-Control helpers ───────────────────────────────────────────────────
+// noCache: always fetch fresh (live counters, health)
+function noCache(_req, res, next) { res.set('Cache-Control', 'no-store'); next(); }
+// shortCache: authenticated list endpoints — 30 s client-side, not shared
+function shortCache(_req, res, next) { res.set('Cache-Control', 'private, max-age=30'); next(); }
+
 // ─── Apply global API rate limiter to all routes ─────────────────────────────
 app.use(apiLimiter);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════════════════
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    system: 'TELAD FLEET',
-    domain: 'fna.sa',
+function buildHealthPayload() {
+  const mem = process.memoryUsage();
+  return {
+    status:    'ok',
+    system:    'TELAD FLEET',
+    domain:    'fna.sa',
     timestamp: new Date().toISOString(),
-    version: '2.0.0',
+    version:   '2.0.0',
+    uptime:    Math.floor(process.uptime()),
+    memory: {
+      heapUsedMB:  +(mem.heapUsed  / 1024 / 1024).toFixed(1),
+      heapTotalMB: +(mem.heapTotal / 1024 / 1024).toFixed(1),
+      rssMB:       +(mem.rss       / 1024 / 1024).toFixed(1),
+    },
+    store: {
+      cities:    cities.length,
+      projects:  projects.length,
+      vehicles:  vehicles.length,
+      employees: employees.length,
+      auditLogs: auditLogs.length,
+      users:     users.length,
+    },
+  };
+}
+
+app.get('/health', noCache, (_req, res) => {
+  res.json(buildHealthPayload());
+});
+
+// Emergency diagnostics endpoint (GET — read-only, admin-protected)
+app.get('/api/v1/admin/diagnostics', adminOnly, noCache, (_req, res) => {
+  res.json({
+    ...buildHealthPayload(),
+    node: process.version,
+    pid:  process.pid,
+    env:  process.env.NODE_ENV || 'development',
   });
 });
 
@@ -312,14 +366,14 @@ function audit(action, username) {
 }
 
 // Dashboard summary
-app.get('/dashboard', authAll, (_req, res) =>
+app.get('/dashboard', authAll, noCache, (_req, res) => {
   res.json({
     cities:    cities.length,
     projects:  projects.length,
     vehicles:  vehicles.length,
     employees: employees.length,
-  })
-);
+  });
+});
 
 // Cities
 app.post('/cities', supervisorUp, (req, res) => {
@@ -328,7 +382,7 @@ app.post('/cities', supervisorUp, (req, res) => {
   audit('إضافة مدينة', req.user.username);
   res.status(201).json(c);
 });
-app.get('/cities', authAll, (_req, res) => res.json(cities));
+app.get('/cities', authAll, shortCache, (_req, res) => res.json(cities));
 
 // Projects
 app.post('/projects', supervisorUp, (req, res) => {
@@ -337,7 +391,7 @@ app.post('/projects', supervisorUp, (req, res) => {
   audit('إضافة مشروع', req.user.username);
   res.status(201).json(p);
 });
-app.get('/projects', authAll, (_req, res) => res.json(projects));
+app.get('/projects', authAll, shortCache, (_req, res) => res.json(projects));
 
 // Vehicles
 app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
@@ -346,7 +400,7 @@ app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), (req, re
   audit('إضافة مركبة', req.user.username);
   res.status(201).json(v);
 });
-app.get('/vehicles', authAll, (_req, res) => res.json(vehicles));
+app.get('/vehicles', authAll, shortCache, (_req, res) => res.json(vehicles));
 app.delete('/vehicles/:id', supervisorUp, (req, res) => {
   const id  = req.params.id;
   const idx = vehicles.findIndex(v => v.id === id);
@@ -364,7 +418,7 @@ app.post('/employees', supervisorUp, (req, res) => {
   audit('إضافة موظف', req.user.username);
   res.status(201).json(e);
 });
-app.get('/employees', authAll, (_req, res) => res.json(employees));
+app.get('/employees', authAll, shortCache, (_req, res) => res.json(employees));
 
 // Audit logs (admin only)
 app.get('/logs', adminOnly, (_req, res) => res.json(auditLogs));
