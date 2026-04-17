@@ -1,9 +1,18 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const pathModule = require('path');
 
 const BASE_DIR = pathModule.join(__dirname, '..');
+const IS_PROD = process.env.NODE_ENV === 'production';
+const DEFAULT_ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'F';
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fna.sa';
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (IS_PROD ? crypto.randomBytes(24).toString('hex') : '0241');
+
+if (IS_PROD && !process.env.ADMIN_PASSWORD) {
+  console.warn('[WARN] ADMIN_PASSWORD is not set in production; default admin login is disabled until you set it.');
+}
 
 const STATUS_LABELS = {
   active: 'نشطة',
@@ -20,9 +29,9 @@ function seedState() {
       {
         id: '1',
         name: 'مدير النظام',
-        username: 'F',
-        email: 'admin@fna.sa',
-        password: '0241',
+        username: DEFAULT_ADMIN_USERNAME,
+        email: DEFAULT_ADMIN_EMAIL,
+        password: DEFAULT_ADMIN_PASSWORD,
         role: 'admin',
         active: true,
         createdAt: now,

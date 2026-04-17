@@ -1,103 +1,91 @@
 # Telad Fleet
 
-لوحة تحكم عربية لإدارة الأسطول تعرض بيانات حيّة من خادم محلي وتحدّث الواجهة بشكل ديناميكي.
+لوحة تحكم عربية لإدارة الأسطول مع واجهة أمامية ثابتة وواجهة API.
 
-## المزايا
+## بنية المشروع
 
-- واجهة عربية مباشرة لعرض حالة الأسطول والسائقين والتنبيهات
-- واجهة API محلية تعرض بيانات JSON بشكل فوري
-- تحديث تلقائي كل 30 ثانية مع إمكانية التحديث اليدوي
-- مسار فحص جاهزية للخادم لتسهيل التحقق من التشغيل
-- قاعدة بيانات SQLite يتم إنشاؤها تلقائياً مع بيانات تجريبية جاهزة
-- لا توجد أي مكتبات خارجية مطلوبة، ويعتمد المشروع على Python القياسي فقط
+- **Frontend:** ملفات ثابتة (`index.html`, `styles.css`, `app.js`)
+- **Backend (Live على Vercel):** دالة Node Serverless في `api/index.js`
+- **Backend محلي بديل:** خادم Python في `server.py` للتشغيل المحلي/التجريبي
+- **Backend إضافي (legacy):** `backend/server.js` (Express) للمسارات القديمة خارج Vercel
 
-## المتطلبات
+## المتطلبات المحلية
 
-- Python 3.10 أو أحدث
-- Docker اختياري للتشغيل بالحاويات
+- Node.js 18+
+- Python 3.10+
+
+## أوامر المشروع (root)
+
+```bash
+npm install
+npm run lint
+npm run build
+npm test
+npm start
+```
 
 ## التشغيل المحلي
 
-### تشغيل مباشر
+### 1) نفس نمط Vercel (Node API + static)
 
 ```bash
-python3 server.py
+npm install
+npm start
 ```
 
-أو:
-
-```bash
-bash start.sh
-```
-
-## قاعدة البيانات
-
-عند تشغيل الخادم لأول مرة سيتم إنشاء ملف قاعدة البيانات التالي تلقائياً:
-
-```text
-fleet.db
-```
-
-وسيتم تجهيز الجداول التالية مع بيانات أولية:
-
-- vehicles
-- alerts
-
-## الوصول إلى الواجهة
-
-بعد تشغيل الخادم افتح المتصفح على العنوان التالي:
+ثم افتح:
 
 ```text
 http://localhost:3000
 ```
 
-## المسارات المتوفرة
-
-- الواجهة الرئيسية: /
-- حالة الخادم: /api/status
-- بيانات اللوحة: /api/dashboard
-- قائمة المركبات: /api/vehicles
-- قائمة التنبيهات: /api/alerts
-- تحديث حي للبيانات: /api/dashboard?refresh=1
-- فحص الجاهزية: /healthz
-
-## التشغيل عبر Docker
-
-### بناء الصورة
+### 2) تشغيل Python المحلي (اختياري)
 
 ```bash
-docker build -t telad-fleet .
+python3 server.py
 ```
 
-### تشغيل الحاوية
+## Health Check
 
-```bash
-docker run --rm -p 3000:3000 --name telad-fleet-app telad-fleet
-```
+- `/healthz`
+- `/api/health`
 
-## ربط النطاق fna.sa
+## متغيرات البيئة
 
-لجعل التطبيق متاحاً عبر النطاق fna.sa:
+انسخ `.env.example` إلى `.env` محليًا.
 
-1. أنشئ سجل DNS من النوع A يشير إلى عنوان IP العام للخادم.
-2. شغّل التطبيق على الخادم أو داخل Docker.
-3. ضع Nginx أو أي reverse proxy أمام التطبيق لتمرير الطلبات إلى المنفذ 3000.
-4. فعّل HTTPS باستخدام Let's Encrypt.
+### مطلوبة للإنتاج على Vercel
 
-مثال سريع على Nginx موجود في مجلد deploy.
+- `NODE_ENV=production`
+- `ADMIN_PASSWORD` (مطلوب للإنتاج لتفعيل تسجيل دخول المدير الافتراضي)
 
-## الملفات الأساسية
+### اختيارية
 
-- index.html
-- styles.css
-- app.js
-- server.py
-- start.sh
-- requirements.txt
-- Dockerfile
+- `PORT` (يتجاهله Vercel غالبًا ويُدار تلقائيًا)
+- `ADMIN_USERNAME` (افتراضي: `F`)
+- `ADMIN_EMAIL` (افتراضي: `admin@fna.sa`)
+- `OPENAI_API_KEY` (اختياري فقط عند استخدام التكامل)
 
-## ملاحظات تشغيل
+> ملاحظة أمنية: لا تحفظ أي أسرار حقيقية داخل المستودع. أضفها من لوحة Vercel فقط.
 
-- إذا كان المنفذ 3000 مستخدماً يمكنك تشغيل المشروع على منفذ مختلف عبر متغير البيئة PORT.
-- الواجهة والخادم يعملان من نفس المصدر، لذلك لا توجد حاجة لأي إعدادات إضافية للربط.
-- يتم إنشاء قاعدة البيانات تلقائياً عند أول تشغيل دون أي خطوة إضافية.
+## النشر على Vercel (Git Integration - الموصى به)
+
+1. من Vercel: **Add New → Project**
+2. اختر مستودع: `fahd65658-bit/Telad-fleet`
+3. Framework Preset: **Other**
+4. اترك الإعدادات الافتراضية (لا حاجة لتوكن Vercel في GitHub)
+5. أضف متغيرات البيئة في Vercel Project Settings → Environment Variables
+6. نفّذ Deploy
+
+## ما المتبقي على لوحة Vercel بعد دمج هذا PR
+
+1. ربط المستودع عبر Git Integration
+2. إضافة `ADMIN_PASSWORD` (وغيرها عند الحاجة)
+3. (اختياري) تعيين Custom Domain
+4. التحقق من:
+   - `https://<your-domain>/healthz`
+   - `https://<your-domain>/api/status`
+
+## CI
+
+تم تحويل workflow الموجود في GitHub Actions إلى **CI تحقق** (lint/build/test) على PRs و `main` بدون أي Vercel token.
