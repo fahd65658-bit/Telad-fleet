@@ -25,10 +25,10 @@ const ROLE_NAMES = {
 
 // Sections accessible per role
 const ROLE_SECTIONS = {
-  admin:      ['dashboard', 'map', 'vehicles', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users'],
-  supervisor: ['dashboard', 'map', 'vehicles', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai'],
-  operator:   ['dashboard', 'map', 'vehicles', 'maintenance'],
-  viewer:     ['dashboard', 'map'],
+  admin:      ['dashboard', 'map', 'vehicles', 'cities', 'projects', 'employees', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users'],
+  supervisor: ['dashboard', 'map', 'vehicles', 'cities', 'projects', 'employees', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai'],
+  operator:   ['dashboard', 'map', 'vehicles', 'cities', 'projects', 'employees', 'maintenance'],
+  viewer:     ['dashboard', 'map', 'cities', 'projects', 'employees'],
 };
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -84,6 +84,12 @@ function renderDashboard() {
   if (currentUser.role === 'viewer') {
     const vf = document.getElementById('vehicle-form-wrap');
     if (vf) vf.style.display = 'none';
+  }
+  if (!['admin', 'supervisor'].includes(currentUser.role)) {
+    ['city-form-wrap', 'project-form-wrap', 'employee-form-wrap'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
   }
 
   navigateTo('dashboard');
@@ -159,6 +165,9 @@ function navigateTo(section) {
   const loaders = {
     dashboard: loadDashboardStats,
     vehicles:  loadVehicles,
+    cities:    loadCitiesSection,
+    projects:  loadProjectsSection,
+    employees: loadEmployeesSection,
     users:     loadUsers,
     logs:      loadLogs,
   };
@@ -302,6 +311,232 @@ function checkExpiringVehicles(vehicles) {
     banner.textContent = `⚠️ ${expiring.length} مركبة لديها فحص أو تأمين ينتهي خلال 30 يوم: ${names}`;
     banner.style.display = 'block';
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CITIES
+// ═══════════════════════════════════════════════════════════════════════════
+let cachedCities = [];
+let cachedProjects = [];
+let cachedVehicles = [];
+
+async function loadCities() {
+  const res = await apiFetch('/cities');
+  if (!res.ok) throw new Error('cities-load-failed');
+  cachedCities = await res.json();
+  syncCitySelects(cachedCities);
+  return cachedCities;
+}
+
+function syncCitySelects(cities) {
+  const select = document.getElementById('p-city-id');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">بدون ربط</option>' + cities.map(c =>
+    `<option value="${escHtml(String(c.id))}">${escHtml(c.name || '—')}</option>`
+  ).join('');
+  if ([...select.options].some(o => o.value === current)) select.value = current;
+}
+
+async function loadCitiesSection() {
+  const tbody = document.getElementById('cities-tbody');
+  if (!tbody) return;
+  try {
+    const cities = await loadCities();
+    tbody.innerHTML = cities.length === 0
+      ? '<tr><td colspan="3" class="tbl-empty">لا توجد مدن مضافة بعد</td></tr>'
+      : cities.map(c => `
+          <tr>
+            <td>${escHtml(c.name || '—')}</td>
+            <td>${escHtml(c.region || '—')}</td>
+            <td>${escHtml(c.created_by || '—')}</td>
+          </tr>`).join('');
+    loadDashboardStats();
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="3" class="tbl-empty">تعذّر تحميل المدن</td></tr>';
+  }
+}
+
+async function addCity(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('city-form-error');
+  errEl.textContent = '';
+  const body = {
+    name: document.getElementById('c-name').value.trim(),
+    region: document.getElementById('c-region').value.trim(),
+  };
+  const res = await apiFetch('/cities', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) {
+    errEl.textContent = data.error || 'تعذّرت إضافة المدينة';
+    return;
+  }
+  document.getElementById('form-city').reset();
+  await loadCitiesSection();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROJECTS
+// ═══════════════════════════════════════════════════════════════════════════
+function formatDate(date) {
+  if (!date) return '—';
+  const d = new Date(date);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('ar-SA');
+}
+
+function projectStatusLabel(status) {
+  const labels = {
+    active: 'نشط',
+    planned: 'مخطط',
+    completed: 'مكتمل',
+    paused: 'متوقف',
+  };
+  return labels[status] || status || '—';
+}
+
+function employeeStatusLabel(status) {
+  const labels = {
+    active: 'نشط',
+    inactive: 'غير نشط',
+    leave: 'إجازة',
+  };
+  return labels[status] || status || '—';
+}
+
+async function loadProjects() {
+  const res = await apiFetch('/projects');
+  if (!res.ok) throw new Error('projects-load-failed');
+  cachedProjects = await res.json();
+  syncProjectSelects(cachedProjects);
+  return cachedProjects;
+}
+
+function cityNameById(cityId) {
+  const match = cachedCities.find(c => String(c.id) === String(cityId));
+  return match?.name || '—';
+}
+
+function syncProjectSelects(projects) {
+  const select = document.getElementById('e-project-id');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">بدون ربط</option>' + projects.map(p =>
+    `<option value="${escHtml(String(p.id))}">${escHtml(p.name || '—')}</option>`
+  ).join('');
+  if ([...select.options].some(o => o.value === current)) select.value = current;
+}
+
+async function loadProjectsSection() {
+  const tbody = document.getElementById('projects-tbody');
+  if (!tbody) return;
+  try {
+    await loadCities();
+    const projects = await loadProjects();
+    tbody.innerHTML = projects.length === 0
+      ? '<tr><td colspan="5" class="tbl-empty">لا توجد مشاريع مضافة بعد</td></tr>'
+      : projects.map(p => `
+          <tr>
+            <td>${escHtml(p.name || '—')}</td>
+            <td>${escHtml(cityNameById(p.city_id))}</td>
+            <td>${escHtml(projectStatusLabel(p.status))}</td>
+            <td>${formatDate(p.start_date)}</td>
+            <td>${formatDate(p.end_date)}</td>
+          </tr>`).join('');
+    loadDashboardStats();
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="5" class="tbl-empty">تعذّر تحميل المشاريع</td></tr>';
+  }
+}
+
+async function addProject(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('project-form-error');
+  errEl.textContent = '';
+  const body = {
+    name: document.getElementById('p-name').value.trim(),
+    city_id: document.getElementById('p-city-id').value || null,
+    status: document.getElementById('p-status').value,
+    start_date: document.getElementById('p-start-date').value || null,
+    end_date: document.getElementById('p-end-date').value || null,
+  };
+  const res = await apiFetch('/projects', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) {
+    errEl.textContent = data.error || 'تعذّرت إضافة المشروع';
+    return;
+  }
+  document.getElementById('form-project').reset();
+  document.getElementById('p-status').value = 'active';
+  await loadProjectsSection();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EMPLOYEES
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadVehicleOptions() {
+  const res = await apiFetch('/vehicles');
+  if (!res.ok) throw new Error('vehicles-load-failed');
+  cachedVehicles = await res.json();
+  syncVehicleSelects(cachedVehicles);
+}
+
+function syncVehicleSelects(vehicles) {
+  const select = document.getElementById('e-vehicle-id');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">بدون ربط</option>' + vehicles.map(v =>
+    `<option value="${escHtml(String(v.id))}">${escHtml(v.plate || v.name || '—')}</option>`
+  ).join('');
+  if ([...select.options].some(o => o.value === current)) select.value = current;
+}
+
+async function loadEmployeesSection() {
+  const tbody = document.getElementById('employees-tbody');
+  if (!tbody) return;
+  try {
+    await Promise.all([loadProjects(), loadVehicleOptions()]);
+    const res = await apiFetch('/employees');
+    if (!res.ok) throw new Error('employees-load-failed');
+    const employees = await res.json();
+    tbody.innerHTML = employees.length === 0
+      ? '<tr><td colspan="5" class="tbl-empty">لا يوجد موظفون مضافون بعد</td></tr>'
+      : employees.map(emp => `
+          <tr>
+            <td>${escHtml(emp.name || '—')}</td>
+            <td>${escHtml(emp.role || '—')}</td>
+            <td>${escHtml(emp.phone || '—')}</td>
+            <td>${escHtml(emp.city || '—')}</td>
+            <td>${escHtml(employeeStatusLabel(emp.status))}</td>
+          </tr>`).join('');
+    loadDashboardStats();
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="5" class="tbl-empty">تعذّر تحميل الموظفين</td></tr>';
+  }
+}
+
+async function addEmployee(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('employee-form-error');
+  errEl.textContent = '';
+  const body = {
+    name: document.getElementById('e-name').value.trim(),
+    role: document.getElementById('e-role').value.trim(),
+    phone: document.getElementById('e-phone').value.trim(),
+    national_id: document.getElementById('e-national-id').value.trim(),
+    city: document.getElementById('e-city').value.trim(),
+    project_id: document.getElementById('e-project-id').value || null,
+    vehicle_id: document.getElementById('e-vehicle-id').value || null,
+    status: document.getElementById('e-status').value,
+  };
+  const res = await apiFetch('/employees', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) {
+    errEl.textContent = data.error || 'تعذّرت إضافة الموظف';
+    return;
+  }
+  document.getElementById('form-employee').reset();
+  document.getElementById('e-status').value = 'active';
+  await loadEmployeesSection();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

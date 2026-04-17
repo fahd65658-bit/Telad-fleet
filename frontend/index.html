@@ -64,6 +64,15 @@
       <a class="nav-link" data-section="vehicles"    onclick="navigateTo('vehicles')">
         <span class="nav-icon">🚗</span> المركبات
       </a>
+      <a class="nav-link" data-section="cities"      onclick="navigateTo('cities')">
+        <span class="nav-icon">🏙️</span> المدن
+      </a>
+      <a class="nav-link" data-section="projects"    onclick="navigateTo('projects')">
+        <span class="nav-icon">🏗️</span> المشاريع
+      </a>
+      <a class="nav-link" data-section="employees"   onclick="navigateTo('employees')">
+        <span class="nav-icon">👷</span> الموظفون
+      </a>
       <a class="nav-link" data-section="maintenance" onclick="navigateTo('maintenance')">
         <span class="nav-icon">🔧</span> الصيانة
       </a>
@@ -217,6 +226,151 @@
         </thead>
         <tbody id="vehicles-tbody">
           <tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── المدن ─────────────────────────────────────── -->
+    <div id="sec-cities" class="section" style="display:none">
+      <h2 class="sec-title">المدن</h2>
+      <div id="city-form-wrap">
+        <form id="form-city" class="data-form" onsubmit="addCity(event)">
+          <h3>إضافة مدينة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم المدينة</label>
+              <input id="c-name" required>
+            </div>
+            <div class="form-group">
+              <label>المنطقة</label>
+              <input id="c-region" placeholder="الرياض / الشرقية / مكة ...">
+            </div>
+          </div>
+          <p id="city-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">➕ إضافة المدينة</button>
+        </form>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>المدينة</th><th>المنطقة</th><th>أضيفت بواسطة</th></tr>
+        </thead>
+        <tbody id="cities-tbody">
+          <tr><td colspan="3" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── المشاريع ─────────────────────────────────── -->
+    <div id="sec-projects" class="section" style="display:none">
+      <h2 class="sec-title">المشاريع</h2>
+      <div id="project-form-wrap">
+        <form id="form-project" class="data-form" onsubmit="addProject(event)">
+          <h3>إضافة مشروع</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم المشروع</label>
+              <input id="p-name" required>
+            </div>
+            <div class="form-group">
+              <label>المدينة</label>
+              <select id="p-city-id">
+                <option value="">بدون ربط</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الحالة</label>
+              <select id="p-status">
+                <option value="active">نشط</option>
+                <option value="planned">مخطط</option>
+                <option value="completed">مكتمل</option>
+                <option value="paused">متوقف</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>تاريخ البداية</label>
+              <input id="p-start-date" type="date">
+            </div>
+            <div class="form-group">
+              <label>تاريخ النهاية</label>
+              <input id="p-end-date" type="date">
+            </div>
+          </div>
+          <p id="project-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">➕ إضافة المشروع</button>
+        </form>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>المشروع</th><th>المدينة</th><th>الحالة</th><th>البداية</th><th>النهاية</th></tr>
+        </thead>
+        <tbody id="projects-tbody">
+          <tr><td colspan="5" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── الموظفون ─────────────────────────────────── -->
+    <div id="sec-employees" class="section" style="display:none">
+      <h2 class="sec-title">الموظفون</h2>
+      <div id="employee-form-wrap">
+        <form id="form-employee" class="data-form" onsubmit="addEmployee(event)">
+          <h3>إضافة موظف</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>الاسم</label>
+              <input id="e-name" required>
+            </div>
+            <div class="form-group">
+              <label>المسمى / الدور</label>
+              <input id="e-role">
+            </div>
+            <div class="form-group">
+              <label>الهاتف</label>
+              <input id="e-phone">
+            </div>
+            <div class="form-group">
+              <label>الهوية الوطنية</label>
+              <input id="e-national-id">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المدينة</label>
+              <input id="e-city">
+            </div>
+            <div class="form-group">
+              <label>المشروع</label>
+              <select id="e-project-id">
+                <option value="">بدون ربط</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>المركبة</label>
+              <select id="e-vehicle-id">
+                <option value="">بدون ربط</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الحالة</label>
+              <select id="e-status">
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+                <option value="leave">إجازة</option>
+              </select>
+            </div>
+          </div>
+          <p id="employee-form-error" class="error-msg"></p>
+          <button type="submit" class="btn-primary">➕ إضافة الموظف</button>
+        </form>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>الاسم</th><th>الدور</th><th>الهاتف</th><th>المدينة</th><th>الحالة</th></tr>
+        </thead>
+        <tbody id="employees-tbody">
+          <tr><td colspan="5" class="tbl-empty">جارٍ التحميل…</td></tr>
         </tbody>
       </table>
     </div>
