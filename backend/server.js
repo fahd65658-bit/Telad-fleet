@@ -101,7 +101,7 @@ const CORS_ORIGINS = [
   'null',                    // file:// open in dev
 ];
 
-// Allow any Vercel preview deployment (*.vercel.app) in addition to the list above
+// Allow any Vercel preview deployment (*.vercel.app) or GitHub Pages (*.github.io) in addition to the list above
 function isAllowedOrigin(origin) {
   // No Origin header means same-origin or non-browser request (curl, server-to-server) — safe to allow
   if (!origin) return true;
@@ -109,6 +109,7 @@ function isAllowedOrigin(origin) {
   try {
     const url = new URL(origin);
     if (url.hostname.endsWith('.vercel.app')) return true;
+    if (url.hostname.endsWith('.github.io')) return true;
   } catch (_) { /* ignore */ }
   return false;
 }

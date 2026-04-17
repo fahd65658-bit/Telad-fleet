@@ -20,11 +20,8 @@ const API_BASE = (() => {
     return 'http://localhost:5000';
   }
 
-  if (host.endsWith('.github.io')) {
-    return 'https://fna.sa/api';
-  }
-
-  return `${window.location.origin}/api`;
+  // All production environments connect directly to the backend server
+  return 'https://api.fna.sa';
 })();
 
 // ─── Role definitions ────────────────────────────────────────────────────────
