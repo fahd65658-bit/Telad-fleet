@@ -25,19 +25,13 @@ dist/
 build/
 .next/
 
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
 # OS
 .DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# SQLite dev DB
-*.db
+fleet.db
 *.sqlite
-
-# PM2
-.pm2/

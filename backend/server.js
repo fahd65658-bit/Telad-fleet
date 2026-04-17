@@ -24,7 +24,6 @@ const { Server } = require('socket.io');
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
 const IS_PROD  = process.env.NODE_ENV === 'production';
-
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
 // value.  Falls back to a random hex string so every cold start gets its own ID
@@ -1272,16 +1271,27 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-server.listen(PORT, () => {
-  console.log('');
-  console.log('╔═══════════════════════════════════════╗');
-  console.log('║       🚀 TELAD FLEET BACKEND v2.1     ║');
-  console.log(`║       Running on port ${PORT}             ║`);
-  console.log('║       Domain: https://fna.sa          ║');
-  console.log('║       API:    https://api.fna.sa      ║');
-  console.log('╚═══════════════════════════════════════╝');
-  console.log('');
-  console.log(`  Data dir:    ${DATA_DIR}`);
-  console.log(`  Health:      http://localhost:${PORT}/health`);
-  console.log('');
-});
+function startServer(port = PORT) {
+  return server.listen(port, () => {
+    console.log('');
+    console.log('╔═══════════════════════════════════════╗');
+    console.log('║       🚀 TELAD FLEET BACKEND v2.1     ║');
+    console.log(`║       Running on port ${port}             ║`);
+    console.log('║       Domain: https://fna.sa          ║');
+    console.log('║       API:    https://api.fna.sa      ║');
+    console.log('╚═══════════════════════════════════════╝');
+    console.log('');
+    console.log(`  Data dir:    ${DATA_DIR}`);
+    console.log(`  Health:      http://localhost:${port}/health`);
+    console.log('');
+  });
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
+module.exports.app = app;
+module.exports.server = server;
+module.exports.startServer = startServer;

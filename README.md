@@ -1,6 +1,8 @@
-# 🚗 TELAD FLEET — نظام إدارة الأسطول المتكامل
+# Telad Fleet
 
 > **Domain:** https://fna.sa &nbsp;|&nbsp; **API:** https://api.fna.sa &nbsp;|&nbsp; **Version:** 2.1.0
+
+لوحة تحكم عربية لإدارة الأسطول مع واجهة أمامية ثابتة وواجهة API.
 
 ---
 
@@ -204,180 +206,90 @@ Header required: `Authorization: Bearer <token>`
 - [ ] Reports with PDF export
 - [ ] Mobile driver app (Expo)
 
+## بنية المشروع
 
----
+- **Frontend:** ملفات ثابتة (`index.html`, `styles.css`, `app.js`)
+- **Backend (Live على Vercel):** دالة Node Serverless في `api/index.js`
+- **Backend محلي بديل:** خادم Python في `server.py` للتشغيل المحلي/التجريبي
+- **Backend إضافي (legacy):** `backend/server.js` (Express) للمسارات القديمة خارج Vercel
 
-## 📁 Project Structure
+## المتطلبات المحلية
 
-```
-telad-fleet/
-├── backend/                 ← Node.js + Express + Socket.io API
-│   ├── server.js            ← Main server (auth, GPS, CRUD, WebSocket)
-│   ├── package.json
-│   └── .env.example         ← Copy to .env and fill values
-│
-├── frontend/                ← Dashboard Web App (SPA)
-│   ├── index.html           ← Login + full dashboard
-│   ├── css/style.css
-│   └── js/app.js            ← Auth, navigation, CRUD logic
-│
-├── database/
-│   └── schema.sql           ← PostgreSQL schema (production)
-│
-├── deployment/
-│   ├── nginx.conf           ← nginx for fna.sa + api.fna.sa + SSL
-│   ├── docker-compose.yml   ← Full stack (backend + DB + nginx)
-│   ├── Dockerfile           ← Backend container
-│   ├── pm2.config.js        ← PM2 process manager
-│   └── deploy.sh            ← One-command VPS deploy
-│
-├── .gitignore
-└── README.md
-```
+- Node.js 18+
+- Python 3.10+
 
----
+## أوامر المشروع (root)
 
-## 👤 الحساب الرئيسي / Default Admin
-
-| Field    | Value              |
-|----------|--------------------|
-| Username | `F`                |
-| Password | `0241`             |
-| Role     | مدير النظام (admin)|
-| Email    | admin@fna.sa       |
-
-> ⚠️ **غيّر كلمة المرور بعد أول تسجيل دخول** — Change password after first login via User Management.
-
----
-
-## 🔐 نظام الصلاحيات / Roles & Permissions
-
-| Role          | لوحة التحكم | المركبات | الصيانة/الحوادث | التقارير | AI | إدارة المستخدمين |
-|---------------|:-----------:|:--------:|:---------------:|:--------:|:--:|:----------------:|
-| `admin`       | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `supervisor`  | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `operator`    | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| `viewer`      | ✅ | 👁 | ❌ | ❌ | ❌ | ❌ |
-
----
-
-## 🚀 Quick Start — Local Development
-
-### Requirements
-- **Node.js** 18+ — https://nodejs.org
-
-### 1. Install backend dependencies
 ```bash
-cd backend
 npm install
+npm run lint
+npm run build
+npm test
+npm start
 ```
 
-### 2. Configure environment
+## التشغيل المحلي
+
+### 1) نفس نمط Vercel (Node API + static)
+
 ```bash
-cp .env.example .env
-# Edit .env — set JWT_SECRET to any long random string
+npm install
+npm start
 ```
 
-### 3. Start the backend
+ثم افتح:
+
+```text
+http://localhost:3000
+```
+
+### 2) تشغيل Python المحلي (اختياري)
+
 ```bash
-node server.js
-```
-Backend running at → **http://localhost:5000**
-
-### 4. Open the dashboard
-Open `frontend/index.html` in your browser, or:
-```bash
-npx serve frontend -l 3000
+python3 server.py
 ```
 
-### 5. Login
-- Username: `F`  |  Password: `0241`
+## Health Check
 
----
+- `/healthz`
+- `/api/health`
 
-## 🌐 Production Deployment on fna.sa
+## متغيرات البيئة
 
-### Step 1 — DNS (at your domain registrar)
+انسخ `.env.example` إلى `.env` محليًا.
 
-| Hostname | Type | Value          |
-|----------|------|----------------|
-| `@`      | A    | `YOUR_VPS_IP`  |
-| `www`    | A    | `YOUR_VPS_IP`  |
-| `api`    | A    | `YOUR_VPS_IP`  |
+### مطلوبة للإنتاج على Vercel
 
-### Step 2 — Clone on VPS
-```bash
-ssh root@YOUR_VPS_IP
-git clone https://github.com/fahd65658-bit/Telad-fleet /var/www/telad-fleet
-```
+- `NODE_ENV=production`
+- `ADMIN_PASSWORD` (مطلوب للإنتاج — سيفشل تشغيل API بدون هذا المتغير)
 
-### Step 3 — Configure .env
-```bash
-cp /var/www/telad-fleet/backend/.env.example /var/www/telad-fleet/backend/.env
-nano /var/www/telad-fleet/backend/.env
-# Set JWT_SECRET=<openssl rand -hex 64>
-```
+### اختيارية
 
-### Step 4 — Run deploy script (one command)
-```bash
-cd /var/www/telad-fleet
-chmod +x deployment/deploy.sh
-sudo bash deployment/deploy.sh
-```
+- `PORT` (يتجاهله Vercel غالبًا ويُدار تلقائيًا)
+- `ADMIN_USERNAME` (افتراضي: `F`)
+- `ADMIN_EMAIL` (افتراضي: `admin@fna.sa`)
+- `OPENAI_API_KEY` (اختياري فقط عند استخدام التكامل)
 
-This automatically installs Node.js, PM2, nginx, Certbot, gets free SSL, and starts the system.
+> ملاحظة أمنية: لا تحفظ أي أسرار حقيقية داخل المستودع. أضفها من لوحة Vercel فقط.
 
-### Step 5 — Verify
-```bash
-pm2 status
-curl https://api.fna.sa/health
-# Browser: https://fna.sa
-```
+## النشر على Vercel (Git Integration - الموصى به)
 
----
+1. من Vercel: **Add New → Project**
+2. اختر مستودع: `fahd65658-bit/Telad-fleet`
+3. Framework Preset: **Other**
+4. اترك الإعدادات الافتراضية (لا حاجة لتوكن Vercel في GitHub)
+5. أضف متغيرات البيئة في Vercel Project Settings → Environment Variables
+6. نفّذ Deploy
 
-## 🐳 Docker (Alternative)
-```bash
-cp backend/.env.example backend/.env  # fill values
-docker compose -f deployment/docker-compose.yml up -d
-```
+## ما المتبقي على لوحة Vercel بعد دمج هذا PR
 
----
+1. ربط المستودع عبر Git Integration
+2. إضافة `ADMIN_PASSWORD` (وغيرها عند الحاجة)
+3. (اختياري) تعيين Custom Domain
+4. التحقق من:
+   - `https://<your-domain>/healthz`
+   - `https://<your-domain>/api/status`
 
-## 🔧 PM2 Commands
-```bash
-pm2 logs telad-fleet     # Live logs
-pm2 restart telad-fleet  # Restart
-pm2 monit               # Dashboard
-```
+## CI
 
----
-
-## 🔌 API Reference
-
-Header required: `Authorization: Bearer <token>`
-
-| Method | Endpoint         | Auth   | Description           |
-|--------|-----------------|--------|-----------------------|
-| POST   | `/auth/login`   | ❌     | Login → JWT token     |
-| GET    | `/auth/me`      | ✅     | Current user          |
-| GET    | `/auth/users`   | admin  | List users            |
-| POST   | `/auth/users`   | admin  | Add user              |
-| PUT    | `/auth/users/:id` | admin | Update user/role    |
-| DELETE | `/auth/users/:id` | admin | Delete user         |
-| GET    | `/dashboard`    | all    | Stats summary         |
-| GET    | `/vehicles`     | all    | List vehicles         |
-| POST   | `/vehicles`     | operator+ | Add vehicle       |
-| DELETE | `/vehicles/:id` | supervisor+ | Delete vehicle |
-| GET    | `/logs`         | admin  | Audit log             |
-| GET    | `/health`       | ❌     | Health check          |
-
----
-
-## 📋 Roadmap
-- [ ] PostgreSQL integration (schema ready at `database/schema.sql`)
-- [ ] Live fleet map (Leaflet.js)
-- [ ] Maintenance scheduling & alerts
-- [ ] Reports with PDF export
-- [ ] AI risk scoring
-- [ ] Mobile driver app (Expo)
+تم تحويل workflow الموجود في GitHub Actions إلى **CI تحقق** (lint/build/test) على PRs و `main` بدون أي Vercel token.
