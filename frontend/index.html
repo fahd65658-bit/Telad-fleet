@@ -37,8 +37,265 @@
       <button type="submit" class="btn-login" id="btn-login">تسجيل الدخول</button>
     </form>
 
+    <!-- Driver portal quick-access -->
+    <div class="driver-portal-link">
+      <p>هل أنت سائق أو مستلم مركبة؟</p>
+      <button type="button" class="btn-driver-switch" onclick="showDriverLogin()">🚗 دخول سريع برقم اللوحة</button>
+    </div>
+
   </div>
 </div><!-- /#page-login -->
+
+
+<!-- ══════════════════════════════════════════ DRIVER LOGIN PAGE ══════════ -->
+<div id="page-driver-login" style="display:none">
+  <div class="login-box">
+
+    <div class="login-logo-wrap">
+      <img src="https://github.com/user-attachments/assets/62dcdcd4-954c-4e9e-816c-359980ffe976"
+           alt="TELAD FLEET" class="login-logo"
+           onerror="this.style.display='none'">
+    </div>
+
+    <h1 class="login-title">دخول سريع</h1>
+    <p class="login-sub">بوابة السائقين ومستلمي المركبات</p>
+    <p class="login-domain">fna.sa</p>
+
+    <form id="driver-login-form" class="login-form" onsubmit="driverLogin(event)">
+      <div class="form-group">
+        <label>رقم لوحة المركبة</label>
+        <input id="dl-plate" type="text" placeholder="مثال: ABC 1234" autocomplete="off" required>
+      </div>
+      <div class="form-group">
+        <label>رقم هوية الموظف</label>
+        <input id="dl-nid" type="text" placeholder="رقم الهوية الوطنية" autocomplete="off" required>
+      </div>
+      <p id="driver-login-error" class="error-msg"></p>
+      <button type="submit" class="btn-login" id="btn-driver-login">دخول</button>
+    </form>
+
+    <div style="text-align:center;margin-top:18px">
+      <button type="button" class="btn-back-link" onclick="showAdminLogin()">← العودة لدخول الموظفين</button>
+    </div>
+
+  </div>
+</div><!-- /#page-driver-login -->
+
+
+<!-- ════════════════════════════════════════════ DRIVER PORTAL PAGE ═══════ -->
+<div id="page-driver-portal" style="display:none">
+
+  <!-- Topbar -->
+  <div class="driver-topbar">
+    <div>
+      <span class="topbar-sys">TELAD FLEET</span>
+      <span class="topbar-domain" style="margin-right:8px">بوابة السائق</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="driver-name-badge" class="topbar-user"></span>
+      <span id="driver-plate-badge" class="role-badge role-driver"></span>
+      <button class="btn-logout" onclick="driverLogout()" style="width:auto;padding:6px 14px">خروج ↩</button>
+    </div>
+  </div>
+
+  <!-- Main driver portal -->
+  <div class="driver-portal">
+
+    <!-- ─── Home: 4 service cards ─── -->
+    <div id="dp-home">
+      <h2 style="font-size:20px;color:#f8fafc;margin-bottom:24px;text-align:center">مرحباً — اختر الخدمة المطلوبة</h2>
+      <div class="service-cards-grid">
+        <div class="service-card" onclick="dpShow('maintenance-booking')">
+          <div class="sc-icon">🔧</div>
+          <div class="sc-title">حجز موعد صيانة</div>
+          <div class="sc-desc">حجز موعد للصيانة الشهرية أو تغيير الزيت أو الإطارات</div>
+        </div>
+        <div class="service-card" onclick="dpShow('monthly-report')">
+          <div class="sc-icon">📸</div>
+          <div class="sc-title">تقرير شهري للمركبة</div>
+          <div class="sc-desc">رفع صور المركبة من جميع الجهات وتقرير الحالة</div>
+        </div>
+        <div class="service-card" onclick="dpShow('other-request')">
+          <div class="sc-icon">📋</div>
+          <div class="sc-title">طلب آخر</div>
+          <div class="sc-desc">إصلاح عاجل / استبدال قطعة / حادث / شكوى / اقتراح</div>
+        </div>
+        <div class="service-card" onclick="dpShow('vehicle-status')">
+          <div class="sc-icon">🚗</div>
+          <div class="sc-title">حالة مركبتي</div>
+          <div class="sc-desc">عرض آخر الصيانات والفحص الدوري وحالة التأمين</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 1. Maintenance Booking ─── -->
+    <div id="dp-maintenance-booking" style="display:none" class="dp-section">
+      <button class="btn-dp-back" onclick="dpShow('home')">← رجوع</button>
+      <h2 class="sec-title">حجز موعد صيانة شهري</h2>
+      <form id="form-maintenance-booking" class="data-form" onsubmit="submitMaintenanceBooking(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>نوع الصيانة</label>
+            <select id="mb-type" required>
+              <option value="">اختر نوع الصيانة</option>
+              <option value="oil">تغيير زيت</option>
+              <option value="tires">إطارات</option>
+              <option value="full_inspection">فحص شامل</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>التاريخ المفضل</label>
+            <input id="mb-date" type="date">
+          </div>
+          <div class="form-group">
+            <label>الوقت المفضل</label>
+            <input id="mb-time" type="time">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ملاحظات إضافية</label>
+          <textarea id="mb-notes" rows="3" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+        </div>
+        <p id="mb-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary">📤 إرسال طلب الصيانة</button>
+      </form>
+    </div>
+
+    <!-- ─── 2. Monthly Report ─── -->
+    <div id="dp-monthly-report" style="display:none" class="dp-section">
+      <button class="btn-dp-back" onclick="dpShow('home')">← رجوع</button>
+      <h2 class="sec-title">رفع تقرير شهري للمركبة</h2>
+      <form id="form-monthly-report" class="data-form" onsubmit="submitMonthlyReport(event)">
+        <h3>صور المركبة (الإجبارية: عداد الكيلومترات)</h3>
+        <div class="photo-grid">
+          <div class="photo-slot" onclick="triggerPhotoUpload('mr-photo-front')">
+            <input id="mr-photo-front" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-front')">
+            <div id="prev-front" class="photo-preview">📷<br><small>أمام</small></div>
+          </div>
+          <div class="photo-slot" onclick="triggerPhotoUpload('mr-photo-back')">
+            <input id="mr-photo-back" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-back')">
+            <div id="prev-back" class="photo-preview">📷<br><small>خلف</small></div>
+          </div>
+          <div class="photo-slot" onclick="triggerPhotoUpload('mr-photo-right')">
+            <input id="mr-photo-right" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-right')">
+            <div id="prev-right" class="photo-preview">📷<br><small>يمين</small></div>
+          </div>
+          <div class="photo-slot" onclick="triggerPhotoUpload('mr-photo-left')">
+            <input id="mr-photo-left" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-left')">
+            <div id="prev-left" class="photo-preview">📷<br><small>يسار</small></div>
+          </div>
+          <div class="photo-slot" onclick="triggerPhotoUpload('mr-photo-inside')">
+            <input id="mr-photo-inside" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-inside')">
+            <div id="prev-inside" class="photo-preview">📷<br><small>داخل</small></div>
+          </div>
+          <div class="photo-slot required-photo" onclick="triggerPhotoUpload('mr-photo-odometer')">
+            <input id="mr-photo-odometer" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-odometer')">
+            <div id="prev-odometer" class="photo-preview">📷<br><small>عداد الكيلومترات *</small></div>
+          </div>
+          <div class="photo-slot" onclick="triggerPhotoUpload('mr-photo-oilsticker')">
+            <input id="mr-photo-oilsticker" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'prev-oilsticker')">
+            <div id="prev-oilsticker" class="photo-preview">📷<br><small>ستيكر بترومين</small></div>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:18px">
+          <div class="form-group">
+            <label>حالة الإطارات</label>
+            <select id="mr-tires" required>
+              <option value="">اختر الحالة</option>
+              <option value="good">سليمة ✅</option>
+              <option value="needs_attention">تحتاج متابعة ⚠️</option>
+              <option value="damaged">تالفة ❌</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>مستوى الوقود</label>
+            <select id="mr-fuel" required>
+              <option value="">اختر المستوى</option>
+              <option value="full">ممتلئ ⛽</option>
+              <option value="half">نصف</option>
+              <option value="needs_refuel">يحتاج تعبئة 🔴</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>قراءة العداد (كم)</label>
+            <input id="mr-odometer" type="number" min="0" placeholder="مثال: 85000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ملاحظات عامة</label>
+          <textarea id="mr-notes" rows="3" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+        </div>
+        <p id="mr-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary">📤 إرسال التقرير الشهري</button>
+      </form>
+    </div>
+
+    <!-- ─── 3. Other Request ─── -->
+    <div id="dp-other-request" style="display:none" class="dp-section">
+      <button class="btn-dp-back" onclick="dpShow('home')">← رجوع</button>
+      <h2 class="sec-title">طلب آخر</h2>
+      <form id="form-other-request" class="data-form" onsubmit="submitOtherRequest(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>نوع الطلب</label>
+            <select id="or-type" required>
+              <option value="">اختر نوع الطلب</option>
+              <option value="urgent_repair">إصلاح عاجل 🔴</option>
+              <option value="part_replacement">استبدال قطعة</option>
+              <option value="accident">حادث ⚠️</option>
+              <option value="complaint">شكوى</option>
+              <option value="suggestion">اقتراح 💡</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>وصف تفصيلي</label>
+          <textarea id="or-description" rows="4" required style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+        </div>
+        <div class="form-group">
+          <label>صور (اختياري — حتى 5 صور)</label>
+          <div class="photo-grid" id="or-photos-grid">
+            <div class="photo-slot" onclick="triggerPhotoUpload('or-photo-1')">
+              <input id="or-photo-1" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'or-prev-1')">
+              <div id="or-prev-1" class="photo-preview">📷<br><small>صورة 1</small></div>
+            </div>
+            <div class="photo-slot" onclick="triggerPhotoUpload('or-photo-2')">
+              <input id="or-photo-2" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'or-prev-2')">
+              <div id="or-prev-2" class="photo-preview">📷<br><small>صورة 2</small></div>
+            </div>
+            <div class="photo-slot" onclick="triggerPhotoUpload('or-photo-3')">
+              <input id="or-photo-3" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'or-prev-3')">
+              <div id="or-prev-3" class="photo-preview">📷<br><small>صورة 3</small></div>
+            </div>
+            <div class="photo-slot" onclick="triggerPhotoUpload('or-photo-4')">
+              <input id="or-photo-4" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'or-prev-4')">
+              <div id="or-prev-4" class="photo-preview">📷<br><small>صورة 4</small></div>
+            </div>
+            <div class="photo-slot" onclick="triggerPhotoUpload('or-photo-5')">
+              <input id="or-photo-5" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this,'or-prev-5')">
+              <div id="or-prev-5" class="photo-preview">📷<br><small>صورة 5</small></div>
+            </div>
+          </div>
+        </div>
+        <p id="or-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary">📤 إرسال الطلب</button>
+      </form>
+    </div>
+
+    <!-- ─── 4. Vehicle Status ─── -->
+    <div id="dp-vehicle-status" style="display:none" class="dp-section">
+      <button class="btn-dp-back" onclick="dpShow('home')">← رجوع</button>
+      <h2 class="sec-title">حالة مركبتي</h2>
+      <div id="dp-vehicle-status-content">
+        <div class="coming-soon" style="padding:40px">جارٍ التحميل…</div>
+      </div>
+    </div>
+
+  </div><!-- /.driver-portal -->
+
+</div><!-- /#page-driver-portal -->
 
 
 <!-- ════════════════════════════════════════════════════ DASHBOARD PAGE ═══ -->
@@ -87,6 +344,15 @@
       </a>
       <a class="nav-link" data-section="users"       onclick="navigateTo('users')">
         <span class="nav-icon">👥</span> إدارة المستخدمين
+      </a>
+      <a class="nav-link" data-section="employees"   onclick="navigateTo('employees')">
+        <span class="nav-icon">👤</span> الموظفون
+      </a>
+      <a class="nav-link" data-section="requests"    onclick="navigateTo('requests')">
+        <span class="nav-icon">📋</span> الطلبات الواردة
+      </a>
+      <a class="nav-link" data-section="monthly-reports" onclick="navigateTo('monthly-reports')">
+        <span class="nav-icon">📊</span> التقارير الشهرية
       </a>
     </div>
 
@@ -307,6 +573,81 @@
         </tbody>
       </table>
     </div><!-- /#sec-users -->
+
+    <!-- ── الموظفون ──────────────────────────────────── -->
+    <div id="sec-employees" class="section" style="display:none">
+      <h2 class="sec-title">إدارة الموظفين</h2>
+      <form id="form-employee" class="data-form" onsubmit="addEmployee(event)">
+        <h3>إضافة موظف جديد</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الاسم الكامل</label>
+            <input id="emp-name" required>
+          </div>
+          <div class="form-group">
+            <label>رقم الهوية الوطنية</label>
+            <input id="emp-nid" required placeholder="رقم الهوية">
+          </div>
+          <div class="form-group">
+            <label>المسمى الوظيفي</label>
+            <input id="emp-title">
+          </div>
+          <div class="form-group">
+            <label>رقم الجوال</label>
+            <input id="emp-phone">
+          </div>
+          <div class="form-group">
+            <label>المدينة</label>
+            <input id="emp-city">
+          </div>
+        </div>
+        <p id="emp-form-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary">➕ إضافة الموظف</button>
+      </form>
+      <h3 class="sub-title">قائمة الموظفين</h3>
+      <table class="data-table">
+        <thead>
+          <tr><th>الاسم</th><th>رقم الهوية</th><th>المسمى</th><th>الجوال</th><th>المدينة</th></tr>
+        </thead>
+        <tbody id="employees-tbody">
+          <tr><td colspan="5" class="tbl-empty">لا يوجد موظفون بعد</td></tr>
+        </tbody>
+      </table>
+    </div><!-- /#sec-employees -->
+
+    <!-- ── الطلبات الواردة (supervisor+) ─────────────── -->
+    <div id="sec-requests" class="section" style="display:none">
+      <h2 class="sec-title">الطلبات الواردة من السائقين</h2>
+      <button class="btn-primary" onclick="loadRequests()" style="margin-bottom:16px">🔄 تحديث</button>
+      <table class="data-table requests-table">
+        <thead>
+          <tr>
+            <th>الموظف</th><th>المركبة</th><th>نوع الطلب</th>
+            <th>التاريخ</th><th>الحالة</th><th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="requests-tbody">
+          <tr><td colspan="6" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div><!-- /#sec-requests -->
+
+    <!-- ── التقارير الشهرية (supervisor+) ───────────── -->
+    <div id="sec-monthly-reports" class="section" style="display:none">
+      <h2 class="sec-title">التقارير الشهرية للمركبات</h2>
+      <button class="btn-primary" onclick="loadMonthlyReports()" style="margin-bottom:16px">🔄 تحديث</button>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>المركبة</th><th>الموظف</th><th>العداد</th>
+            <th>الإطارات</th><th>الوقود</th><th>التاريخ</th><th>ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-reports-tbody">
+          <tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>
+        </tbody>
+      </table>
+    </div><!-- /#sec-monthly-reports -->
 
   </div><!-- /.main -->
 
