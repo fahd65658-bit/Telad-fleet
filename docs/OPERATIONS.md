@@ -1,5 +1,31 @@
 # TELAD FLEET – Operations Runbook
 
+## Auto-sync (مزامنة Git تلقائية)
+
+يثبّت `deployment/deploy.sh` مهمة cron تسحب التحديثات من GitHub كل 5 دقائق تلقائيًا وتُعيد تحميل PM2 في حال وجود تعديلات جديدة (zero-downtime reload):
+
+```
+*/5 * * * * root /bin/bash /var/www/telad-fleet/deployment/auto-sync.sh
+```
+
+سجل المزامنة:
+
+```bash
+tail -f /var/log/telad-fleet-sync.log
+```
+
+لتشغيل المزامنة يدويًا:
+
+```bash
+sudo bash /var/www/telad-fleet/deployment/auto-sync.sh
+```
+
+لإيقاف المزامنة التلقائية مؤقتًا:
+
+```bash
+sudo rm /etc/cron.d/telad-fleet-sync
+```
+
 ## Production mode
 
 - Use the root `server.js` as the only write-capable backend.
