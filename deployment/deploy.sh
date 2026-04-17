@@ -125,7 +125,29 @@ pm2 startup systemd -u root --hp /root | tail -1 | bash || true
 # ─── 12. Reload nginx (after SSL) ────────────────────────────────────────────
 systemctl reload nginx
 
-# ─── 13. Daily backup cron ────────────────────────────────────────────────────
+# ─── 13. Auto-sync cron (every 5 minutes) ────────────────────────────────────
+log "Installing auto-sync cron (every 5 minutes)…"
+chmod +x "$DEPLOY_DIR/deployment/auto-sync.sh"
+cat >/etc/cron.d/telad-fleet-sync <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+*/5 * * * * root DEPLOY_DIR=$DEPLOY_DIR /bin/bash $DEPLOY_DIR/deployment/auto-sync.sh
+EOF
+chmod 644 /etc/cron.d/telad-fleet-sync
+
+cat >/etc/logrotate.d/telad-fleet-sync <<'EOF'
+/var/log/telad-fleet-sync.log {
+  daily
+  rotate 14
+  compress
+  missingok
+  notifempty
+  copytruncate
+}
+EOF
+log "Auto-sync cron installed — will pull from GitHub every 5 minutes"
+
+# ─── 14. Daily backup cron ────────────────────────────────────────────────────
 log "Installing daily backup cron…"
 cat >/etc/cron.d/telad-fleet-backup <<EOF
 SHELL=/bin/bash
@@ -155,6 +177,8 @@ echo "║  🔌 API       : https://api.fna.sa       ║"
 echo "║  📊 PM2 logs  : pm2 logs telad-fleet     ║"
 echo "║  💾 Data dir  : $DATA_DIR                 ║"
 echo "║  🗂  Backups  : $BACKUP_DIR               ║"
+echo "║  🔄 Auto-sync : every 5 min (git pull)   ║"
+echo "║     Sync log  : /var/log/telad-fleet-sync.log ║"
 echo "╠══════════════════════════════════════════╣"
 echo "║  Admin login  : admin / from .env        ║"
 echo "║  ⚠️  Change password after first login!   ║"
