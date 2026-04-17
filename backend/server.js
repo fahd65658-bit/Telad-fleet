@@ -475,6 +475,8 @@ let accidents     = [];
 let violations    = [];
 let financialItems = [];
 
+let devRequests   = [];
+
 function audit(action, username) {
   auditLogs.push({
     id:     newId(),
@@ -984,6 +986,170 @@ app.post('/notifications/read/:id', authAll, (req, res) => {
   if (!n) return res.status(404).json({ error: 'الإشعار غير موجود' });
   n.read = true;
   res.json(n);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEV-REQUESTS  — Admin AI development request panel
+// Allows the superadmin to submit natural-language improvement requests.
+// Each request is classified by AI (category, priority, complexity), stored
+// locally, and — when GITHUB_TOKEN + GITHUB_REPO are configured — also
+// opened as a GitHub Issue for fast repository-connected tracking.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── AI classifier ───────────────────────────────────────────────────────────
+function classifyDevRequest(text) {
+  const t = text.toLowerCase();
+
+  // Category detection
+  let category = 'عام';
+  if (/واجهة|تصميم|صفحة|لون|شاشة|زر|قائمة|ui|ux|frontend/.test(t))       category = 'واجهة المستخدم';
+  else if (/api|endpoint|خادم|backend|مسار|route|قاعدة بيانات|database/.test(t)) category = 'الخادم والواجهة البرمجية';
+  else if (/أمان|security|تشفير|صلاحية|permission|token|jwt/.test(t))       category = 'الأمان';
+  else if (/تقرير|report|إحصاء|analytics|مخطط|chart/.test(t))               category = 'التقارير والتحليلات';
+  else if (/سائق|driver|مركبة|vehicle|أسطول|fleet/.test(t))                 category = 'إدارة الأسطول';
+  else if (/ذكاء|ai|تنبيه|alert|توصية|recommendation/.test(t))              category = 'الذكاء الاصطناعي';
+  else if (/إشعار|notification|تنبيه|push/.test(t))                         category = 'الإشعارات';
+  else if (/خريطة|map|gps|تتبع|tracking/.test(t))                           category = 'الخرائط والتتبع';
+  else if (/مالي|financial|تكلفة|cost|ميزانية|budget/.test(t))              category = 'المالية';
+
+  // Priority detection
+  let priority = 'متوسطة';
+  if (/عاجل|فوري|حرج|critical|urgent|مهم جداً|أولوية عالية/.test(t))       priority = 'عالية';
+  else if (/منخفض|بسيط|غير عاجل|وقت فراغ|low priority/.test(t))            priority = 'منخفضة';
+
+  // Complexity estimate
+  let complexity = 'متوسط';
+  if (/بسيط|صغير|سريع|minor|quick|small/.test(t))                           complexity = 'بسيط';
+  else if (/كبير|معقد|شامل|major|complex|large|هيكل/.test(t))               complexity = 'معقد';
+
+  // Generate structured title from first sentence (≤ 80 chars)
+  const firstSentence = text.split(/[.،\n]/)[0].trim();
+  const title = firstSentence.length > 80 ? firstSentence.slice(0, 77) + '…' : firstSentence;
+
+  return { title, category, priority, complexity };
+}
+
+// ─── Create GitHub Issue (fire-and-forget; never throws) ─────────────────────
+async function createGitHubIssue(title, body, labels) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO;   // e.g. "fahd65658-bit/Telad-fleet"
+  if (!token || !repo) return null;
+
+  try {
+    const https = require('https');
+    const payload = JSON.stringify({ title, body, labels });
+    return await new Promise((resolve) => {
+      const [owner, repoName] = repo.split('/');
+      const options = {
+        hostname: 'api.github.com',
+        path:     `/repos/${owner}/${repoName}/issues`,
+        method:   'POST',
+        headers: {
+          'Content-Type':    'application/json',
+          'Authorization':   `Bearer ${token}`,
+          'User-Agent':      'TELAD-FLEET-Bot/2.0',
+          'Accept':          'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Length':  Buffer.byteLength(payload),
+        },
+      };
+      const req = https.request(options, (r) => {
+        let data = '';
+        r.on('data', c => { data += c; });
+        r.on('end', () => {
+          try { resolve(JSON.parse(data)); } catch { resolve(null); }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.write(payload);
+      req.end();
+    });
+  } catch {
+    return null;
+  }
+}
+
+// GET /dev-requests  — list all (admin only)
+app.get('/dev-requests', adminOnly, (_req, res) => {
+  res.json([...devRequests].reverse());
+});
+
+// POST /dev-requests  — submit a new request (admin only)
+app.post('/dev-requests', adminOnly, async (req, res) => {
+  const { request } = req.body || {};
+  if (!request || !request.trim())
+    return res.status(400).json({ error: 'نص الطلب مطلوب' });
+  if (request.length > 2000)
+    return res.status(400).json({ error: 'نص الطلب طويل جداً (الحد 2000 حرف)' });
+
+  const ai    = classifyDevRequest(request.trim());
+  const id    = newId();
+  const createdAt = new Date().toISOString();
+
+  // Build GitHub issue body
+  const issueBody = [
+    `## طلب تطوير — TELAD FLEET`,
+    '',
+    `**الوصف:**`,
+    request.trim(),
+    '',
+    `---`,
+    `| الحقل | القيمة |`,
+    `|---|---|`,
+    `| الفئة | ${ai.category} |`,
+    `| الأولوية | ${ai.priority} |`,
+    `| التعقيد | ${ai.complexity} |`,
+    `| مُقدَّم بواسطة | ${req.user.username} |`,
+    `| التاريخ | ${createdAt.slice(0, 10)} |`,
+    '',
+    `*أُنشئ تلقائياً من لوحة تحكم TELAD FLEET*`,
+  ].join('\n');
+
+  const labelMap = { 'عالية': 'priority:high', 'متوسطة': 'priority:medium', 'منخفضة': 'priority:low' };
+  const ghIssue = await createGitHubIssue(
+    `[تطوير] ${ai.title}`,
+    issueBody,
+    [labelMap[ai.priority] || 'priority:medium', 'dev-request'],
+  );
+
+  const record = {
+    id,
+    request:     request.trim(),
+    title:       ai.title,
+    category:    ai.category,
+    priority:    ai.priority,
+    complexity:  ai.complexity,
+    status:      'مفتوح',
+    githubIssue: ghIssue ? { number: ghIssue.number, url: ghIssue.html_url } : null,
+    submittedBy: req.user.username,
+    createdAt,
+  };
+  devRequests.push(record);
+  audit(`طلب تطوير جديد: ${ai.title}`, req.user.username);
+  res.status(201).json(record);
+});
+
+// PUT /dev-requests/:id/status  — update status (admin only)
+app.put('/dev-requests/:id/status', adminOnly, (req, res) => {
+  const record = devRequests.find(r => r.id === req.params.id);
+  if (!record) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const allowed = ['مفتوح', 'قيد التنفيذ', 'مكتمل', 'مرفوض'];
+  const { status } = req.body || {};
+  if (!allowed.includes(status))
+    return res.status(400).json({ error: `الحالة غير صالحة. القيم المتاحة: ${allowed.join(', ')}` });
+  record.status    = status;
+  record.updatedAt = new Date().toISOString();
+  audit(`تحديث حالة طلب التطوير: ${record.title} → ${status}`, req.user.username);
+  res.json(record);
+});
+
+// DELETE /dev-requests/:id  — remove (admin only)
+app.delete('/dev-requests/:id', adminOnly, (req, res) => {
+  const idx = devRequests.findIndex(r => r.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'الطلب غير موجود' });
+  devRequests.splice(idx, 1);
+  audit('حذف طلب تطوير', req.user.username);
+  res.json({ ok: true });
 });
 
 // ─── 404 fallback ─────────────────────────────────────────────────────────────

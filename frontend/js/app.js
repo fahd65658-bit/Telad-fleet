@@ -25,7 +25,7 @@ const ROLE_NAMES = {
 
 // Sections accessible per role
 const ROLE_SECTIONS = {
-  admin:      ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users'],
+  admin:      ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users', 'devRequests'],
   supervisor: ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'reports', 'ai'],
   operator:   ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments'],
   viewer:     ['dashboard', 'map'],
@@ -211,6 +211,7 @@ function navigateTo(section) {
     reports:      loadReports,
     users:        loadUsers,
     logs:         loadLogs,
+    devRequests:  loadDevRequests,
   };
   if (loaders[section]) loaders[section]();
 
@@ -757,6 +758,12 @@ document.addEventListener('click', async (e) => {
     case 'delete-financial':
       await deleteFinancial(id);
       break;
+    case 'delete-dev-request':
+      await deleteDevRequest(id);
+      break;
+    case 'update-dev-status':
+      await updateDevRequestStatus(id, btn.dataset.status);
+      break;
   }
 });
 
@@ -1114,4 +1121,126 @@ function connectGPS() {
       }
     });
   } catch { gpsSocketConnected = false; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEV REQUESTS — AI-powered development request panel (admin only)
+// ═══════════════════════════════════════════════════════════════════════════
+const DEV_STATUS_LABELS = {
+  'مفتوح':       { cls: 'badge-active',   icon: '🟢' },
+  'قيد التنفيذ': { cls: 'badge-warn',     icon: '🔵' },
+  'مكتمل':       { cls: 'badge-active',   icon: '✅' },
+  'مرفوض':       { cls: 'badge-inactive', icon: '🔴' },
+};
+
+const DEV_PRIORITY_COLORS = {
+  'عالية':   '#ef4444',
+  'متوسطة': '#f59e0b',
+  'منخفضة': '#22c55e',
+};
+
+async function loadDevRequests() {
+  const tbody = document.getElementById('dev-requests-tbody');
+  if (!tbody) return;
+  try {
+    const res  = await apiFetch('/dev-requests');
+    if (!res.ok) return;
+    const list = await res.json();
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">لا توجد طلبات بعد — أضف أول طلب تطوير أعلاه</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(r => {
+      const sl    = DEV_STATUS_LABELS[r.status] || { cls: 'badge-active', icon: '❓' };
+      const pCol  = DEV_PRIORITY_COLORS[r.priority] || '#94a3b8';
+      const ghBtn = r.githubIssue
+        ? `<a href="${escHtml(r.githubIssue.url)}" target="_blank" rel="noopener noreferrer"
+              style="color:#3b82f6;text-decoration:none;font-size:12px">
+             #${r.githubIssue.number} ↗
+           </a>`
+        : '<span style="color:#94a3b8;font-size:12px">—</span>';
+
+      const statusOptions = ['مفتوح', 'قيد التنفيذ', 'مكتمل', 'مرفوض']
+        .filter(s => s !== r.status)
+        .map(s => `<button class="btn-sm" style="font-size:11px;padding:2px 8px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;margin-bottom:2px"
+                    data-action="update-dev-status" data-id="${escHtml(r.id)}" data-status="${escHtml(s)}">${s}</button>`)
+        .join('');
+
+      return `<tr>
+        <td style="max-width:220px;font-size:13px" title="${escHtml(r.request)}">${escHtml(r.title)}</td>
+        <td style="font-size:12px">${escHtml(r.category)}</td>
+        <td><span style="background:${pCol}22;color:${pCol};padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600">${escHtml(r.priority)}</span></td>
+        <td style="font-size:12px">${escHtml(r.complexity)}</td>
+        <td><span class="${sl.cls}" style="font-size:12px">${sl.icon} ${escHtml(r.status)}</span></td>
+        <td>${ghBtn}</td>
+        <td style="font-size:12px">${formatDate(r.createdAt)}</td>
+        <td style="white-space:nowrap">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            ${statusOptions}
+            <button class="btn-sm btn-danger" style="font-size:11px;padding:2px 8px"
+                    data-action="delete-dev-request" data-id="${escHtml(r.id)}">حذف</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">تعذّر تحميل الطلبات</td></tr>';
+  }
+}
+
+async function submitDevRequest(e) {
+  e.preventDefault();
+  const text   = document.getElementById('dev-req-text').value.trim();
+  const errEl  = document.getElementById('dev-req-error');
+  const btn    = document.getElementById('btn-dev-submit');
+  const result = document.getElementById('dev-req-result');
+  const body   = document.getElementById('dev-req-result-body');
+
+  errEl.textContent    = '';
+  result.style.display = 'none';
+  if (!text) { errEl.textContent = 'يرجى كتابة وصف الطلب'; return; }
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ الذكاء الاصطناعي يحلل الطلب…';
+
+  try {
+    const res  = await apiFetch('/dev-requests', { method: 'POST', body: JSON.stringify({ request: text }) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'فشل إرسال الطلب'; return; }
+
+    document.getElementById('form-dev-request').reset();
+    result.style.display = 'block';
+    const ghLine = data.githubIssue
+      ? `• Issue GitHub: <a href="${escHtml(data.githubIssue.url)}" target="_blank" rel="noopener noreferrer">#${data.githubIssue.number}</a>`
+      : '• GitHub Issue: لم يُفعَّل (يحتاج GITHUB_TOKEN في .env)';
+    body.innerHTML = `
+      • العنوان: ${escHtml(data.title)}<br>
+      • الفئة: ${escHtml(data.category)}<br>
+      • الأولوية: ${escHtml(data.priority)} &nbsp;|&nbsp; التعقيد: ${escHtml(data.complexity)}<br>
+      ${ghLine}
+    `;
+    showToast('تم إرسال الطلب وتحليله بنجاح ✅');
+    loadDevRequests();
+  } catch {
+    errEl.textContent = 'تعذّر الاتصال بالخادم';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '🤖 تحليل وإرسال الطلب';
+  }
+}
+
+async function updateDevRequestStatus(id, status) {
+  const res = await apiFetch('/dev-requests/' + id + '/status', {
+    method: 'PUT',
+    body:   JSON.stringify({ status }),
+  });
+  if (res.ok) { loadDevRequests(); showToast('تم تحديث الحالة'); }
+  else        { showToast('فشل تحديث الحالة', 'error'); }
+}
+
+async function deleteDevRequest(id) {
+  if (!confirm('هل تريد حذف هذا الطلب؟')) return;
+  const res = await apiFetch('/dev-requests/' + id, { method: 'DELETE' });
+  if (res.ok) { loadDevRequests(); showToast('تم حذف الطلب'); }
+  else        { showToast('فشل حذف الطلب', 'error'); }
 }

@@ -117,6 +117,9 @@
       <a class="nav-link" data-section="users"        onclick="navigateTo('users')">
         <span class="nav-icon">👥</span> إدارة المستخدمين
       </a>
+      <a class="nav-link" data-section="devRequests"  onclick="navigateTo('devRequests')">
+        <span class="nav-icon">🛠️</span> طلبات التطوير
+      </a>
     </div>
 
     <div class="sidebar-footer">
@@ -651,6 +654,56 @@
         </tbody>
       </table>
     </div><!-- /#sec-users -->
+
+    <!-- ── طلبات التطوير (admin only) ──────────────────── -->
+    <div id="sec-devRequests" class="section" style="display:none">
+      <h2 class="sec-title">🛠️ لوحة طلبات التطوير الذكي</h2>
+
+      <!-- Submission form -->
+      <form id="form-dev-request" class="data-form" onsubmit="submitDevRequest(event)">
+        <h3>إضافة طلب تطوير أو تعديل جديد</h3>
+        <p style="color:#64748b;font-size:13px;margin-bottom:12px">
+          اكتب طلبك بأي صياغة — سيحلله الذكاء الاصطناعي، يصنّفه، ويفتح له Issue في المستودع تلقائياً.
+        </p>
+        <div class="form-group" style="max-width:100%">
+          <label>وصف الطلب أو التعديل المطلوب</label>
+          <textarea id="dev-req-text" rows="5" required
+                    placeholder="مثال: أضف حقل ميزانية للمشاريع وأربطه بتقرير الإنفاق الشهري..."
+                    style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
+        </div>
+        <p id="dev-req-error" class="error-msg"></p>
+        <button type="submit" class="btn-primary" id="btn-dev-submit">
+          🤖 تحليل وإرسال الطلب
+        </button>
+      </form>
+
+      <!-- AI analysis result (shown after submission) -->
+      <div id="dev-req-result" style="display:none;margin-top:16px;padding:16px;
+           background:#f0fdf4;border:1px solid #86efac;border-radius:8px;border-right:4px solid #22c55e">
+        <strong>✅ تم تحليل الطلب وإرساله بنجاح</strong>
+        <div id="dev-req-result-body" style="margin-top:8px;font-size:13px;color:#166534"></div>
+      </div>
+
+      <!-- Requests table -->
+      <h3 class="sub-title" style="margin-top:28px">سجل طلبات التطوير</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>العنوان</th>
+            <th>الفئة</th>
+            <th>الأولوية</th>
+            <th>التعقيد</th>
+            <th>الحالة</th>
+            <th>Issue GitHub</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="dev-requests-tbody">
+          <tr><td colspan="8" class="tbl-empty">لا توجد طلبات بعد</td></tr>
+        </tbody>
+      </table>
+    </div><!-- /#sec-devRequests -->
 
   </div><!-- /.main -->
 
