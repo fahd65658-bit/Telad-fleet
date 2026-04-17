@@ -102,11 +102,22 @@ const CORS_ORIGINS = [
   'null',                    // file:// open in dev
 ];
 
+// Allow any Vercel preview deployment (*.vercel.app) in addition to the list above
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (CORS_ORIGINS.includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    if (url.hostname.endsWith('.vercel.app')) return true;
+  } catch (_) { /* ignore */ }
+  return false;
+}
+
 // ─── App setup ───────────────────────────────────────────────────────────────
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
-  cors: { origin: CORS_ORIGINS, methods: ['GET', 'POST'] },
+  cors: { origin: (origin, cb) => cb(null, isAllowedOrigin(origin)), methods: ['GET', 'POST'] },
 });
 
 app.set('trust proxy', 1);
@@ -127,7 +138,7 @@ app.use(helmet({
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || CORS_ORIGINS.includes(origin)) return cb(null, true);
+    if (isAllowedOrigin(origin)) return cb(null, true);
     cb(new Error('CORS not allowed for: ' + origin));
   },
   credentials: true,

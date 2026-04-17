@@ -9,10 +9,10 @@
 // ─── API Base URL (auto-detects environment) ─────────────────────────────────
 const API_BASE = (() => {
   const h = window.location.hostname;
-  if (h === 'fna.sa' || h === 'www.fna.sa' || h === 'fleet.fna.sa') {
-    return 'https://api.fna.sa';
+  if (h === 'localhost' || h === '127.0.0.1' || h === '') {
+    return 'http://localhost:5000';
   }
-  return 'http://localhost:5000';
+  return 'https://api.fna.sa';
 })();
 
 // ─── Role definitions ────────────────────────────────────────────────────────
