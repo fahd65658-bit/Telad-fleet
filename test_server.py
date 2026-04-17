@@ -19,6 +19,11 @@ class TestTeladFleet(unittest.TestCase):
         thread.start()
         return httpd
 
+    def _stop_test_server(self, httpd):
+        if httpd is not None:
+            httpd.shutdown()
+            httpd.server_close()
+
     def test_build_dashboard_payload_contains_core_fields(self):
         payload = server.build_dashboard_payload(refresh=False)
         self.assertEqual(payload["status"], "running")
@@ -122,8 +127,7 @@ class TestTeladFleet(unittest.TestCase):
                 self.assertGreater(len(payload["alerts"]), 0)
             finally:
                 if 'httpd' in locals():
-                    httpd.shutdown()
-                    httpd.server_close()
+                    self._stop_test_server(httpd)
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 
@@ -147,8 +151,7 @@ class TestTeladFleet(unittest.TestCase):
                 self.assertGreater(len(vehicles["vehicles"]), 0)
             finally:
                 if "httpd" in locals():
-                    httpd.shutdown()
-                    httpd.server_close()
+                    self._stop_test_server(httpd)
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 
@@ -171,8 +174,7 @@ class TestTeladFleet(unittest.TestCase):
                 refresh_mock.assert_called_once()
             finally:
                 if "httpd" in locals():
-                    httpd.shutdown()
-                    httpd.server_close()
+                    self._stop_test_server(httpd)
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 
@@ -199,8 +201,7 @@ class TestTeladFleet(unittest.TestCase):
                 self.assertEqual(error_payload["error"], "Route not found")
             finally:
                 if "httpd" in locals():
-                    httpd.shutdown()
-                    httpd.server_close()
+                    self._stop_test_server(httpd)
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 
