@@ -25,6 +25,7 @@ const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
 const STATIC_FILE_CACHE = new Map();
+const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -152,6 +153,10 @@ async function sendFile(res, fileName, contentType) {
       data = cached.data;
     } else {
       data = await fs.promises.readFile(filePath);
+      if (STATIC_FILE_CACHE.size >= MAX_STATIC_CACHE_ENTRIES) {
+        const firstKey = STATIC_FILE_CACHE.keys().next().value;
+        if (firstKey) STATIC_FILE_CACHE.delete(firstKey);
+      }
       STATIC_FILE_CACHE.set(filePath, { mtimeMs: stat.mtimeMs, data });
     }
     res.statusCode = 200;
@@ -207,11 +212,11 @@ function pickAllowedFields(source, allowedFields) {
 function warnDevConfig() {
   if (!IS_PROD && !HAS_ADMIN_PASSWORD && !loggedDevAdminPassword) {
     loggedDevAdminPassword = true;
-    console.warn(`[SECURITY] ADMIN_PASSWORD is not set. Development admin password (temporary): ${ADMIN_PASSWORD_VALUE}`);
+    console.warn('[SECURITY] ADMIN_PASSWORD is not set. A random temporary admin password was generated for development mode.');
   }
   if (!IS_PROD && !authModule && !AUTH_FALLBACK_SECRET && !loggedFallbackAuthWarning) {
     loggedFallbackAuthWarning = true;
-    console.warn('[SECURITY] AUTH_SECRET/JWT_SECRET is not set. Using ephemeral token signing key (dev-only).');
+    console.warn('[SECURITY] AUTH_SECRET/JWT_SECRET is not set. Using ephemeral token signing key (dev-only, tokens reset on restart).');
   }
 }
 
@@ -269,9 +274,12 @@ function findRawUser(req) {
 }
 
 function issueToken(user) {
-  const token = (authModule && typeof authModule.issueTokens === 'function')
-    ? authModule.issueTokens(user).accessToken
-    : issueFallbackToken(user);
+  let token = null;
+  if (authModule && typeof authModule.issueTokens === 'function') {
+    const issued = authModule.issueTokens(user);
+    if (issued && typeof issued.accessToken === 'string' && issued.accessToken) token = issued.accessToken;
+  }
+  if (!token) token = issueFallbackToken(user);
   user.token = token;
   return token;
 }
