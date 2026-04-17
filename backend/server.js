@@ -24,6 +24,7 @@ const { Server } = require('socket.io');
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
 const IS_PROD  = process.env.NODE_ENV === 'production';
+const DEFAULT_ADMIN_PASSWORD_HASH = bcrypt.hashSync('0241', 10);
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
 // value.  Falls back to a random hex string so every cold start gets its own ID
@@ -44,7 +45,7 @@ function buildDefaultUsers() {
       name: 'مدير النظام',
       username: 'F',
       email: 'admin@fna.sa',
-      passwordHash: bcrypt.hashSync('0241', 10),
+      passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
       role: 'admin',
       active: true,
       createdAt: new Date().toISOString(),
@@ -62,6 +63,7 @@ function buildDemoCollections() {
   const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 3).toISOString().slice(0, 10);
 
   return {
+    users: buildDefaultUsers(),
     cities: [
       { id: 'city-riyadh', name: 'الرياض', createdAt: nowIso },
       { id: 'city-jeddah', name: 'جدة', createdAt: nowIso },
@@ -277,7 +279,7 @@ const apiLimiter = rateLimit({
 // USERS  (in-memory store — swap for PostgreSQL in production)
 // Default super-admin: username=F  password=0241
 // ═══════════════════════════════════════════════════════════════════════════
-let users = hasCollectionFile('users') ? loadCollection('users') : buildDefaultUsers();
+let users = loadOrBootstrapCollection('users');
 
 // Role permission levels
 const VALID_ROLES = ['admin', 'supervisor', 'operator', 'viewer'];
