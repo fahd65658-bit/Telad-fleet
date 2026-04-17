@@ -28,6 +28,9 @@ telad-fleet/
 │   ├── pm2.config.js        ← PM2 process manager
 │   └── deploy.sh            ← One-command VPS deploy
 │
+├── archive/                 ← Legacy reference files kept outside runtime paths
+├── index.html               ← Safe root redirect to frontend/index.html
+│
 ├── .gitignore
 └── README.md
 ```
@@ -82,7 +85,7 @@ node server.js
 Backend running at → **http://localhost:5000**
 
 ### 4. Open the dashboard
-Open `frontend/index.html` in your browser, or:
+Open `index.html` or `frontend/index.html` in your browser, or:
 ```bash
 npx serve frontend -l 3000
 ```

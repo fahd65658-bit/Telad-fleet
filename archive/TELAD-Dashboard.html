@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TELAD FLEET – نظام إدارة الأسطول</title>
+<style>
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#0f172a;color:white}
+header{
+  background:#020617;padding:12px 24px;font-size:18px;
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid #1e293b;
+}
+header img{width:40px;height:40px;object-fit:contain;border-radius:50%}
+header .brand{font-weight:800;letter-spacing:1px}
+header .domain{font-size:12px;color:#c9a227;font-weight:600;margin-right:6px}
+.sidebar{position:fixed;right:0;top:64px;width:240px;height:calc(100% - 64px);background:#020617;padding:12px 0;border-left:1px solid #1e293b}
+.sidebar a{display:flex;align-items:center;gap:8px;color:#94a3b8;text-decoration:none;margin:2px 8px;padding:9px 12px;background:transparent;border-radius:8px;font-size:14px;transition:all .2s;border-right:3px solid transparent}
+.sidebar a:hover{background:#1e293b;color:#e2e8f0}
+.sidebar a.active{background:#1e293b;color:#c9a227;border-right-color:#c9a227}
+.main{margin-right:256px;padding:28px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.card{background:#1e293b;padding:24px 20px;border-radius:12px;text-align:center;border:1px solid #334155}
+.card h3{font-size:13px;color:#94a3b8;margin-bottom:8px;font-weight:500}
+.card p{font-size:36px;font-weight:800;margin:0}
+.map{margin-top:0;height:420px;background:#020617;border-radius:12px;border:1px solid #1e293b;display:flex;align-items:center;justify-content:center;font-size:18px;color:#475569}
+h2{font-size:22px;font-weight:700;color:#f8fafc;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #1e293b}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="https://github.com/user-attachments/assets/62dcdcd4-954c-4e9e-816c-359980ffe976"
+       alt="TELAD FLEET"
+       onerror="this.style.display='none'">
+  <span class="brand">TELAD FLEET</span>
+  <span class="domain">fna.sa</span>
+  <span style="margin-right:auto;font-size:14px;color:#64748b">مركز عمليات الأسطول</span>
+</header>
+
+<div class="sidebar">
+  <a href="#" class="active"><span>📊</span> لوحة التحكم</a>
+  <a href="#"><span>🗺️</span> خريطة الأسطول</a>
+  <a href="#"><span>🚗</span> المركبات</a>
+  <a href="#"><span>🔧</span> الصيانة</a>
+  <a href="#"><span>⚠️</span> الحوادث</a>
+  <a href="#"><span>🚦</span> المخالفات</a>
+  <a href="#"><span>💰</span> العهد المالية</a>
+  <a href="#"><span>📅</span> المواعيد</a>
+  <a href="#"><span>📈</span> التقارير</a>
+  <a href="#"><span>📄</span> النماذج</a>
+  <a href="#"><span>🧠</span> AI System</a>
+  <a href="#"><span>👥</span> المستخدمين</a>
+  <a href="#"><span>⚙️</span> الإعدادات</a>
+</div>
+
+<div class="main">
+  <h2>لوحة التحكم</h2>
+  <div class="cards">
+    <div class="card"><h3>المركبات</h3><p>128</p></div>
+    <div class="card"><h3>الصيانة</h3><p>36</p></div>
+    <div class="card"><h3>الحوادث</h3><p>4</p></div>
+    <div class="card"><h3>المخالفات</h3><p>12</p></div>
+  </div>
+  <div class="map">🛰 TELAD Fleet Live Map – fna.sa</div>
+</div>
+
+</body>
+</html>
