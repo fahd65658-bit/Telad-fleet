@@ -34,10 +34,52 @@ const ROLE_SECTIONS = {
 // ─── State ───────────────────────────────────────────────────────────────────
 let currentUser = null;
 
+// ─── Skew Protection ─────────────────────────────────────────────────────────
+// _serverDeployId: the X-Deploy-Id value received from the first API response.
+// If any later response carries a *different* value, the server was redeployed
+// while the user was on the page → show the reload banner.
+let _serverDeployId = null;
+
+function _showSkewBanner() {
+  const banner = document.getElementById('skew-banner');
+  if (banner && banner.style.display === 'none') {
+    banner.style.display = 'block';
+  }
+}
+
+function _checkDeployId(res) {
+  const id = res.headers.get('X-Deploy-Id');
+  if (!id) return;
+  if (!_serverDeployId) {
+    _serverDeployId = id;   // establish baseline on first response
+  } else if (_serverDeployId !== id) {
+    _showSkewBanner();      // deployment changed — notify user
+  }
+}
+
+// Detect stale static assets (JS / CSS 404 after a redeploy that renames files)
+window.addEventListener('error', (e) => {
+  const el = e.target;
+  if (el && (el.tagName === 'SCRIPT' || el.tagName === 'LINK')) {
+    _showSkewBanner();
+  }
+}, true /* capture phase — fires before bubbling */);
+
+// Wire the banner reload button (HTML is in index.html, so wait for DOM)
+window.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('skew-reload-btn');
+  if (btn) btn.addEventListener('click', () => location.reload());
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
+  // ── Skew Protection: prime the baseline deploy ID before any auth call ──
+  // Uses a fire-and-forget fetch to /version so the very first response sets
+  // _serverDeployId.  Subsequent apiFetch() calls then detect any change.
+  fetch(API_BASE + '/version').then(r => { _checkDeployId(r); }).catch(() => {});
+
   const token = localStorage.getItem('telad_token');
   if (token) {
     try {
@@ -190,6 +232,9 @@ function apiFetch(path, options = {}) {
       ...(token ? { Authorization: 'Bearer ' + token } : {}),
       ...(options.headers || {}),
     },
+  }).then(res => {
+    _checkDeployId(res);   // Skew Protection: check deploy ID on every response
+    return res;
   });
 }
 

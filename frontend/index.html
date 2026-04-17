@@ -10,6 +10,25 @@
 </head>
 <body>
 
+<!-- ── Skew Protection Banner ──────────────────────────────────────────────────
+     Hidden by default. Shown by app.js when the server's X-Deploy-Id header
+     changes (new deployment) or when a static asset returns 404.
+─────────────────────────────────────────────────────────────────────────────── -->
+<div id="skew-banner" role="alert" aria-live="assertive"
+     style="display:none;position:fixed;top:0;left:0;right:0;z-index:10000;
+            background:#f59e0b;color:#1c1917;padding:12px 24px;
+            text-align:center;font-size:14px;font-weight:600;
+            box-shadow:0 2px 8px rgba(0,0,0,.25)">
+  🔄 تم تحديث النظام — يرجى
+  <button id="skew-reload-btn"
+          style="background:#1c1917;color:#fef3c7;border:none;border-radius:4px;
+                 padding:4px 14px;cursor:pointer;font-size:13px;font-weight:600;
+                 margin-right:10px;margin-left:4px">
+    تحديث الصفحة
+  </button>
+  للحصول على أحدث نسخة
+</div>
+
 <!-- ═══════════════════════════════════════════════════════ LOGIN PAGE ═══ -->
 <div id="page-login">
   <div class="login-box">

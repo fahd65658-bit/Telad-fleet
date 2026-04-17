@@ -23,6 +23,12 @@ const { Server } = require('socket.io');
 const PORT     = process.env.PORT || 5000;
 const IS_PROD  = process.env.NODE_ENV === 'production';
 
+// ─── Skew Protection ─────────────────────────────────────────────────────────
+// Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
+// value.  Falls back to a random hex string so every cold start gets its own ID
+// when DEPLOY_ID is not injected by CI/CD.
+const DEPLOY_ID = process.env.DEPLOY_ID || crypto.randomBytes(8).toString('hex');
+
 // Fail fast in production if JWT_SECRET is not set
 if (IS_PROD && !process.env.JWT_SECRET) {
   console.error('[FATAL] JWT_SECRET environment variable must be set in production.');
@@ -69,6 +75,7 @@ app.use(cors({
     cb(new Error('CORS not allowed for: ' + origin));
   },
   credentials: true,
+  exposedHeaders: ['X-Deploy-Id'],  // allow client JS to read the skew-protection header
 }));
 
 app.use(express.json({ limit: '1mb' }));
@@ -148,6 +155,19 @@ const supervisorUp = requireAuth(['admin', 'supervisor']);
 // ─── Apply global API rate limiter to all routes ─────────────────────────────
 app.use(apiLimiter);
 
+// ─── Skew Protection — stamp every response with the deploy ID ───────────────
+// The client reads this header after every fetch() call.  If the ID changes
+// (new deployment) the client shows a "please reload" banner.
+app.use((_req, res, next) => {
+  res.setHeader('X-Deploy-Id', DEPLOY_ID);
+  next();
+});
+
+// ─── Version endpoint (used by client on first load to prime the baseline ID) ─
+app.get('/version', (_req, res) => {
+  res.json({ deployId: DEPLOY_ID, version: '2.0.0' });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════════════════
@@ -158,6 +178,7 @@ app.get('/health', (_req, res) => {
     domain: 'fna.sa',
     timestamp: new Date().toISOString(),
     version: '2.0.0',
+    deployId: DEPLOY_ID,
   });
 });
 

@@ -32,3 +32,7 @@ jobs:
 
       - name: Validate server syntax
         run: cd backend && node --check server.js
+        env:
+          # Inject the git commit SHA as DEPLOY_ID so the running server's
+          # Skew Protection ID is stable and traceable to a specific commit.
+          DEPLOY_ID: ${{ github.sha }}
