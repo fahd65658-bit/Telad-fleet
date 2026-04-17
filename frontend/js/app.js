@@ -9,6 +9,7 @@
 // ─── API Base URL (auto-detects environment) ─────────────────────────────────
 const API_BASE = (() => {
   const h = window.location.hostname;
+  // Empty hostname occurs when the page is opened via file:// (dev only)
   if (h === 'localhost' || h === '127.0.0.1' || h === '') {
     return 'http://localhost:5000';
   }

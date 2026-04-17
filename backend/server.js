@@ -104,6 +104,7 @@ const CORS_ORIGINS = [
 
 // Allow any Vercel preview deployment (*.vercel.app) in addition to the list above
 function isAllowedOrigin(origin) {
+  // No Origin header means same-origin or non-browser request (curl, server-to-server) — safe to allow
   if (!origin) return true;
   if (CORS_ORIGINS.includes(origin)) return true;
   try {
