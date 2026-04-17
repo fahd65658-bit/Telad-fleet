@@ -61,7 +61,9 @@ function buildDemoCollections() {
   const nowIso = now.toISOString();
   const today = nowIso.slice(0, 10);
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const nextMonthDate = new Date(now);
+  nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+  const nextMonth = nextMonthDate.toISOString().slice(0, 10);
   const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 3).toISOString().slice(0, 10);
 
@@ -130,11 +132,20 @@ function buildDemoCollections() {
   };
 }
 
+let demoCollectionsCache = null;
+
+function getDemoCollections() {
+  if (!demoCollectionsCache) {
+    demoCollectionsCache = buildDemoCollections();
+  }
+  return demoCollectionsCache;
+}
+
 function loadOrBootstrapCollection(name) {
   if (hasCollectionFile(name)) {
     return loadCollection(name);
   }
-  const demoCollections = buildDemoCollections();
+  const demoCollections = getDemoCollections();
   return demoCollections[name] ? structuredClone(demoCollections[name]) : [];
 }
 
