@@ -1,4 +1,8 @@
 {
   "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {}
+  "features": {},
+  "postCreateCommand": "npm ci && cd backend && npm ci && if [ ! -f .env ]; then cp .env.example .env; fi",
+  "remoteEnv": {
+    "NODE_ENV": "development"
+  }
 }
