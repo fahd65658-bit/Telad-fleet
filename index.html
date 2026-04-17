@@ -1,74 +1,87 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="لوحة تحكم Telad Fleet لمتابعة حالة الأسطول بشكل مباشر." />
-    <title>Telad Fleet Dashboard</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header class="hero">
-      <div>
-        <p class="eyebrow">منصة تشغيل الأسطول</p>
-        <h1>لوحة تحكم Telad Fleet</h1>
-        <p class="subtext">
-          متابعة المركبات، السائقين، وحالة الشحن بشكل مباشر من واجهة عربية واحدة.
-        </p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TELAD FLEET – نظام إدارة الأسطول المتكامل">
+  <title>TELAD FLEET – لوحة التحكم</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <!-- ═══════ Header ══════════════════════════════════════════════════════════ -->
+  <header class="hero">
+    <div>
+      <p class="eyebrow">fna.sa — نظام إدارة الأسطول</p>
+      <h1>TELAD FLEET</h1>
+      <p class="subtext">مراقبة المركبات والسائقين في الوقت الفعلي</p>
+    </div>
+    <button id="refreshBtn" class="primary-btn">تحديث البيانات</button>
+  </header>
+
+  <!-- ═══════ Main Content ════════════════════════════════════════════════════ -->
+  <main class="container">
+
+    <!-- Meta / status bar -->
+    <div class="meta-panel">
+      <span id="apiStatus">جاري الاتصال بالخادم...</span>
+      <span id="syncStatus"></span>
+    </div>
+
+    <!-- Stats cards -->
+    <section id="statsGrid" class="stats-grid" aria-label="إحصائيات الأسطول">
+      <article class="card">
+        <span>جارٍ التحميل...</span>
+        <strong>—</strong>
+      </article>
+    </section>
+
+    <!-- Fleet table + alerts -->
+    <div class="two-col">
+
+      <!-- Fleet table -->
+      <div class="panel" style="padding:1rem">
+        <div class="panel-head">
+          <h2 style="font-size:1rem;margin:0">المركبات</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>المركبة</th>
+                <th>السائق</th>
+                <th>الحالة</th>
+                <th>الموقع</th>
+              </tr>
+            </thead>
+            <tbody id="fleetTableBody">
+              <tr>
+                <td colspan="4" class="empty-row">جارٍ التحميل...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <button id="refreshBtn" class="primary-btn" type="button">تحديث البيانات</button>
-    </header>
 
-    <main class="container">
-      <section class="panel meta-panel">
-        <div>
-          <strong>حالة الربط:</strong>
-          <span id="apiStatus">جاري التحميل...</span>
+      <!-- Alerts -->
+      <div class="panel" style="padding:1rem">
+        <div class="panel-head">
+          <h2 style="font-size:1rem;margin:0">التنبيهات</h2>
+          <span id="alertsBadge" class="badge warn">0 جديد</span>
         </div>
-        <div>
-          <strong>المزامنة:</strong>
-          <span id="syncStatus">بانتظار أول تحديث...</span>
-        </div>
-      </section>
+        <ul id="alertsList" class="alerts">
+          <li class="empty-state">جارٍ التحميل...</li>
+        </ul>
+      </div>
 
-      <section class="stats-grid" id="statsGrid" aria-live="polite"></section>
+    </div>
+  </main>
 
-      <section class="panel two-col">
-        <div>
-          <div class="panel-head">
-            <h2>المركبات النشطة</h2>
-            <span class="badge success">مباشر</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>المركبة</th>
-                  <th>السائق</th>
-                  <th>الحالة</th>
-                  <th>الموقع</th>
-                </tr>
-              </thead>
-              <tbody id="fleetTableBody"></tbody>
-            </table>
-          </div>
-        </div>
+  <!-- ═══════ Footer ══════════════════════════════════════════════════════════ -->
+  <footer class="footer-note">
+    <small>TELAD FLEET v2.1.0 &mdash; &copy; 2025 fna.sa &mdash; جميع الحقوق محفوظة</small>
+  </footer>
 
-        <div>
-          <div class="panel-head">
-            <h2>التنبيهات</h2>
-            <span class="badge warn" id="alertsBadge">0 جديد</span>
-          </div>
-          <ul class="alerts" id="alertsList"></ul>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer-note">
-      يتم تحديث البيانات تلقائياً كل 30 ثانية عند توفر الخادم المحلي.
-    </footer>
-
-    <script src="app.js"></script>
-  </body>
+  <script src="/app.js"></script>
+</body>
 </html>
-

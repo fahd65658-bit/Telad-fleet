@@ -1,9 +1,37 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment files — NEVER commit real .env files
+.env
+backend/.env
+*.local
+
+# Runtime data (JSON persistence) — excluded from VCS; stored on server volume
+backend/data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime
+*.pid
+*.seed
+pids/
+
+# Build artifacts
+dist/
+build/
+.next/
+
+# Python
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# OS
 .DS_Store
 fleet.db
 *.sqlite
-.env
-node_modules/

@@ -1,0 +1,38 @@
+# ═══════════════════════════════════════════════════════════════════════
+# TELAD FLEET – Node.js CI
+# ═══════════════════════════════════════════════════════════════════════
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+
+      - name: Validate server syntax
+        run: cd backend && node --check server.js
+        env:
+          # Inject the git commit SHA as DEPLOY_ID so the running server's
+          # Skew Protection ID is stable and traceable to a specific commit.
+          DEPLOY_ID: ${{ github.sha }}
