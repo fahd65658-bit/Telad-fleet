@@ -36,6 +36,11 @@
     { "source": "/api/alerts",                 "destination": "/api/index.js" },
     { "source": "/api/fleet",                  "destination": "/api/index.js" },
     { "source": "/api/(.*)",                   "destination": "/api/index.js" },
+    { "source": "/css/:path*",                 "destination": "/frontend/css/:path*" },
+    { "source": "/js/:path*",                  "destination": "/frontend/js/:path*" },
+    { "source": "/vendor/:path*",              "destination": "/frontend/vendor/:path*" },
+    { "source": "/assets/:path*",              "destination": "/frontend/assets/:path*" },
+    { "source": "/manifest.json",              "destination": "/frontend/manifest.json" },
     { "source": "/(.*)",                       "destination": "/frontend/index.html" }
   ],
   "headers": [

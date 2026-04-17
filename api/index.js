@@ -128,9 +128,12 @@ function sanitizeUser(user) {
 function normalizeRequest(urlString) {
   const url = new URL(urlString, 'https://fna.sa');
   let path = url.pathname;
-  if (path === '/healthz' || path === '/api/health') path = '/health';
-  else if (path === '/api') path = '/';
+  // Strip /api prefix (Vercel rewrites /api/* → this function)
+  if (path === '/healthz' || path === '/api/health' || path === '/health') path = '/health';
+  else if (path === '/api' || path === '/api/') path = '/';
   else if (path.startsWith('/api/')) path = path.slice(4) || '/';
+  // Ensure leading slash
+  if (!path.startsWith('/')) path = '/' + path;
   return { url, path };
 }
 
@@ -194,27 +197,37 @@ function refreshState() {
 }
 
 function buildDashboardSummary() {
-  const openAccidents   = state.accidents.filter(a => a.status === 'open').length;
+  const openAccidents    = state.accidents.filter(a => a.status === 'open').length;
   const unpaidViolations = state.violations.filter(v => v.status === 'unpaid').length;
-  const pendingMaint    = state.maintenance.filter(m => m.status === 'pending').length;
-  const pendingAppts    = state.appointments.filter(a => a.status === 'pending').length;
-  const thisMonth       = new Date().toISOString().slice(0, 7);
-  const financialMonth  = state.financial
+  const pendingMaint     = state.maintenance.filter(m => m.status === 'pending').length;
+  const pendingAppts     = state.appointments.filter(a => a.status === 'pending').length;
+  const thisMonth        = new Date().toISOString().slice(0, 7);
+  const today            = new Date().toISOString().slice(0, 10);
+  const financialMonth   = state.financial
     .filter(f => f.date && f.date.startsWith(thisMonth))
     .reduce((s, f) => s + (Number(f.amount) || 0), 0);
+  const activeVehicles   = state.vehicles.filter(v => v.status === 'active').length;
+  const handovers        = state.handovers || [];
+  const employees        = state.employees || [];
 
   return {
-    vehicles:        state.vehicles.length,
-    drivers:         state.drivers.length,
-    employees:       new Set(state.vehicles.map(v => v.driver)).size,
-    maintenance:     pendingMaint,
-    appointments:    pendingAppts,
-    cities:          new Set(state.vehicles.map(v => v.city)).size,
-    projects:        3,
-    regions:         state.regions.length,
-    accidents:       openAccidents,
-    violationsUnpaid: unpaidViolations,
-    financialMonth:  financialMonth.toFixed(2),
+    vehicles:          state.vehicles.length,
+    activeVehicles,
+    drivers:           state.drivers.length,
+    employees:         employees.length || new Set(state.vehicles.map(v => v.driver)).size,
+    maintenance:       pendingMaint,
+    appointments:      pendingAppts,
+    cities:            new Set(state.vehicles.map(v => v.city)).size,
+    projects:          3,
+    regions:           state.regions.length,
+    accidents:         openAccidents,
+    violationsUnpaid:  unpaidViolations,
+    financialMonth:    financialMonth.toFixed(2),
+    alerts:            state.alerts.length,
+    handoversToday:    handovers.filter(h => h.date && h.date.slice(0, 10) === today).length,
+    insuranceExpiring: state.vehicles.filter(v => v.insurance?.status === 'expiring').length,
+    inspectionExpired: state.vehicles.filter(v => v.inspection?.status === 'منتهي').length,
+    efficiency:        Math.round(activeVehicles / Math.max(state.vehicles.length, 1) * 100),
   };
 }
 

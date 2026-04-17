@@ -11,8 +11,10 @@ const API_BASE = (() => {
   const host = window.location.hostname;
   const override = new URLSearchParams(window.location.search).get('api');
   if (override) return override.replace(/\/$/, '');
-  if (host === 'localhost' || host === '127.0.0.1' || host === '') return 'http://localhost:3000';
-  return 'https://api.fna.sa';
+  // Local dev: backend runs on port 3000
+  if (host === 'localhost' || host === '127.0.0.1' || host === '') return 'http://localhost:3000/api';
+  // Vercel / any other host: API is same-origin under /api
+  return window.location.origin + '/api';
 })();
 
 // ─── Role definitions ────────────────────────────────────────────────────────
@@ -1361,9 +1363,25 @@ function connectRealtimeSocket() {
   if (_rtSocket || _rtConnecting || typeof io === 'undefined') return;
   const token = localStorage.getItem('telad_token');
   if (!token) return;
+
+  // Vercel is serverless — no persistent WebSocket support.
+  // Only attempt Socket.IO on localhost or self-hosted servers.
+  const host = window.location.hostname;
+  const isVercel = host.endsWith('.vercel.app') || host.endsWith('.now.sh');
+  if (isVercel) {
+    console.info('[RT] Vercel detected – real-time Socket.IO disabled, using REST polling');
+    _startRestPolling();
+    return;
+  }
+
+  // Socket.IO server is at the root, not under /api
+  const socketUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : window.location.origin;
+
   _rtConnecting = true;
   try {
-    _rtSocket = io(API_BASE, {
+    _rtSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -1484,6 +1502,35 @@ function _applyDashboardData(d) {
 // Disconnect on logout
 function _disconnectSocket() {
   if (_rtSocket) { _rtSocket.disconnect(); _rtSocket = null; }
+  if (_restPollTimer) { clearInterval(_restPollTimer); _restPollTimer = null; }
+}
+
+// REST polling fallback (for Vercel / serverless — no WebSocket)
+let _restPollTimer = null;
+let _lastPollEtag  = null;
+async function _startRestPolling() {
+  if (_restPollTimer) return;
+  _restPollTimer = setInterval(async () => {
+    try {
+      const token = localStorage.getItem('telad_token');
+      if (!token) return;
+      const dashRes = await apiFetch('/dashboard');
+      if (dashRes.ok) { const d = await dashRes.json(); _applyDashboardData(d); }
+
+      const posRes = await apiFetch('/gps/positions');
+      if (posRes.ok) {
+        const positions = await posRes.json();
+        if (Array.isArray(positions)) {
+          positions.forEach(p => {
+            if (p.lat && p.lng) {
+              _updateMapMarker(p.vehicleId, p.lat, p.lng, p.name);
+              _updateOpsMapMarker(p.vehicleId, p.lat, p.lng);
+            }
+          });
+        }
+      }
+    } catch { /* silent */ }
+  }, 15000);  // poll every 15 s
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
