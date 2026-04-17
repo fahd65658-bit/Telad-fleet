@@ -3,6 +3,8 @@ name: Vercel production disabled
 on:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   disabled:
     name: Explain production backend

@@ -47,7 +47,7 @@ telad-fleet/
 ## التشغيل المحلي
 
 ```bash
-cd /home/runner/work/Telad-fleet/Telad-fleet
+cd /path/to/telad-fleet
 npm install
 cp .env.example .env
 npm start
@@ -61,7 +61,7 @@ npm start
 ## أوامر التحقق
 
 ```bash
-cd /home/runner/work/Telad-fleet/Telad-fleet
+cd /path/to/telad-fleet
 npm run lint
 npm run build
 npm test
@@ -89,7 +89,7 @@ sudo bash deployment/deploy.sh
 ## Docker
 
 ```bash
-cd /home/runner/work/Telad-fleet/Telad-fleet
+cd /path/to/telad-fleet
 cp .env.example .env
 docker compose -f deployment/docker-compose.yml up -d
 ```
@@ -147,4 +147,3 @@ pm2 start telad-fleet
 1. نقل `lib/db.js` إلى PostgreSQL فعليًا
 2. تنفيذ migration للبيانات الحالية
 3. إضافة مراقبة وتنبيهات خارجية
-

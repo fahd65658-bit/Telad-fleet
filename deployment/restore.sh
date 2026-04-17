@@ -26,7 +26,7 @@ STAGING="$(mktemp -d)"
 
 tar -xzf "$BACKUP_FILE" -C "$STAGING"
 
-if find "$DATA_DIR" -mindepth 1 -maxdepth 1 | read -r _; then
+if [[ -n "$(find "$DATA_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
   mkdir -p "$SNAPSHOT"
   cp -a "$DATA_DIR"/. "$SNAPSHOT"/
   find "$DATA_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +

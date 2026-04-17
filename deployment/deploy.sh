@@ -43,7 +43,7 @@ echo ""
 # ─── 1. System packages ──────────────────────────────────────────────────────
 log "Updating system packages…"
 apt-get update -qq
-apt-get install -y -qq curl git nginx ufw
+apt-get install -y -qq curl git logrotate nginx ufw
 
 # ─── 2. Node.js 20 ───────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null || [[ "$(node -v | cut -d'v' -f2 | cut -d'.' -f1)" -lt 18 ]]; then
@@ -133,6 +133,17 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 0 2 * * * root DATA_DIR=$DATA_DIR BACKUP_DIR=$BACKUP_DIR /bin/bash $DEPLOY_DIR/deployment/backup.sh >> /var/log/telad-fleet-backup.log 2>&1
 EOF
 chmod 644 /etc/cron.d/telad-fleet-backup
+
+cat >/etc/logrotate.d/telad-fleet-backup <<'EOF'
+/var/log/telad-fleet-backup.log {
+  daily
+  rotate 14
+  compress
+  missingok
+  notifempty
+  copytruncate
+}
+EOF
 
 # ─── Done ────────────────────────────────────────────────────────────────────
 echo ""

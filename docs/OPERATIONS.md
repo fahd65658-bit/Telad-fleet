@@ -52,11 +52,13 @@ Manual restore:
 
 ```bash
 pm2 stop telad-fleet
+ls -lh /var/backups/telad-fleet/
 DATA_DIR=/var/www/telad-fleet/data \
 bash /var/www/telad-fleet/deployment/restore.sh /var/backups/telad-fleet/telad-fleet-data-YYYYMMDDTHHMMSSZ.tar.gz
 pm2 start telad-fleet
 ```
 
+استبدل `YYYYMMDDTHHMMSSZ` باسم الملف الحقيقي من مجلد النسخ الاحتياطية.
 `restore.sh` keeps a snapshot of the previous data directory before replacing it.
 
 ## Post-restore verification
