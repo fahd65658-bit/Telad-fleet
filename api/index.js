@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const crypto = require('crypto');
 const pathModule = require('path');
 
 let generateFleetAnswer;
@@ -17,11 +18,34 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const DEFAULT_ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fna.sa';
 const HAS_ADMIN_PASSWORD = Boolean(process.env.ADMIN_PASSWORD);
-const ADMIN_PASSWORD_VALUE = process.env.ADMIN_PASSWORD || 'telad2024';
+const RUNTIME_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || `dev-${crypto.randomBytes(12).toString('base64url')}`;
+const ADMIN_PASSWORD_VALUE = RUNTIME_ADMIN_PASSWORD;
 const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
+const GPS_API_KEY = process.env.GPS_API_KEY || '';
+const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
+const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
+const STATIC_FILE_CACHE = new Map();
+const STATIC_MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+};
+let loggedDevAdminPassword = false;
+let loggedFallbackAuthWarning = false;
+let loggedGpsKeyDevWarning = false;
 
 if (IS_PROD && !HAS_ADMIN_PASSWORD) {
   throw new Error('[CONFIG] ADMIN_PASSWORD is required in production.');
+}
+if (IS_PROD && !authModule && !FALLBACK_TOKEN_SECRET) {
+  throw new Error('[CONFIG] lib/auth is unavailable and AUTH_SECRET (or JWT_SECRET) is required in production.');
 }
 
 const STATUS_LABELS = {
@@ -111,13 +135,84 @@ function sendJson(res, statusCode, payload) {
   res.end(body);
 }
 
-function sendFile(res, fileName, contentType) {
+function resolveContentType(filePath, contentType) {
+  if (contentType) return contentType;
+  return STATIC_MIME_TYPES[pathModule.extname(filePath).toLowerCase()] || 'application/octet-stream';
+}
+
+async function sendFile(res, fileName, contentType) {
   const filePath = pathModule.join(BASE_DIR, fileName);
-  if (!fs.existsSync(filePath)) return sendJson(res, 404, { error: 'File not found', file: fileName });
-  res.statusCode = 200;
-  applyCommonHeaders(res);
-  res.setHeader('Content-Type', contentType);
-  res.end(fs.readFileSync(filePath));
+  try {
+    const stat = await fs.promises.stat(filePath);
+    if (!stat.isFile()) return sendJson(res, 404, { error: 'File not found', file: fileName });
+    const cached = STATIC_FILE_CACHE.get(filePath);
+    const mime = resolveContentType(filePath, contentType);
+    let data;
+    if (cached && cached.mtimeMs === stat.mtimeMs) {
+      data = cached.data;
+    } else {
+      data = await fs.promises.readFile(filePath);
+      STATIC_FILE_CACHE.set(filePath, { mtimeMs: stat.mtimeMs, data });
+    }
+    res.statusCode = 200;
+    applyCommonHeaders(res);
+    res.setHeader('Content-Type', mime);
+    return res.end(data);
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return sendJson(res, 404, { error: 'File not found', file: fileName });
+    return sendJson(res, 500, { error: 'File read error', file: fileName });
+  }
+}
+
+function issueFallbackToken(user) {
+  const payloadPart = Buffer.from(JSON.stringify({
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    issuedAt: Date.now(),
+  })).toString('base64url');
+  const signaturePart = crypto
+    .createHmac('sha256', FALLBACK_TOKEN_SECRET)
+    .update(payloadPart)
+    .digest('base64url');
+  return `${payloadPart}.${signaturePart}`;
+}
+
+function verifyFallbackToken(token) {
+  const [payloadPart, signaturePart] = String(token || '').split('.');
+  if (!payloadPart || !signaturePart || !FALLBACK_TOKEN_SECRET) return null;
+  const expected = crypto
+    .createHmac('sha256', FALLBACK_TOKEN_SECRET)
+    .update(payloadPart)
+    .digest('base64url');
+  const signatureBuf = Buffer.from(signaturePart);
+  const expectedBuf = Buffer.from(expected);
+  if (signatureBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(signatureBuf, expectedBuf)) return null;
+  try {
+    return JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function pickAllowedFields(source, allowedFields) {
+  const updates = {};
+  if (!source || typeof source !== 'object') return updates;
+  for (const field of allowedFields) {
+    if (Object.prototype.hasOwnProperty.call(source, field)) updates[field] = source[field];
+  }
+  return updates;
+}
+
+function warnDevConfig() {
+  if (!IS_PROD && !HAS_ADMIN_PASSWORD && !loggedDevAdminPassword) {
+    loggedDevAdminPassword = true;
+    console.warn(`[SECURITY] ADMIN_PASSWORD is not set. Development admin password (temporary): ${ADMIN_PASSWORD_VALUE}`);
+  }
+  if (!IS_PROD && !authModule && !AUTH_FALLBACK_SECRET && !loggedFallbackAuthWarning) {
+    loggedFallbackAuthWarning = true;
+    console.warn('[SECURITY] AUTH_SECRET/JWT_SECRET is not set. Using ephemeral token signing key (dev-only).');
+  }
 }
 
 function sanitizeUser(user) {
@@ -153,7 +248,9 @@ function currentUser(req) {
       return user ? sanitizeUser(user) : null;
     } catch { return null; }
   }
-  const user = state.users.find(e => e.token === token && e.active);
+  const payload = verifyFallbackToken(token);
+  if (!payload) return null;
+  const user = state.users.find(e => e.id === payload.id && e.token === token && e.active);
   return user ? sanitizeUser(user) : null;
 }
 
@@ -166,11 +263,15 @@ function findRawUser(req) {
       return state.users.find(u => u.id === payload.id && u.active) || null;
     } catch { return null; }
   }
-  return state.users.find(e => e.token === token && e.active) || null;
+  const payload = verifyFallbackToken(token);
+  if (!payload) return null;
+  return state.users.find(e => e.id === payload.id && e.token === token && e.active) || null;
 }
 
 function issueToken(user) {
-  const token = Buffer.from(JSON.stringify({ id: user.id, username: user.username, role: user.role, issuedAt: Date.now() })).toString('base64url');
+  const token = (authModule && typeof authModule.issueTokens === 'function')
+    ? authModule.issueTokens(user).accessToken
+    : issueFallbackToken(user);
   user.token = token;
   return token;
 }
@@ -337,6 +438,7 @@ function matchPath(pattern, path) {
 // ─── MAIN HANDLER ──────────────────────────────────────────────────────────
 
 module.exports = async (req, res) => {
+  warnDevConfig();
   if (req.method === 'OPTIONS') return sendJson(res, 204, {});
 
   const { url, path } = normalizeRequest(req.url || '/');
@@ -348,12 +450,7 @@ module.exports = async (req, res) => {
     if (path === '/styles.css')  return sendFile(res, 'styles.css', 'text/css; charset=utf-8');
     if (path === '/app.js')      return sendFile(res, 'app.js', 'application/javascript; charset=utf-8');
     if (path.startsWith('/css/') || path.startsWith('/js/') || path.startsWith('/vendor/') || path.startsWith('/assets/')) {
-      const mime = path.endsWith('.css') ? 'text/css; charset=utf-8'
-                 : path.endsWith('.js')  ? 'application/javascript; charset=utf-8'
-                 : path.endsWith('.svg') ? 'image/svg+xml'
-                 : path.endsWith('.png') ? 'image/png'
-                 : path.endsWith('.json') ? 'application/json; charset=utf-8'
-                 : 'application/octet-stream';
+      const mime = resolveContentType(path, null);
       return sendFile(res, 'frontend' + path, mime);
     }
     if (path === '/manifest.json') return sendFile(res, 'frontend/manifest.json', 'application/json; charset=utf-8');
@@ -489,7 +586,13 @@ module.exports = async (req, res) => {
       const v = state.vehicles.find(x => x.id === pm.id);
       if (!v) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
       const body = await readBody(req);
-      Object.assign(v, body);
+      const updates = pickAllowedFields(body, [
+        'name', 'plate', 'city', 'driver', 'status', 'location',
+        'lat', 'lng', 'gpsUpdatedAt', 'type', 'brand', 'model', 'year',
+        'vin', 'color', 'odometer', 'fuelType', 'fuelLevel',
+        'lastServiceAt', 'nextServiceAt', 'insurance', 'inspection', 'notes',
+      ]);
+      Object.assign(v, updates);
       addLog(`تعديل مركبة ${v.name}`, cu.username);
       return sendJson(res, 200, v);
     }
@@ -939,7 +1042,12 @@ module.exports = async (req, res) => {
       if (method === 'PUT') {
         if (!['admin','supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
         const body = await readBody(req);
-        Object.assign(emp, body);
+        const updates = pickAllowedFields(body, [
+          'name', 'phone', 'email', 'status', 'department', 'jobTitle',
+          'position', 'vehicleId', 'licenseNo', 'nationalId', 'iqamaNo',
+          'hireDate', 'notes',
+        ]);
+        Object.assign(emp, updates);
         return sendJson(res, 200, emp);
       }
       if (method === 'DELETE') {
@@ -962,7 +1070,14 @@ module.exports = async (req, res) => {
     const body = await readBody(req);
     // Simple API-key or token auth for GPS devices
     const key = req.headers['x-gps-key'] || body.key;
-    if (key && key !== (process.env.GPS_API_KEY || key)) return sendJson(res, 401, { error: 'مفتاح GPS غير صالح' });
+    if (GPS_API_KEY) {
+      if (key !== GPS_API_KEY) return sendJson(res, 401, { error: 'مفتاح GPS غير صالح' });
+    } else if (IS_PROD) {
+      return sendJson(res, 500, { error: 'GPS_API_KEY غير مضبوط في بيئة الإنتاج' });
+    } else if (!loggedGpsKeyDevWarning) {
+      loggedGpsKeyDevWarning = true;
+      console.warn('[SECURITY] GPS_API_KEY is not set. /gps/push is allowed only for development mode.');
+    }
     const { vehicleId, lat, lng } = body;
     if (!vehicleId || lat == null || lng == null) return sendJson(res, 400, { error: 'vehicleId, lat, lng مطلوبة' });
     const v = state.vehicles.find(x => x.id === vehicleId);

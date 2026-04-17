@@ -86,6 +86,12 @@ sudo bash deployment/deploy.sh
 - `DATA_DIR`
 - `BACKUP_DIR`
 
+### ملاحظات أمان مهمة لملف `api/index.js` (مسار Vercel legacy)
+
+- `ADMIN_PASSWORD` إلزامية في `production`.
+- `GPS_API_KEY` يجب ضبطها في `production` لنقطة `POST /api/gps/push` (بدونها يتم رفض الطلب).
+- عند استخدام fallback للمصادقة (في حال عدم توفر `lib/auth`)، يجب ضبط `AUTH_SECRET` (أو `JWT_SECRET`) لتوقيع/تحقق التوكن بشكل آمن.
+
 ## Docker
 
 ```bash
