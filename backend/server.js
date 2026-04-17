@@ -37,6 +37,103 @@ if (IS_PROD && !process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
 
+function buildDefaultUsers() {
+  return [
+    {
+      id: 1,
+      name: 'مدير النظام',
+      username: 'F',
+      email: 'admin@fna.sa',
+      passwordHash: bcrypt.hashSync('0241', 10),
+      role: 'admin',
+      active: true,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+}
+
+function buildDemoCollections() {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const today = nowIso.slice(0, 10);
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 3).toISOString().slice(0, 10);
+
+  return {
+    cities: [
+      { id: 'city-riyadh', name: 'الرياض', createdAt: nowIso },
+      { id: 'city-jeddah', name: 'جدة', createdAt: nowIso },
+      { id: 'city-dammam', name: 'الدمام', createdAt: nowIso },
+    ],
+    projects: [
+      { id: 'proj-north', name: 'مشروع النقل الشمالي', createdAt: nowIso },
+      { id: 'proj-west', name: 'مشروع الدعم الغربي', createdAt: nowIso },
+      { id: 'proj-east', name: 'مشروع التوزيع الشرقي', createdAt: nowIso },
+    ],
+    vehicles: [
+      { id: 'veh-102', name: 'TLD-102', plate: 'TLD-102', city: 'الرياض', driver: 'أحمد سالم', status: 'active', model: 'Toyota Hilux', year: 2024, createdAt: nowIso },
+      { id: 'veh-118', name: 'TLD-118', plate: 'TLD-118', city: 'جدة', driver: 'سارة علي', status: 'active', model: 'Ford Transit', year: 2023, createdAt: nowIso },
+      { id: 'veh-204', name: 'TLD-204', plate: 'TLD-204', city: 'الدمام', driver: 'خالد حسن', status: 'maintenance', model: 'Isuzu NPR', year: 2022, createdAt: nowIso },
+      { id: 'veh-221', name: 'TLD-221', plate: 'TLD-221', city: 'المدينة', driver: 'منى فهد', status: 'active', model: 'Hyundai H350', year: 2024, createdAt: nowIso },
+    ],
+    employees: [
+      { id: 'emp-ops-1', name: 'محمد راشد', department: 'العمليات', createdAt: nowIso },
+      { id: 'emp-ops-2', name: 'ليان فهد', department: 'الدعم', createdAt: nowIso },
+      { id: 'emp-fin-1', name: 'عبدالله خالد', department: 'المالية', createdAt: nowIso },
+      { id: 'emp-maint-1', name: 'ريم سعد', department: 'الصيانة', createdAt: nowIso },
+    ],
+    drivers: [
+      { id: 'drv-1', name: 'أحمد سالم', phone: '0500000001', licenseNo: 'DL-1001', licenseExpiry: nextMonth, vehicleId: 'veh-102', status: 'active', createdAt: nowIso },
+      { id: 'drv-2', name: 'سارة علي', phone: '0500000002', licenseNo: 'DL-1002', licenseExpiry: nextMonth, vehicleId: 'veh-118', status: 'active', createdAt: nowIso },
+      { id: 'drv-3', name: 'خالد حسن', phone: '0500000003', licenseNo: 'DL-1003', licenseExpiry: nextMonth, vehicleId: 'veh-204', status: 'active', createdAt: nowIso },
+      { id: 'drv-4', name: 'منى فهد', phone: '0500000004', licenseNo: 'DL-1004', licenseExpiry: nextMonth, vehicleId: 'veh-221', status: 'active', createdAt: nowIso },
+    ],
+    maintenanceJobs: [
+      { id: 'mnt-1', vehicleId: 'veh-204', type: 'فحص دوري', description: 'فحص كامل لنظام الفرامل والزيوت', scheduledDate: today, cost: 1250, status: 'pending', createdAt: nowIso },
+      { id: 'mnt-2', vehicleId: 'veh-118', type: 'تغيير إطارات', description: 'استبدال إطارين أماميين', scheduledDate: lastWeek, cost: 980, status: 'completed', createdAt: nowIso },
+    ],
+    appointments: [
+      { id: 'appt-1', vehicleId: 'veh-102', type: 'تجديد استمارة', scheduledAt: nextWeek, notes: 'مراجعة فرع الرياض', status: 'pending', createdAt: nowIso },
+      { id: 'appt-2', vehicleId: 'veh-221', type: 'فحص هيئة النقل', scheduledAt: nextWeek, notes: 'إحضار ملف المركبة', status: 'confirmed', createdAt: nowIso },
+    ],
+    regions: [
+      { id: 'reg-central', name: 'المنطقة الوسطى', description: 'تغطية عمليات الرياض وما حولها', createdAt: nowIso },
+      { id: 'reg-western', name: 'المنطقة الغربية', description: 'تشغيل جدة ومكة والمدينة', createdAt: nowIso },
+    ],
+    reports: [
+      { id: 'rep-1', title: 'ملخص جاهزية الأسطول', type: 'تشغيلي', createdBy: 'system', createdAt: nowIso },
+    ],
+    notifications: [],
+    auditLogs: [
+      { id: 'audit-bootstrap', action: 'تهيئة بيانات تجريبية للنظام', user: 'system', time: nowIso },
+    ],
+    accidents: [
+      { id: 'acc-1', vehicleId: 'veh-204', date: today, location: 'الدمام', description: 'احتكاك بسيط أثناء الوقوف', injuriesCount: 0, damageAmount: 1500, status: 'open', createdAt: nowIso },
+    ],
+    violations: [
+      { id: 'vio-1', vehicleId: 'veh-102', date: today, type: 'سرعة', amount: 300, description: 'تجاوز السرعة المسموحة', status: 'unpaid', createdAt: nowIso },
+      { id: 'vio-2', vehicleId: 'veh-118', date: lastWeek, type: 'موقف', amount: 150, description: 'وقوف في مكان ممنوع', status: 'paid', createdAt: nowIso },
+    ],
+    financialItems: [
+      { id: 'fin-1', type: 'fuel', amount: 850, description: 'تعبئة وقود أسبوعية', vehicleId: 'veh-102', date: currentMonthDate, receiptNo: 'RCPT-1001', createdAt: nowIso },
+      { id: 'fin-2', type: 'maintenance', amount: 1250, description: 'فحص وصيانة دورية', vehicleId: 'veh-204', date: currentMonthDate, receiptNo: 'RCPT-1002', createdAt: nowIso },
+      { id: 'fin-3', type: 'salary', amount: 4200, description: 'بدل تشغيل السائقين', vehicleId: null, date: currentMonthDate, receiptNo: 'RCPT-1003', createdAt: nowIso },
+    ],
+    devRequests: [],
+  };
+}
+
+const DEMO_COLLECTIONS = buildDemoCollections();
+
+function loadOrBootstrapCollection(name) {
+  if (hasCollectionFile(name)) {
+    return loadCollection(name);
+  }
+  return DEMO_COLLECTIONS[name] ? structuredClone(DEMO_COLLECTIONS[name]) : [];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // FILE PERSISTENCE
 // All in-memory collections are serialised to JSON files under DATA_DIR.
@@ -50,6 +147,10 @@ try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch { /* already exists *
 
 function dataFile(name) {
   return path.join(DATA_DIR, `${name}.json`);
+}
+
+function hasCollectionFile(name) {
+  return fs.existsSync(dataFile(name));
 }
 
 /** Load a JSON array from disk; return empty array if file does not exist. */
@@ -77,7 +178,11 @@ function saveCollection(name, data) {
 
 /** Persist all mutable collections to disk. Called on every mutation and on shutdown. */
 function persistAll() {
+  saveCollection('users',          users);
+  saveCollection('cities',         cities);
+  saveCollection('projects',       projects);
   saveCollection('vehicles',       vehicles);
+  saveCollection('employees',      employees);
   saveCollection('drivers',        drivers);
   saveCollection('maintenanceJobs',maintenanceJobs);
   saveCollection('appointments',   appointments);
@@ -173,18 +278,7 @@ const apiLimiter = rateLimit({
 // USERS  (in-memory store — swap for PostgreSQL in production)
 // Default super-admin: username=F  password=0241
 // ═══════════════════════════════════════════════════════════════════════════
-const users = [
-  {
-    id: 1,
-    name: 'مدير النظام',
-    username: 'F',
-    email: 'admin@fna.sa',
-    passwordHash: bcrypt.hashSync('0241', 10),
-    role: 'admin',   // admin | supervisor | operator | viewer
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-];
+let users = hasCollectionFile('users') ? loadCollection('users') : buildDefaultUsers();
 
 // Role permission levels
 const VALID_ROLES = ['admin', 'supervisor', 'operator', 'viewer'];
@@ -257,7 +351,7 @@ app.get('/health', (_req, res) => {
     system: 'TELAD FLEET',
     domain: 'fna.sa',
     timestamp: new Date().toISOString(),
-    version: '2.0.0',
+    version: '2.1.0',
     deployId: DEPLOY_ID,
   });
 });
@@ -541,22 +635,22 @@ app.post('/ai/query', supervisorUp, (req, res) => {
 // CRUD DATA  — loaded from JSON files on startup, persisted on every write
 // Replace with PostgreSQL when scaling beyond a single process.
 // ═══════════════════════════════════════════════════════════════════════════
-let cities        = [];
-let projects      = [];
-let vehicles      = loadCollection('vehicles');
-let employees     = [];
-let drivers       = loadCollection('drivers');
-let maintenanceJobs = loadCollection('maintenanceJobs');
-let appointments  = loadCollection('appointments');
-let regions       = loadCollection('regions');
-let reports       = loadCollection('reports');
-let notifications = loadCollection('notifications');
-let auditLogs     = loadCollection('auditLogs');
-let accidents     = loadCollection('accidents');
-let violations    = loadCollection('violations');
-let financialItems = loadCollection('financialItems');
+let cities         = loadOrBootstrapCollection('cities');
+let projects       = loadOrBootstrapCollection('projects');
+let vehicles       = loadOrBootstrapCollection('vehicles');
+let employees      = loadOrBootstrapCollection('employees');
+let drivers        = loadOrBootstrapCollection('drivers');
+let maintenanceJobs = loadOrBootstrapCollection('maintenanceJobs');
+let appointments   = loadOrBootstrapCollection('appointments');
+let regions        = loadOrBootstrapCollection('regions');
+let reports        = loadOrBootstrapCollection('reports');
+let notifications  = loadOrBootstrapCollection('notifications');
+let auditLogs      = loadOrBootstrapCollection('auditLogs');
+let accidents      = loadOrBootstrapCollection('accidents');
+let violations     = loadOrBootstrapCollection('violations');
+let financialItems = loadOrBootstrapCollection('financialItems');
 
-let devRequests   = loadCollection('devRequests');
+let devRequests    = loadOrBootstrapCollection('devRequests');
 
 function audit(action, username) {
   auditLogs.push({
