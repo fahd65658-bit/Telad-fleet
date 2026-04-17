@@ -64,6 +64,9 @@
       <a class="nav-link" data-section="vehicles"    onclick="navigateTo('vehicles')">
         <span class="nav-icon">🚗</span> المركبات
       </a>
+      <a class="nav-link" data-section="vehicle-condition" onclick="navigateTo('vehicle-condition')">
+        <span class="nav-icon">🔍</span> حالة المركبات
+      </a>
       <a class="nav-link" data-section="maintenance" onclick="navigateTo('maintenance')">
         <span class="nav-icon">🔧</span> الصيانة
       </a>
@@ -242,9 +245,188 @@
       </table>
     </div>
 
+    <!-- ── حالة المركبات ─────────────────────────────── -->
+    <div id="sec-vehicle-condition" class="section" style="display:none">
+      <h2 class="sec-title">🔍 حالة المركبات</h2>
+
+      <!-- Tabs -->
+      <div class="vc-tabs">
+        <button class="vc-tab active" data-tab="delivery" onclick="vcShowTab('delivery')">🚗 تسليم</button>
+        <button class="vc-tab" data-tab="receipt"  onclick="vcShowTab('receipt')">📋 استلام</button>
+        <button class="vc-tab" data-tab="history"  onclick="vcShowTab('history')">📜 السجل</button>
+      </div>
+
+      <!-- ── تسليم ── -->
+      <div id="vc-tab-delivery" class="vc-tab-content">
+        <form class="data-form" onsubmit="vcSubmitDelivery(event)">
+          <h3>نموذج تسليم مركبة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>رقم اللوحة <span style="color:#ef4444">*</span></label>
+              <input id="vc-d-plate" required placeholder="أ ب ج 1234">
+            </div>
+            <div class="form-group">
+              <label>اسم الموظف المسؤول</label>
+              <input id="vc-d-employee" placeholder="الاسم الكامل">
+            </div>
+            <div class="form-group">
+              <label>اسم السائق</label>
+              <input id="vc-d-driver" placeholder="اسم السائق">
+            </div>
+            <div class="form-group">
+              <label>قراءة العداد (كم)</label>
+              <input id="vc-d-mileage" type="number" min="0" placeholder="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>مستوى الوقود: <span id="vc-d-fuel-val">50</span>%</label>
+              <input id="vc-d-fuel" type="range" min="0" max="100" value="50"
+                     oninput="document.getElementById('vc-d-fuel-val').textContent=this.value"
+                     style="width:100%;accent-color:#c9a227">
+            </div>
+            <div class="form-group">
+              <label>حالة الإطارات</label>
+              <select id="vc-d-tires">
+                <option value="good">ممتازة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">سيئة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>مستوى الزيت</label>
+              <select id="vc-d-oil">
+                <option value="good">طبيعي</option>
+                <option value="low">منخفض</option>
+                <option value="change">يحتاج تغيير</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة البطارية</label>
+              <select id="vc-d-battery">
+                <option value="good">جيدة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">ضعيفة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة الزجاج</label>
+              <select id="vc-d-glass">
+                <option value="good">سليم</option>
+                <option value="cracked">متشقق</option>
+                <option value="broken">مكسور</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة الأضواء</label>
+              <select id="vc-d-lights">
+                <option value="good">تعمل</option>
+                <option value="partial">بعضها لا يعمل</option>
+                <option value="poor">معطّلة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة المرايا</label>
+              <select id="vc-d-mirrors">
+                <option value="good">سليمة</option>
+                <option value="damaged">تالفة</option>
+                <option value="missing">مفقودة</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>ملاحظات</label>
+            <textarea id="vc-d-notes" rows="3" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px;font-family:inherit;resize:vertical" placeholder="أي ملاحظات إضافية…"></textarea>
+          </div>
+
+          <!-- Photo grid -->
+          <h4 style="color:#c9a227;margin:20px 0 12px">📷 صور المركبة عند التسليم</h4>
+          <div class="vc-photo-grid" id="vc-delivery-photos"></div>
+
+          <p id="vc-delivery-error" class="error-msg" style="margin-top:12px"></p>
+          <button type="submit" class="btn-primary">✅ حفظ وتحليل</button>
+        </form>
+        <div id="vc-delivery-ai-result" style="margin-top:20px"></div>
+      </div>
+
+      <!-- ── استلام ── -->
+      <div id="vc-tab-receipt" class="vc-tab-content" style="display:none">
+        <form class="data-form" onsubmit="vcSubmitReceipt(event)">
+          <h3>نموذج استلام مركبة</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>رقم اللوحة <span style="color:#ef4444">*</span></label>
+              <input id="vc-r-plate" required placeholder="أ ب ج 1234">
+            </div>
+            <div class="form-group">
+              <label>اسم الموظف المستلِم</label>
+              <input id="vc-r-employee" placeholder="الاسم الكامل">
+            </div>
+            <div class="form-group">
+              <label>اسم السائق</label>
+              <input id="vc-r-driver" placeholder="اسم السائق">
+            </div>
+            <div class="form-group">
+              <label>قراءة العداد النهائية (كم)</label>
+              <input id="vc-r-finalmileage" type="number" min="0" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label>عدد أيام الاستخدام</label>
+              <input id="vc-r-daysused" type="number" min="0" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label>الحالة العامة عند الاستلام</label>
+              <select id="vc-r-condition">
+                <option value="good">ممتازة</option>
+                <option value="fair">متوسطة</option>
+                <option value="poor">سيئة</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>ملاحظات</label>
+            <textarea id="vc-r-notes" rows="3" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px;font-family:inherit;resize:vertical" placeholder="أي ملاحظات أو أضرار مكتشفة…"></textarea>
+          </div>
+
+          <!-- Photo grid -->
+          <h4 style="color:#c9a227;margin:20px 0 12px">📷 صور المركبة عند الاستلام</h4>
+          <div class="vc-photo-grid" id="vc-receipt-photos"></div>
+
+          <p id="vc-receipt-error" class="error-msg" style="margin-top:12px"></p>
+          <button type="submit" class="btn-primary">✅ حفظ وتحليل</button>
+        </form>
+        <div id="vc-receipt-ai-result" style="margin-top:20px"></div>
+      </div>
+
+      <!-- ── السجل ── -->
+      <div id="vc-tab-history" class="vc-tab-content" style="display:none">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <input id="vc-history-search" type="text" placeholder="🔍 بحث في السجل…"
+                 oninput="vcFilterHistory()"
+                 style="flex:1;min-width:200px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:9px 14px;font-family:inherit;font-size:14px">
+          <button class="btn-primary" style="margin-top:0" onclick="vcFetchReports()">🔄 تحديث</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>رقم اللوحة</th>
+              <th>النوع</th>
+              <th>السائق / الموظف</th>
+              <th>حالة AI</th>
+              <th>بواسطة</th>
+            </tr>
+          </thead>
+          <tbody id="vc-history-tbody">
+            <tr><td colspan="6" class="tbl-empty">اضغط تحديث لتحميل السجل</td></tr>
+          </tbody>
+        </table>
+        <div id="vc-history-compare" style="margin-top:16px"></div>
+      </div>
+    </div><!-- /#sec-vehicle-condition -->
+
     <!-- ── إدارة المستخدمين (admin only) ─────────────── -->
-    <div id="sec-users" class="section" style="display:none">
-      <h2 class="sec-title">إدارة المستخدمين والصلاحيات</h2>
+    <div id="sec-users" class="section" style="display:none">      <h2 class="sec-title">إدارة المستخدمين والصلاحيات</h2>
 
       <!-- Roles legend -->
       <div class="roles-legend">
@@ -312,6 +494,53 @@
 
 </div><!-- /#page-dashboard -->
 
+<!-- ═══════════════════════════════════ ANNOTATION MODAL ═══ -->
+<div id="vc-annotate-modal" class="vc-modal" style="display:none" onclick="if(event.target===this)vcAnnotClose()">
+  <div class="vc-modal-inner">
+    <div class="vc-canvas-toolbar">
+      <!-- Tools -->
+      <div class="vc-toolbar-group">
+        <button class="vc-tool-btn active" data-tool="pen"    onclick="vcSetTool('pen')"    title="قلم">✏️</button>
+        <button class="vc-tool-btn"        data-tool="rect"   onclick="vcSetTool('rect')"   title="مستطيل">⬜</button>
+        <button class="vc-tool-btn"        data-tool="text"   onclick="vcSetTool('text')"   title="نص">T</button>
+        <button class="vc-tool-btn"        data-tool="eraser" onclick="vcSetTool('eraser')" title="ممحاة">🧹</button>
+      </div>
+      <!-- Colors -->
+      <div class="vc-toolbar-group">
+        <button class="vc-color-btn active" data-color="#ef4444" onclick="vcSetColor('#ef4444')" style="background:#ef4444"></button>
+        <button class="vc-color-btn"        data-color="#eab308" onclick="vcSetColor('#eab308')" style="background:#eab308"></button>
+        <button class="vc-color-btn"        data-color="#22c55e" onclick="vcSetColor('#22c55e')" style="background:#22c55e"></button>
+        <button class="vc-color-btn"        data-color="#3b82f6" onclick="vcSetColor('#3b82f6')" style="background:#3b82f6"></button>
+        <button class="vc-color-btn"        data-color="#000000" onclick="vcSetColor('#000000')" style="background:#000000"></button>
+        <button class="vc-color-btn"        data-color="#ffffff" onclick="vcSetColor('#ffffff')" style="background:#ffffff;border:1px solid #475569"></button>
+      </div>
+      <!-- Text input (shown when text tool is active) -->
+      <div class="vc-toolbar-group" id="vc-text-input-group" style="display:none">
+        <input id="vc-annot-text-input" type="text" placeholder="اكتب نصاً ثم اضغط على الصورة"
+               style="background:#0f172a;border:1px solid #475569;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-family:inherit;font-size:13px;width:200px">
+      </div>
+      <!-- Actions -->
+      <div class="vc-toolbar-group">
+        <button class="vc-action-btn" onclick="vcAnnotUndo()">↩ تراجع</button>
+        <button class="vc-action-btn" onclick="vcAnnotClear()">🗑 مسح</button>
+        <button class="vc-action-btn vc-save-btn" onclick="vcAnnotSave()">💾 حفظ</button>
+        <button class="vc-action-btn" onclick="vcAnnotClose()">✕ إغلاق</button>
+      </div>
+    </div>
+    <div class="vc-canvas-wrap">
+      <canvas id="vc-annot-canvas"
+              onmousedown="vcAnnotMouseDown(event)"
+              onmousemove="vcAnnotMouseMove(event)"
+              onmouseup="vcAnnotMouseUp(event)"
+              onmouseleave="vcAnnotMouseUp(event)"
+              ontouchstart="vcAnnotMouseDown(event)"
+              ontouchmove="vcAnnotMouseMove(event)"
+              ontouchend="vcAnnotMouseUp(event)"></canvas>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
+<script src="js/vehicle-condition.js"></script>
 </body>
 </html>

@@ -421,3 +421,329 @@ body {
 
 .btn-warn   { background: #78350f; color: #fcd34d; }
 .btn-danger { background: #7f1d1d; color: #fca5a5; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VEHICLE CONDITION SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Tabs ──────────────────────────────────────────────────────────────── */
+.vc-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+  border-bottom: 2px solid #334155;
+  padding-bottom: 0;
+}
+
+.vc-tab {
+  padding: 10px 22px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .2s, border-color .2s;
+  margin-bottom: -2px;
+}
+
+.vc-tab:hover   { color: #e2e8f0; }
+.vc-tab.active  { color: #c9a227; border-bottom-color: #c9a227; }
+
+.vc-tab-content { display: block; }
+
+/* ─── Photo grid ────────────────────────────────────────────────────────── */
+.vc-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 700px) {
+  .vc-photo-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.vc-photo-slot {
+  background: #0f172a;
+  border: 2px dashed #334155;
+  border-radius: 10px;
+  min-height: 110px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+
+.vc-photo-slot:hover {
+  border-color: #c9a227;
+  background: #1a2540;
+}
+
+.vc-photo-slot-inner {
+  width: 100%;
+  height: 100%;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.vc-photo-icon  { font-size: 26px; }
+
+.vc-photo-label {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  font-weight: 600;
+}
+
+.vc-photo-thumb {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.vc-photo-overlay {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.vc-photo-slot:hover .vc-photo-overlay { opacity: 1; }
+
+.vc-annotate-btn {
+  background: rgba(0,0,0,.65);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  padding: 4px 7px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.vc-annotate-btn:hover { background: rgba(201,162,39,.85); }
+
+.vc-photo-label-over {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,.55);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 3px 0;
+}
+
+/* ─── Annotation modal ──────────────────────────────────────────────────── */
+.vc-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.88);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.vc-modal-inner {
+  background: #1e293b;
+  border-radius: 14px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 900px;
+  border: 1px solid #334155;
+}
+
+.vc-canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  align-items: center;
+}
+
+.vc-toolbar-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vc-tool-btn {
+  width: 36px; height: 36px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #e2e8f0;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.vc-tool-btn:hover  { background: #334155; }
+.vc-tool-btn.active { background: #c9a227; border-color: #c9a227; color: #000; }
+
+.vc-color-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform .15s;
+}
+
+.vc-color-btn:hover   { transform: scale(1.2); }
+.vc-color-btn.active  { border-color: #fff; transform: scale(1.15); }
+
+.vc-action-btn {
+  padding: 7px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+
+.vc-action-btn:hover  { background: #334155; }
+.vc-save-btn          { background: #c9a227 !important; color: #000 !important; font-weight: 700; }
+.vc-save-btn:hover    { opacity: .88; }
+
+.vc-canvas-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+  display: flex;
+  justify-content: center;
+  background: #0f172a;
+}
+
+#vc-annot-canvas {
+  max-width: 100%;
+  cursor: crosshair;
+  display: block;
+  touch-action: none;
+}
+
+/* ─── AI result card ────────────────────────────────────────────────────── */
+.vc-ai-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-top: 4px;
+}
+
+.vc-ai-card.cond-good { border-color: #22c55e; }
+.vc-ai-card.cond-fair { border-color: #eab308; }
+.vc-ai-card.cond-poor { border-color: #ef4444; }
+
+.vc-mock-notice {
+  background: #78350f;
+  color: #fcd34d;
+  border-radius: 7px;
+  padding: 8px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.vc-ai-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.vc-ai-score {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vc-ai-cost {
+  color: #c9a227;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.vc-ai-summary {
+  color: #cbd5e1;
+  font-size: 14px;
+  margin-bottom: 14px;
+  line-height: 1.7;
+}
+
+.vc-ai-damages, .vc-ai-rec {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.vc-ai-damages strong, .vc-ai-rec strong {
+  color: #e2e8f0;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.vc-ai-rec ul { padding-right: 20px; margin: 0; }
+.vc-ai-rec li { margin-bottom: 4px; }
+
+/* ─── Damage items ──────────────────────────────────────────────────────── */
+.vc-ai-damage-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #0f172a;
+  border-radius: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.vc-severity-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sev-low    { background: #14532d; color: #86efac; }
+.sev-medium { background: #713f12; color: #fde68a; }
+.sev-high   { background: #7f1d1d; color: #fca5a5; }
+
+/* ─── Condition badges ──────────────────────────────────────────────────── */
+.vc-condition-badge {
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.badge-good     { background: #14532d; color: #86efac; }
+.badge-fair     { background: #713f12; color: #fde68a; }
+.badge-poor     { background: #7f1d1d; color: #fca5a5; }
+.badge-delivery { background: #1e3a5f; color: #93c5fd; }
+.badge-receipt  { background: #312e81; color: #c4b5fd; }

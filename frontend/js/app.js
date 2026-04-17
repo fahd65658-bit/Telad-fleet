@@ -36,9 +36,9 @@ const ROLE_NAMES = {
 
 // Sections accessible per role
 const ROLE_SECTIONS = {
-  admin:      ['dashboard', 'map', 'vehicles', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users'],
-  supervisor: ['dashboard', 'map', 'vehicles', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai'],
-  operator:   ['dashboard', 'map', 'vehicles', 'maintenance'],
+  admin:      ['dashboard', 'map', 'vehicles', 'vehicle-condition', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai', 'logs', 'users'],
+  supervisor: ['dashboard', 'map', 'vehicles', 'vehicle-condition', 'maintenance', 'accidents', 'violations', 'financial', 'reports', 'ai'],
+  operator:   ['dashboard', 'map', 'vehicles', 'vehicle-condition', 'maintenance'],
   viewer:     ['dashboard', 'map'],
 };
 
@@ -172,6 +172,7 @@ function navigateTo(section) {
     vehicles:  loadVehicles,
     users:     loadUsers,
     logs:      loadLogs,
+    'vehicle-condition': vcLoadHistory,
   };
   if (loaders[section]) loaders[section]();
 }
