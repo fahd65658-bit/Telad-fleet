@@ -36,3 +36,17 @@ jobs:
           # Inject the git commit SHA as DEPLOY_ID so the running server's
           # Skew Protection ID is stable and traceable to a specific commit.
           DEPLOY_ID: ${{ github.sha }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Lint all server files
+        run: npm run lint
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Python tests
+        run: npm test
