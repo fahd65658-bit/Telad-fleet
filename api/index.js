@@ -4,6 +4,15 @@ const fs = require('fs');
 const pathModule = require('path');
 
 const BASE_DIR = pathModule.join(__dirname, '..');
+const IS_PROD = process.env.NODE_ENV === 'production';
+const DEFAULT_ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'F';
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fna.sa';
+const HAS_ADMIN_PASSWORD = Boolean(process.env.ADMIN_PASSWORD);
+const ADMIN_PASSWORD_VALUE = process.env.ADMIN_PASSWORD || 'change-me-local-dev';
+
+if (IS_PROD && !HAS_ADMIN_PASSWORD) {
+  throw new Error('[CONFIG] ADMIN_PASSWORD is required in production.');
+}
 
 const STATUS_LABELS = {
   active: 'نشطة',
@@ -20,9 +29,9 @@ function seedState() {
       {
         id: '1',
         name: 'مدير النظام',
-        username: 'F',
-        email: 'admin@fna.sa',
-        password: '0241',
+        username: DEFAULT_ADMIN_USERNAME,
+        email: DEFAULT_ADMIN_EMAIL,
+        password: ADMIN_PASSWORD_VALUE,
         role: 'admin',
         active: true,
         createdAt: now,
