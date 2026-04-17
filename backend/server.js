@@ -125,13 +125,12 @@ function buildDemoCollections() {
   };
 }
 
-const DEMO_COLLECTIONS = buildDemoCollections();
-
 function loadOrBootstrapCollection(name) {
   if (hasCollectionFile(name)) {
     return loadCollection(name);
   }
-  return DEMO_COLLECTIONS[name] ? structuredClone(DEMO_COLLECTIONS[name]) : [];
+  const demoCollections = buildDemoCollections();
+  return demoCollections[name] ? structuredClone(demoCollections[name]) : [];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
