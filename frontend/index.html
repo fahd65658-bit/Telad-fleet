@@ -47,6 +47,11 @@
     <p class="login-sub">نظام إدارة الأسطول المتكامل</p>
     <p class="login-domain">fna.sa</p>
 
+    <div class="login-mode-toggle">
+      <button type="button" class="login-mode-btn active" id="login-mode-admin" onclick="switchLoginMode('admin')">دخول الموظفين/المسؤولين</button>
+      <button type="button" class="login-mode-btn" id="login-mode-quick" onclick="switchLoginMode('quick')">دخول سريع</button>
+    </div>
+
     <form id="login-form" class="login-form" onsubmit="login(event)">
       <div class="form-group">
         <label>اسم المستخدم</label>
@@ -60,8 +65,67 @@
       <button type="submit" class="btn-login" id="btn-login">تسجيل الدخول</button>
     </form>
 
+    <form id="quick-login-form" class="login-form" style="display:none" onsubmit="quickAccessLogin(event)">
+      <div class="form-group">
+        <label>رقم الهوية الوطنية</label>
+        <input id="inp-quick-national-id" type="text" inputmode="numeric" required>
+      </div>
+      <div class="form-group">
+        <label>رقم اللوحة</label>
+        <input id="inp-quick-plate" type="text" required>
+      </div>
+      <p id="quick-login-error" class="error-msg"></p>
+      <button type="submit" class="btn-login" id="btn-quick-login">دخول سريع إلى ملف المركبة</button>
+    </form>
+
   </div>
 </div><!-- /#page-login -->
+
+<!-- ═════════════════════════════════════════════════ QUICK ACCESS PAGE ═══ -->
+<div id="page-quick-access" style="display:none" class="quick-page-wrap">
+  <div class="quick-page-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <h2 style="margin:0">ملف مركبة (دخول سريع)</h2>
+      <button class="btn-secondary" onclick="quickAccessLogout()">تسجيل الخروج</button>
+    </div>
+
+    <div class="profile-grid" style="margin-top:14px">
+      <div class="pinfo-block"><div class="pinfo-label">اسم مستخدم المركبة</div><div class="pinfo-val" id="qa-user-name">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">رقم اللوحة</div><div class="pinfo-val" id="qa-plate">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">حالة التأمين</div><div class="pinfo-val" id="qa-insurance">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">حالة الفحص الدوري</div><div class="pinfo-val" id="qa-inspection">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">الحالة العامة</div><div class="pinfo-val" id="qa-status">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">هل توجد ملاحظات عامة؟</div><div class="pinfo-val" id="qa-has-notes">—</div></div>
+      <div class="pinfo-block"><div class="pinfo-label">هل توجد ملاحظات السائق؟</div><div class="pinfo-val" id="qa-has-driver-notes">—</div></div>
+    </div>
+
+    <form class="data-form" onsubmit="bookQuickMonthlyAppointment(event)">
+      <h3>حجز موعد الصيانة الشهرية</h3>
+      <div class="form-row">
+        <div class="form-group"><label>التاريخ</label><input id="qa-appointment-date" type="date" required></div>
+        <div class="form-group"><label>ملاحظات</label><input id="qa-appointment-notes"></div>
+      </div>
+      <button type="submit" class="btn-primary">📅 حجز الموعد</button>
+    </form>
+
+    <form class="data-form" onsubmit="uploadQuickAttachments(event)">
+      <h3>رفع المرفقات</h3>
+      <div class="form-row">
+        <div class="form-group"><label>صور المركبة (أربع جهات)</label><input id="qa-photo-sides" type="file" accept="image/*" multiple></div>
+        <div class="form-group"><label>صورة استيكر الزيت</label><input id="qa-oil-sticker" type="file" accept="image/*"></div>
+        <div class="form-group"><label>صورة ممشى المركبة</label><input id="qa-odometer" type="file" accept="image/*"></div>
+        <div class="form-group"><label>صور إضافية</label><input id="qa-extra-photos" type="file" accept="image/*" multiple></div>
+        <div class="form-group"><label>صور الاستلام/التسليم</label><input id="qa-handover-photos" type="file" accept="image/*" multiple></div>
+      </div>
+      <button type="submit" class="btn-primary">📤 رفع المرفقات</button>
+    </form>
+
+    <div class="data-form">
+      <h3>آخر صيانة للمركبة</h3>
+      <div id="qa-latest-maintenance" class="tbl-empty">جارٍ التحميل…</div>
+    </div>
+  </div>
+</div>
 
 
 <!-- ════════════════════════════════════════════════════ DASHBOARD PAGE ═══ -->
@@ -113,6 +177,12 @@
       </a>
       <a class="nav-link" data-section="employees"    onclick="navigateTo('employees')">
         <span class="nav-icon">👤</span> الموظفون
+      </a>
+      <a class="nav-link" data-section="projectStructure" onclick="navigateTo('projectStructure')">
+        <span class="nav-icon">🏙️</span> المدن والمشاريع
+      </a>
+      <a class="nav-link" data-section="formsApproved" onclick="navigateTo('formsApproved')">
+        <span class="nav-icon">🧾</span> النماذج المعتمدة
       </a>
       <a class="nav-link" data-section="reports"      onclick="navigateTo('reports')">
         <span class="nav-icon">📈</span> التقارير
@@ -836,6 +906,95 @@
         <tbody id="employees-tbody">
           <tr><td colspan="8" class="tbl-empty">جارٍ التحميل…</td></tr>
         </tbody>
+      </table>
+    </div>
+
+    <!-- ── المدن والمشاريع ───────────────────────────────── -->
+    <div id="sec-projectStructure" class="section" style="display:none">
+      <h2 class="sec-title">المدن والمشاريع والتحويلات</h2>
+
+      <form id="form-city" class="data-form" onsubmit="addCity(event)">
+        <h3>إضافة مدينة</h3>
+        <div class="form-row">
+          <div class="form-group"><label>اسم المدينة</label><input id="city-name" required></div>
+        </div>
+        <button type="submit" class="btn-primary">➕ إضافة مدينة</button>
+      </form>
+
+      <form id="form-project" class="data-form" onsubmit="addProject(event)">
+        <h3>إضافة مشروع مرتبط بمدينة</h3>
+        <div class="form-row">
+          <div class="form-group"><label>اسم المشروع</label><input id="project-name" required></div>
+          <div class="form-group"><label>المدينة</label><select id="project-city-id" required></select></div>
+        </div>
+        <button type="submit" class="btn-primary">➕ إضافة مشروع</button>
+      </form>
+
+      <div class="data-form">
+        <h3>ملف مركبات المشروع</h3>
+        <div class="form-row">
+          <div class="form-group"><label>اختر المشروع</label><select id="project-fleet-select" onchange="loadProjectFleet()"></select></div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>المركبة</th><th>اللوحة</th><th>الحالة</th><th>المستخدم المعيّن</th></tr></thead>
+          <tbody id="project-fleet-tbody"><tr><td colspan="4" class="tbl-empty">اختر مشروعاً للعرض</td></tr></tbody>
+        </table>
+      </div>
+
+      <form id="form-transfer-vehicle" class="data-form" onsubmit="transferVehicle(event)">
+        <h3>نقل مركبة بين المشاريع/المدن</h3>
+        <div class="form-row">
+          <div class="form-group"><label>المركبة</label><select id="transfer-vehicle-id" required></select></div>
+          <div class="form-group"><label>إلى مدينة</label><select id="transfer-vehicle-city-id"></select></div>
+          <div class="form-group"><label>إلى مشروع</label><select id="transfer-vehicle-project-id"></select></div>
+        </div>
+        <button type="submit" class="btn-primary">🔄 نقل المركبة</button>
+      </form>
+
+      <form id="form-transfer-employee" class="data-form" onsubmit="transferEmployee(event)">
+        <h3>نقل موظف بين المشاريع/المدن</h3>
+        <div class="form-row">
+          <div class="form-group"><label>الموظف</label><select id="transfer-employee-id" required></select></div>
+          <div class="form-group"><label>إلى مدينة</label><select id="transfer-employee-city-id"></select></div>
+          <div class="form-group"><label>إلى مشروع</label><select id="transfer-employee-project-id"></select></div>
+        </div>
+        <button type="submit" class="btn-primary">🔄 نقل الموظف</button>
+      </form>
+    </div>
+
+    <!-- ── النماذج المعتمدة ─────────────────────────────── -->
+    <div id="sec-formsApproved" class="section" style="display:none">
+      <h2 class="sec-title">النماذج المعتمدة</h2>
+
+      <form id="form-approved-form" class="data-form" onsubmit="createApprovedForm(event)">
+        <h3>إضافة نموذج وتسريع التعبئة</h3>
+        <div class="form-row">
+          <div class="form-group"><label>عنوان النموذج</label><input id="af-title" required></div>
+          <div class="form-group">
+            <label>نوع النموذج</label>
+            <select id="af-type">
+              <option value="delivery_receipt">نموذج استلام/تسليم</option>
+              <option value="work_order">أمر عمل</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="form-group"><label>الموظف</label><select id="af-employee-id" onchange="loadFormAutofill()"></select></div>
+          <div class="form-group"><label>المركبة</label><select id="af-vehicle-id" onchange="loadFormAutofill()"></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>بيانات الموظف (تعبئة تلقائية)</label><input id="af-employee-preview" readonly></div>
+          <div class="form-group"><label>بيانات المركبة (تعبئة تلقائية)</label><input id="af-vehicle-preview" readonly></div>
+        </div>
+        <div class="form-group">
+          <label>مرفقات النموذج (اختياري)</label>
+          <input id="af-attachments" type="file" multiple accept="image/*,.pdf">
+        </div>
+        <button type="submit" class="btn-primary">💾 حفظ النموذج المعتمد</button>
+      </form>
+
+      <table class="data-table">
+        <thead><tr><th>العنوان</th><th>النوع</th><th>الموظف</th><th>المركبة</th><th>الحالة</th><th>مرفقات</th><th>إجراءات</th></tr></thead>
+        <tbody id="approved-forms-tbody"><tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
       </table>
     </div>
 

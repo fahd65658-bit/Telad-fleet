@@ -27,14 +27,15 @@ const ROLE_NAMES = {
 
 // Sections accessible per role
 const ROLE_SECTIONS = {
-  admin:      ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'handovers', 'employees', 'reports', 'ai', 'logs', 'users', 'devRequests'],
-  supervisor: ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'handovers', 'employees', 'reports', 'ai'],
+  admin:      ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'handovers', 'employees', 'projectStructure', 'formsApproved', 'reports', 'ai', 'logs', 'users', 'devRequests'],
+  supervisor: ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'regions', 'accidents', 'violations', 'financial', 'handovers', 'employees', 'projectStructure', 'formsApproved', 'reports', 'ai'],
   operator:   ['dashboard', 'map', 'vehicles', 'drivers', 'maintenance', 'appointments', 'handovers'],
   viewer:     ['dashboard', 'map'],
 };
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let currentUser = null;
+let currentLoginMode = 'admin';
 
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // _serverDeployId: the X-Deploy-Id value received from the first API response.
@@ -109,6 +110,8 @@ const CMD_ITEMS = [
   { icon: '💰', label: 'العهد المالية',          section: 'financial' },
   { icon: '�', label: 'الاستلام والتسليم',        section: 'handovers' },
   { icon: '👤', label: 'الموظفون',                 section: 'employees' },
+  { icon: '🏙️', label: 'المدن والمشاريع',         section: 'projectStructure' },
+  { icon: '🧾', label: 'النماذج المعتمدة',          section: 'formsApproved' },
   { icon: '�📈', label: 'التقارير',              section: 'reports' },
   { icon: '🧠', label: 'الذكاء الاصطناعي',       section: 'ai' },
   { icon: '📜', label: 'سجل العمليات',          section: 'logs' },
@@ -291,6 +294,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   fetch(API_BASE + '/version').then(r => { _checkDeployId(r); }).catch(() => {});
 
   const token = localStorage.getItem('telad_token');
+  const quickToken = localStorage.getItem('telad_quick_token');
+  if (quickToken) {
+    try {
+      const ok = await loadQuickAccessProfile();
+      if (ok) return;
+    } catch (error) {
+      console.warn('Quick access session restore failed:', error);
+    }
+    localStorage.removeItem('telad_quick_token');
+  }
+
   if (token) {
     try {
       const res = await apiFetch('/auth/me');
@@ -314,10 +328,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 // ═══════════════════════════════════════════════════════════════════════════
 function renderLogin() {
   document.getElementById('page-login').style.display    = 'flex';
+  document.getElementById('page-quick-access').style.display = 'none';
   document.getElementById('page-dashboard').style.display = 'none';
   document.getElementById('login-error').textContent     = '';
+  const quickErr = document.getElementById('quick-login-error');
+  if (quickErr) quickErr.textContent = '';
   document.getElementById('inp-username').value          = '';
   document.getElementById('inp-password').value          = '';
+  switchLoginMode('admin');
 }
 
 function renderDashboard() {
@@ -384,10 +402,165 @@ async function login(e) {
   }
 }
 
+function switchLoginMode(mode) {
+  if (mode !== 'quick' && mode !== 'admin') mode = 'admin';
+  currentLoginMode = mode;
+  const adminBtn = document.getElementById('login-mode-admin');
+  const quickBtn = document.getElementById('login-mode-quick');
+  const adminForm = document.getElementById('login-form');
+  const quickForm = document.getElementById('quick-login-form');
+  if (adminBtn) adminBtn.classList.toggle('active', currentLoginMode === 'admin');
+  if (quickBtn) quickBtn.classList.toggle('active', currentLoginMode === 'quick');
+  if (adminForm) adminForm.style.display = currentLoginMode === 'admin' ? '' : 'none';
+  if (quickForm) quickForm.style.display = currentLoginMode === 'quick' ? '' : 'none';
+}
+
+function apiFetchQuick(path, options = {}) {
+  const token = localStorage.getItem('telad_quick_token');
+  return fetch(API_BASE + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+      ...(options.headers || {}),
+    },
+  }).then(res => {
+    _checkDeployId(res);
+    return res;
+  });
+}
+
+async function quickAccessLogin(e) {
+  e.preventDefault();
+  const nationalId = document.getElementById('inp-quick-national-id').value.trim();
+  const plate = document.getElementById('inp-quick-plate').value.trim();
+  const errEl = document.getElementById('quick-login-error');
+  const btn = document.getElementById('btn-quick-login');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'جارٍ التحقق…';
+  try {
+    const res = await fetch(`${API_BASE}/auth/quick-access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nationalId, plate }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'تعذّر الدخول السريع';
+      return;
+    }
+    localStorage.setItem('telad_quick_token', data.token);
+    await loadQuickAccessProfile();
+  } catch {
+    errEl.textContent = 'تعذّر الاتصال بالخادم';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'دخول سريع إلى ملف المركبة';
+  }
+}
+
+async function loadQuickAccessProfile() {
+  const res = await apiFetchQuick('/quick-access/vehicle-profile');
+  if (!res.ok) return false;
+  const data = await res.json();
+  const v = data.vehicle || {};
+  document.getElementById('page-login').style.display = 'none';
+  document.getElementById('page-dashboard').style.display = 'none';
+  document.getElementById('page-quick-access').style.display = 'block';
+  const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value ?? '—'; };
+  set('qa-user-name', v.vehicleUserName || '—');
+  set('qa-plate', v.vehiclePlate || '—');
+  set('qa-insurance', v.insuranceStatus || '—');
+  set('qa-inspection', v.inspectionStatus || '—');
+  set('qa-status', v.vehicleStatus || '—');
+  set('qa-has-notes', v.hasGeneralNotes ? 'نعم' : 'لا');
+  set('qa-has-driver-notes', v.hasDriverNotes ? 'نعم' : 'لا');
+  const maintEl = document.getElementById('qa-latest-maintenance');
+  if (maintEl) {
+    if (v.latestMaintenance) {
+      maintEl.textContent = formatQuickMaintenanceSummary(v.latestMaintenance);
+    } else {
+      maintEl.textContent = 'لا يوجد سجل صيانة';
+    }
+  }
+  return true;
+}
+
+function formatQuickMaintenanceSummary(maintenance) {
+  const type = maintenance?.type || 'صيانة';
+  const status = maintenance?.status || '—';
+  const date = maintenance?.scheduledDate || maintenance?.completedAt || '—';
+  return `${type} — ${status} — ${date}`;
+}
+
+async function quickAccessLogout() {
+  try { await apiFetchQuick('/auth/quick-logout', { method: 'POST', body: JSON.stringify({}) }); } catch { /**/ }
+  localStorage.removeItem('telad_quick_token');
+  renderLogin();
+}
+
+async function bookQuickMonthlyAppointment(event) {
+  event.preventDefault();
+  const scheduledAt = document.getElementById('qa-appointment-date').value;
+  const notes = document.getElementById('qa-appointment-notes').value.trim();
+  const res = await apiFetchQuick('/quick-access/monthly-appointment', {
+    method: 'POST',
+    body: JSON.stringify({ scheduledAt, notes }),
+  });
+  if (res.ok) showToast('✅ تم حجز موعد الصيانة');
+  else showToast('تعذر حجز الموعد', 'error');
+}
+
+async function _collectFileAsBase64(inputEl, type, filesOut, multiple = false) {
+  const files = inputEl?.files ? Array.from(inputEl.files) : [];
+  const selected = multiple ? files : files.slice(0, 1);
+  for (const file of selected) {
+    await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        filesOut.push({ type, name: file.name, data: e.target.result });
+        resolve();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
+async function uploadQuickAttachments(event) {
+  event.preventDefault();
+  const files = [];
+  const sidesInput = document.getElementById('qa-photo-sides');
+  const sides = sidesInput?.files ? Array.from(sidesInput.files) : [];
+  if (sides.length > 4) {
+    showToast('سيتم استخدام أول 4 صور فقط للجهات الأربع', 'info');
+  }
+  for (let i = 0; i < Math.min(sides.length, 4); i++) {
+    const sideType = ['front', 'back', 'left', 'right'][i];
+    await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        files.push({ type: sideType, name: sides[i].name, data: e.target.result });
+        resolve();
+      };
+      reader.readAsDataURL(sides[i]);
+    });
+  }
+  await _collectFileAsBase64(document.getElementById('qa-oil-sticker'), 'oil_sticker', files);
+  await _collectFileAsBase64(document.getElementById('qa-odometer'), 'odometer', files);
+  await _collectFileAsBase64(document.getElementById('qa-extra-photos'), 'additional', files, true);
+  await _collectFileAsBase64(document.getElementById('qa-handover-photos'), 'handover_receipt', files, true);
+
+  const res = await apiFetchQuick('/quick-access/attachments', { method: 'POST', body: JSON.stringify({ files }) });
+  if (res.ok) showToast('✅ تم رفع المرفقات');
+  else showToast('فشل رفع المرفقات', 'error');
+}
+
 function logout() {
   if (!confirm('هل تريد تسجيل الخروج؟')) return;
   _disconnectSocket();
   localStorage.removeItem('telad_token');
+  localStorage.removeItem('telad_quick_token');
   currentUser = null;
   renderLogin();
 }
@@ -432,6 +605,8 @@ function navigateTo(section) {
     devRequests:  loadDevRequests,
     handovers:    loadHandovers,
     employees:    loadEmployees,
+    projectStructure: loadProjectStructure,
+    formsApproved: loadApprovedForms,
   };
   if (loaders[section]) loaders[section]();
 
@@ -2160,6 +2335,247 @@ async function openEmployeeProfile(empId) {
           </tr>`).join('');
   } catch {
     document.getElementById('ep-name').textContent = 'تعذّر التحميل';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CITIES / PROJECTS / FORMS
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadProjectStructure() {
+  try {
+    const [citiesRes, projectsRes, vehiclesRes, employeesRes] = await Promise.all([
+      apiFetch('/cities'),
+      apiFetch('/projects'),
+      apiFetch('/vehicles'),
+      apiFetch('/employees'),
+    ]);
+    const cities = citiesRes.ok ? await citiesRes.json() : [];
+    const projects = projectsRes.ok ? await projectsRes.json() : [];
+    const vehicles = vehiclesRes.ok ? await vehiclesRes.json() : [];
+    const employees = employeesRes.ok ? await employeesRes.json() : [];
+    _fillSelect('project-city-id', cities.map(c => ({ value: c.id, label: c.name })), true);
+    _fillSelect('project-fleet-select', projects.map(p => ({ value: p.id, label: p.name })), true);
+    _fillSelect('transfer-vehicle-id', vehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), true);
+    _fillSelect('transfer-vehicle-city-id', cities.map(c => ({ value: c.id, label: c.name })), false);
+    _fillSelect('transfer-vehicle-project-id', projects.map(p => ({ value: p.id, label: p.name })), false);
+    _fillSelect('transfer-employee-id', employees.map(e => ({ value: e.id, label: `${e.name} – ${e.nationalId || '—'}` })), true);
+    _fillSelect('transfer-employee-city-id', cities.map(c => ({ value: c.id, label: c.name })), false);
+    _fillSelect('transfer-employee-project-id', projects.map(p => ({ value: p.id, label: p.name })), false);
+    await loadProjectFleet();
+  } catch {
+    const tbody = document.getElementById('project-fleet-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+  }
+}
+
+function _fillSelect(selectId, options, requiredChoice) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const placeholder = requiredChoice ? '<option value="">— اختر —</option>' : '<option value="">— بدون تغيير —</option>';
+  select.innerHTML = placeholder + options.map(o => `<option value="${escHtml(String(o.value))}">${escHtml(String(o.label))}</option>`).join('');
+}
+
+async function addCity(event) {
+  event.preventDefault();
+  const name = document.getElementById('city-name').value.trim();
+  const res = await apiFetch('/cities', { method: 'POST', body: JSON.stringify({ name }) });
+  if (res.ok) {
+    document.getElementById('city-name').value = '';
+    showToast('تمت إضافة المدينة');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل إضافة المدينة', 'error');
+  }
+}
+
+async function addProject(event) {
+  event.preventDefault();
+  const name = document.getElementById('project-name').value.trim();
+  const cityId = document.getElementById('project-city-id').value;
+  const res = await apiFetch('/projects', { method: 'POST', body: JSON.stringify({ name, cityId }) });
+  if (res.ok) {
+    document.getElementById('project-name').value = '';
+    showToast('تمت إضافة المشروع');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل إضافة المشروع', 'error');
+  }
+}
+
+async function loadProjectFleet() {
+  const projectId = document.getElementById('project-fleet-select')?.value;
+  const tbody = document.getElementById('project-fleet-tbody');
+  if (!tbody) return;
+  if (!projectId) {
+    tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">اختر مشروعاً للعرض</td></tr>';
+    return;
+  }
+  const res = await apiFetch(`/projects/${projectId}/fleet`);
+  if (!res.ok) {
+    tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل ملف المشروع</td></tr>';
+    return;
+  }
+  const data = await res.json();
+  const rows = data.vehicles || [];
+  tbody.innerHTML = rows.length === 0
+    ? '<tr><td colspan="4" class="tbl-empty">لا توجد مركبات في هذا المشروع</td></tr>'
+    : rows.map(v => `
+      <tr>
+        <td>${escHtml(v.name || '—')}</td>
+        <td>${escHtml(v.plate || '—')}</td>
+        <td>${escHtml(v.status || '—')}</td>
+        <td>${escHtml(v.assignedUser?.name || 'غير معيّن')}</td>
+      </tr>
+    `).join('');
+}
+
+async function transferVehicle(event) {
+  event.preventDefault();
+  const payload = {
+    vehicleId: document.getElementById('transfer-vehicle-id').value,
+    toCityId: document.getElementById('transfer-vehicle-city-id').value || null,
+    toProjectId: document.getElementById('transfer-vehicle-project-id').value || null,
+  };
+  const res = await apiFetch('/transfers/vehicle', { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok) {
+    showToast('تم نقل المركبة بنجاح');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل نقل المركبة', 'error');
+  }
+}
+
+async function transferEmployee(event) {
+  event.preventDefault();
+  const payload = {
+    employeeId: document.getElementById('transfer-employee-id').value,
+    toCityId: document.getElementById('transfer-employee-city-id').value || null,
+    toProjectId: document.getElementById('transfer-employee-project-id').value || null,
+  };
+  const res = await apiFetch('/transfers/employee', { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok) {
+    showToast('تم نقل الموظف بنجاح');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل نقل الموظف', 'error');
+  }
+}
+
+async function loadApprovedForms() {
+  const tbody = document.getElementById('approved-forms-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>';
+  try {
+    const [formsRes, employeesRes, vehiclesRes] = await Promise.all([
+      apiFetch('/forms/approved'),
+      apiFetch('/employees'),
+      apiFetch('/vehicles'),
+    ]);
+    const forms = formsRes.ok ? await formsRes.json() : [];
+    const employees = employeesRes.ok ? await employeesRes.json() : [];
+    const vehicles = vehiclesRes.ok ? await vehiclesRes.json() : [];
+    _fillSelect('af-employee-id', employees.map(e => ({ value: e.id, label: `${e.name} – ${e.nationalId || '—'}` })), false);
+    _fillSelect('af-vehicle-id', vehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), false);
+
+    const empById = new Map(employees.map(e => [e.id, e]));
+    const vehById = new Map(vehicles.map(v => [v.id, v]));
+    tbody.innerHTML = forms.length === 0
+      ? '<tr><td colspan="7" class="tbl-empty">لا توجد نماذج معتمدة</td></tr>'
+      : forms.map(f => `
+        <tr>
+          <td>${escHtml(f.title || '—')}</td>
+          <td>${escHtml(f.type || '—')}</td>
+          <td>${escHtml(empById.get(f.employeeId)?.name || '—')}</td>
+          <td>${escHtml(vehById.get(f.vehicleId)?.plate || '—')}</td>
+          <td>${escHtml(f.status || '—')}</td>
+          <td>${escHtml(String((f.attachments || []).length))}</td>
+          <td><button class="btn-sm btn-info" data-action="work-approved-form" data-id="${escHtml(String(f.id))}">تحديث</button></td>
+        </tr>
+      `).join('');
+    tbody.onclick = (event) => {
+      const button = event.target.closest('button[data-action="work-approved-form"]');
+      if (!button) return;
+      workOnApprovedForm(button.dataset.id);
+    };
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر التحميل</td></tr>';
+  }
+}
+
+async function loadFormAutofill() {
+  const employeeId = document.getElementById('af-employee-id')?.value || '';
+  const vehicleId = document.getElementById('af-vehicle-id')?.value || '';
+  if (!employeeId && !vehicleId) {
+    const empPreview = document.getElementById('af-employee-preview');
+    const vehPreview = document.getElementById('af-vehicle-preview');
+    if (empPreview) empPreview.value = '';
+    if (vehPreview) vehPreview.value = '';
+    return;
+  }
+  const res = await apiFetch(`/forms/autofill?employeeId=${encodeURIComponent(employeeId)}&vehicleId=${encodeURIComponent(vehicleId)}`);
+  if (!res.ok) return;
+  const data = await res.json();
+  const empPreview = document.getElementById('af-employee-preview');
+  const vehPreview = document.getElementById('af-vehicle-preview');
+  if (empPreview) empPreview.value = data.employee ? `${data.employee.name} — ${data.employee.nationalId}` : '';
+  if (vehPreview) vehPreview.value = data.vehicle ? `${data.vehicle.name} — ${data.vehicle.plate}` : '';
+}
+
+async function createApprovedForm(event) {
+  event.preventDefault();
+  const attachmentsInput = document.getElementById('af-attachments');
+  const files = attachmentsInput?.files ? Array.from(attachmentsInput.files) : [];
+  const attachments = [];
+  for (const file of files) {
+    await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        attachments.push({ name: file.name, data: e.target.result });
+        resolve();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const payload = {
+    title: document.getElementById('af-title').value.trim(),
+    type: document.getElementById('af-type').value,
+    employeeId: document.getElementById('af-employee-id').value || null,
+    vehicleId: document.getElementById('af-vehicle-id').value || null,
+    payload: {
+      employeePreview: document.getElementById('af-employee-preview').value,
+      vehiclePreview: document.getElementById('af-vehicle-preview').value,
+    },
+    attachments,
+  };
+  const res = await apiFetch('/forms/approved', { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok) {
+    document.getElementById('af-title').value = '';
+    document.getElementById('af-attachments').value = '';
+    showToast('تم حفظ النموذج المعتمد');
+    loadApprovedForms();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حفظ النموذج', 'error');
+  }
+}
+
+async function workOnApprovedForm(formId) {
+  const note = prompt('أدخل تحديث العمل على النموذج:');
+  if (note === null) return;
+  const res = await apiFetch(`/forms/approved/${encodeURIComponent(formId)}/work`, {
+    method: 'POST',
+    body: JSON.stringify({ payload: { lastWorkNote: note, updatedAt: new Date().toISOString() } }),
+  });
+  if (res.ok) {
+    showToast('تم تحديث النموذج');
+    loadApprovedForms();
+  } else {
+    showToast('فشل تحديث النموذج', 'error');
   }
 }
 
