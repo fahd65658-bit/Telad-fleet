@@ -3,6 +3,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const pathModule = require('path');
+const { isWithdrawalOperation } = require('../lib/financial');
 
 let generateFleetAnswer;
 try { generateFleetAnswer = require('../lib/ai-chat').generateFleetAnswer; } catch { generateFleetAnswer = null; }
@@ -834,6 +835,12 @@ module.exports = async (req, res) => {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
     return sendJson(res, 200, state.financial);
+  }
+
+  if (method === 'GET' && path === '/financial/withdrawals') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    return sendJson(res, 200, state.financial.filter(isWithdrawalOperation));
   }
 
   if (method === 'POST' && path === '/financial') {

@@ -1157,7 +1157,7 @@ async function deleteViolation(id) {
 // ═══════════════════════════════════════════════════════════════════════════
 // FINANCIAL
 // ═══════════════════════════════════════════════════════════════════════════
-const FIN_LABELS = { fuel: 'وقود', maintenance: 'صيانة', violation: 'مخالفة', salary: 'راتب', other: 'أخرى' };
+const FIN_LABELS = { fuel: 'وقود', maintenance: 'صيانة', violation: 'مخالفة', salary: 'راتب', withdrawal: 'سحب', other: 'أخرى' };
 
 async function loadFinancial() {
   const tbody = document.getElementById('financial-tbody');
@@ -1167,6 +1167,14 @@ async function loadFinancial() {
     const res  = await apiFetch('/financial');
     if (!res.ok) return;
     const list = await res.json();
+    const withdrawals = list.filter((f) => {
+      const type = String(f.type || '').toLowerCase();
+      if (type === 'deposit') return false;
+      if (['fuel', 'maintenance', 'violation', 'salary', 'other', 'withdrawal'].includes(type)) return true;
+      const direction = String(f.direction || f.operation || '').toLowerCase();
+      if (direction === 'withdrawal' || direction === 'debit' || direction === 'out') return true;
+      return Number.isFinite(Number(f.amount)) && Number(f.amount) < 0;
+    });
     const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
 
     // Summary
@@ -1180,6 +1188,10 @@ async function loadFinancial() {
             <div class="card-label">${FIN_LABELS[t] || t}</div>
             <div class="card-value">${v.toFixed(2)} ر.س</div>
           </div>`).join('') +
+        `<div class="card"><div class="card-icon">📤</div>
+            <div class="card-label">عمليات السحب</div>
+            <div class="card-value">${withdrawals.length}</div>
+          </div>` +
         `<div class="card"><div class="card-icon">💰</div>
             <div class="card-label">الإجمالي</div>
             <div class="card-value">${total.toFixed(2)} ر.س</div>
