@@ -20,6 +20,7 @@ const { Server }     = require('socket.io');
 const db             = require('./lib/db');
 const authModule     = require('./lib/auth');
 const gps            = require('./lib/gps');
+const { isWithdrawalOperation } = require('./lib/financial');
 const { analyzeVehicleDamage, formatReportText } = require('./lib/ai-vision');
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -255,6 +256,9 @@ app.delete('/api/violations/:id',    auth('admin'), (req, res) => { const ok=db.
 // FINANCIAL
 // ══════════════════════════════════════════════════════════════════════════
 app.get('/api/financial',        auth(), (_req, res) => res.json(db.store.financial));
+app.get('/api/financial/withdrawals', auth(), (_req, res) => {
+  res.json(db.store.financial.filter(isWithdrawalOperation));
+});
 app.post('/api/financial',       auth('supervisor'), (req, res) => { const f=db.insert('financial',req.body); res.status(201).json(f); });
 app.put('/api/financial/:id',    auth('supervisor'), (req, res) => { const f=db.update('financial',req.params.id,req.body); f?res.json(f):res.status(404).json({error:'السجل غير موجود'}); });
 app.delete('/api/financial/:id', auth('admin'), (req, res) => { const ok=db.remove('financial',req.params.id); ok?res.json({message:'تم الحذف'}):res.status(404).json({error:'السجل غير موجود'}); });
