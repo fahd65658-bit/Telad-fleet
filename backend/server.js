@@ -21,6 +21,7 @@ const jwt       = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const { generateFleetAnswer } = require('../lib/ai-chat');
+const { isWithdrawalOperation, FINANCIAL_TRANSACTION_TYPES } = require('../lib/financial');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
@@ -1177,14 +1178,17 @@ app.delete('/violations/:id', supervisorUp, (req, res) => {
 // FINANCIAL
 // ═══════════════════════════════════════════════════════════════════════════
 app.get('/financial', authAll, (_req, res) => res.json(financialItems));
+app.get('/financial/withdrawals', authAll, (_req, res) => {
+  res.json(financialItems.filter(isWithdrawalOperation));
+});
 app.post('/financial', supervisorUp, (req, res) => {
   const { type, amount, description, vehicleId, driverId, date, receiptNo } = req.body || {};
   if (!type || amount == null || !description) return res.status(400).json({ error: 'النوع والمبلغ والوصف مطلوبة' });
-  const valid = ['fuel','maintenance','violation','salary','other'];
-  if (!valid.includes(type)) return res.status(400).json({ error: 'نوع غير صالح' });
+  const normalizedType = String(type || '').toLowerCase();
+  if (!FINANCIAL_TRANSACTION_TYPES.has(normalizedType)) return res.status(400).json({ error: 'نوع غير صالح' });
   const fin = {
     id:          newId(),
-    type,
+    type:        normalizedType,
     amount:      Number(amount) || 0,
     description,
     vehicleId:   vehicleId  || null,
