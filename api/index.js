@@ -24,6 +24,7 @@ const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
 const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
+const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -117,8 +118,162 @@ function seedState() {
 }
 
 const state = globalThis.__TELAD_FLEET_STATE || (globalThis.__TELAD_FLEET_STATE = seedState());
+const quickAccessSessions = globalThis.__TELAD_FLEET_QUICK_ACCESS_SESSIONS || (globalThis.__TELAD_FLEET_QUICK_ACCESS_SESSIONS = new Map());
 
 function nowIso() { return new Date().toISOString(); }
+
+function normalizeNationalId(value) {
+  return String(value || '').trim().replace(/\D/g, '');
+}
+
+function normalizePlate(value) {
+  return String(value || '').trim().replace(/[\s\-]/g, '').toUpperCase();
+}
+
+function generateFallbackNationalId(existingEmployees = []) {
+  const used = new Set((existingEmployees || []).map(e => normalizeNationalId(e.nationalId)));
+  let candidate = '';
+  do {
+    candidate = String(crypto.randomInt(1000000000, 9999999999));
+  } while (used.has(candidate));
+  return candidate;
+}
+
+function ensureStateStructure() {
+  if (!Array.isArray(state.cities)) state.cities = [];
+  if (!Array.isArray(state.projects)) state.projects = [];
+  if (!Array.isArray(state.employees)) state.employees = [];
+  if (!Array.isArray(state.handovers)) state.handovers = [];
+  if (!Array.isArray(state.approvedForms)) state.approvedForms = [];
+  if (!Array.isArray(state.maintenance)) state.maintenance = [];
+  if (!Array.isArray(state.appointments)) state.appointments = [];
+
+  if (state.cities.length === 0) {
+    const cityNames = [...new Set((state.vehicles || []).map(v => String(v.city || '').trim()).filter(Boolean))];
+    state.cities = cityNames.map((name, idx) => ({ id: `c${idx + 1}`, name, createdAt: nowIso() }));
+  }
+  const citiesByNormName = new Map(state.cities.map(c => [String(c.name || '').trim().toLowerCase(), c]));
+
+  if (state.projects.length === 0) {
+    const baseCityId = state.cities[0]?.id || null;
+    state.projects = [
+      { id: 'p1', name: 'مشروع الرياض الرئيسي', cityId: baseCityId, createdAt: nowIso() },
+      { id: 'p2', name: 'مشروع المنطقة الغربية', cityId: state.cities[1]?.id || baseCityId, createdAt: nowIso() },
+      { id: 'p3', name: 'مشروع المنطقة الشرقية', cityId: state.cities[2]?.id || baseCityId, createdAt: nowIso() },
+    ];
+  }
+  const projectsById = new Map(state.projects.map(p => [p.id, p]));
+
+  for (const project of state.projects) {
+    if (!project.cityId || !projectsById.has(project.id)) {
+      project.cityId = state.cities[0]?.id || null;
+    }
+  }
+
+  for (const vehicle of state.vehicles) {
+    vehicle.plate = String(vehicle.plate || '').trim();
+    vehicle.plateNormalized = normalizePlate(vehicle.plate);
+    if (!vehicle.insurance) vehicle.insurance = { company: '', policyNo: '', expiry: '', status: 'غير محدد' };
+    if (!vehicle.inspection) vehicle.inspection = { status: 'غير محدد', expiry: '', center: '' };
+    if (!vehicle.notes) vehicle.notes = '';
+    if (!vehicle.driverNotes) vehicle.driverNotes = '';
+    if (!Array.isArray(vehicle.quickAccessAttachments)) vehicle.quickAccessAttachments = [];
+
+    if (!vehicle.cityId) {
+      const city = citiesByNormName.get(String(vehicle.city || '').trim().toLowerCase());
+      if (city) vehicle.cityId = city.id;
+    }
+    const projectExists = vehicle.projectId && projectsById.has(vehicle.projectId);
+    if (!projectExists) {
+      const projectInCity = state.projects.find(p => p.cityId === vehicle.cityId);
+      vehicle.projectId = projectInCity?.id || state.projects[0]?.id || null;
+    }
+  }
+
+  if (state.employees.length === 0) {
+    const seeded = [];
+    for (const v of state.vehicles.slice(0, 6)) {
+      const assignedDriver = (state.drivers || []).find(d => (v.driverId && d.id === v.driverId) || d.name === v.driver);
+      const nat = normalizeNationalId(assignedDriver?.nationalId || '');
+      seeded.push({
+        id: uid(),
+        name: v.driver || `موظف ${v.id}`,
+        nationalId: nat || generateFallbackNationalId([...state.employees, ...seeded]),
+        phone: '',
+        department: 'العمليات',
+        jobTitle: 'مستخدم مركبة',
+        vehicleId: v.id,
+        cityId: v.cityId || null,
+        projectId: v.projectId || null,
+        status: 'active',
+        createdAt: nowIso(),
+      });
+    }
+    state.employees = seeded;
+  }
+
+  for (const emp of state.employees) {
+    emp.nationalId = normalizeNationalId(emp.nationalId);
+    if (emp.vehicleId) {
+      const v = state.vehicles.find(x => x.id === emp.vehicleId);
+      if (v) {
+        if (!emp.cityId) emp.cityId = v.cityId || null;
+        if (!emp.projectId) emp.projectId = v.projectId || null;
+      }
+    }
+    if (!emp.cityId) emp.cityId = state.cities[0]?.id || null;
+    if (!emp.projectId) {
+      const project = state.projects.find(p => p.cityId === emp.cityId) || state.projects[0];
+      emp.projectId = project?.id || null;
+    }
+  }
+}
+
+function findVehicleByPlate(plate) {
+  const plateNormalized = normalizePlate(plate);
+  return state.vehicles.find(v => normalizePlate(v.plate || v.plateNormalized) === plateNormalized) || null;
+}
+
+function findEmployeeByNationalId(nationalId) {
+  const normalized = normalizeNationalId(nationalId);
+  return (state.employees || []).find(e => normalizeNationalId(e.nationalId) === normalized) || null;
+}
+
+function isVehiclePlateUnique(plate, excludeVehicleId = null) {
+  const normalized = normalizePlate(plate);
+  return !state.vehicles.some(v => v.id !== excludeVehicleId && normalizePlate(v.plate || v.plateNormalized) === normalized);
+}
+
+function isEmployeeUnique(nationalId, excludeEmployeeId = null) {
+  const normalized = normalizeNationalId(nationalId);
+  if (!normalized) return false;
+  return !(state.employees || []).some(e => e.id !== excludeEmployeeId && normalizeNationalId(e.nationalId) === normalized);
+}
+
+function isProjectInCity(projectId, cityId) {
+  const project = (state.projects || []).find(p => p.id === projectId);
+  if (!project) return false;
+  return !cityId || project.cityId === cityId;
+}
+
+function latestMaintenanceForVehicle(vehicleId) {
+  const rows = (state.maintenance || []).filter(m => m.vehicleId === vehicleId);
+  rows.sort((a, b) => new Date(b.completedAt || b.scheduledDate || b.createdAt || 0) - new Date(a.completedAt || a.scheduledDate || a.createdAt || 0));
+  return rows[0] || null;
+}
+
+function buildQuickVehicleProfile(vehicle, employee) {
+  return {
+    vehicleUserName: employee?.name || vehicle.driver || '—',
+    vehiclePlate: vehicle.plate || '—',
+    insuranceStatus: vehicle.insurance?.status || 'غير محدد',
+    inspectionStatus: vehicle.inspection?.status || 'غير محدد',
+    vehicleStatus: vehicle.status || 'غير محدد',
+    hasGeneralNotes: Boolean(String(vehicle.notes || '').trim()),
+    hasDriverNotes: Boolean(String(vehicle.driverNotes || '').trim()),
+    latestMaintenance: latestMaintenanceForVehicle(vehicle.id),
+  };
+}
 
 function applyCommonHeaders(res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -326,8 +481,8 @@ function buildDashboardSummary() {
     employees:         employees.length || new Set(state.vehicles.map(v => v.driver)).size,
     maintenance:       pendingMaint,
     appointments:      pendingAppts,
-    cities:            new Set(state.vehicles.map(v => v.city)).size,
-    projects:          3,
+    cities:            (state.cities || []).length,
+    projects:          (state.projects || []).length,
     regions:           state.regions.length,
     accidents:         openAccidents,
     violationsUnpaid:  unpaidViolations,
@@ -447,6 +602,7 @@ function matchPath(pattern, path) {
 
 module.exports = async (req, res) => {
   warnDevConfig();
+  ensureStateStructure();
   if (req.method === 'OPTIONS') return sendJson(res, 204, {});
 
   const { url, path } = normalizeRequest(req.url || '/');
@@ -484,6 +640,113 @@ module.exports = async (req, res) => {
     const token = issueToken(user);
     addLog('تسجيل دخول', user.username);
     return sendJson(res, 200, { token, accessToken: token, user: sanitizeUser(user) });
+  }
+
+  if (method === 'POST' && path === '/auth/quick-access') {
+    const body = await readBody(req);
+    const nationalId = normalizeNationalId(body.nationalId);
+    const plate = String(body.plate || '').trim();
+    if (!nationalId || !plate) return sendJson(res, 400, { error: 'رقم الهوية ورقم اللوحة مطلوبان' });
+
+    const employee = findEmployeeByNationalId(nationalId);
+    if (!employee) return sendJson(res, 403, { error: 'لا يوجد موظف مطابق في النظام' });
+
+    const vehicle = findVehicleByPlate(plate);
+    if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مطابق' });
+
+    if (employee.vehicleId !== vehicle.id) {
+      return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
+    }
+
+    const quickToken = `qa.${uid()}.${uid()}`;
+    quickAccessSessions.set(quickToken, {
+      token: quickToken,
+      employeeId: employee.id,
+      vehicleId: vehicle.id,
+      createdAt: nowIso(),
+      expiresAt: Date.now() + QUICK_ACCESS_SESSION_TTL_MS,
+    });
+    addLog(`دخول سريع للمركبة ${vehicle.plate}`, employee.name || employee.id);
+
+    return sendJson(res, 200, {
+      quickAccess: true,
+      token: quickToken,
+      employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId },
+      vehicle: buildQuickVehicleProfile(vehicle, employee),
+    });
+  }
+
+  if (method === 'POST' && path === '/auth/quick-logout') {
+    const token = tokenFromRequest(req);
+    if (token) quickAccessSessions.delete(token);
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (path.startsWith('/quick-access/')) {
+    const token = tokenFromRequest(req);
+    const session = token ? quickAccessSessions.get(token) : null;
+    if (!session) return sendJson(res, 401, { error: 'جلسة الدخول السريع غير صالحة' });
+    if (session.expiresAt && Date.now() > session.expiresAt) {
+      quickAccessSessions.delete(token);
+      return sendJson(res, 401, { error: 'انتهت صلاحية جلسة الدخول السريع' });
+    }
+    const employee = (state.employees || []).find(e => e.id === session.employeeId);
+    const vehicle = (state.vehicles || []).find(v => v.id === session.vehicleId);
+    if (!employee || !vehicle) return sendJson(res, 404, { error: 'بيانات المركبة أو الموظف غير موجودة' });
+
+    if (method === 'GET' && path === '/quick-access/vehicle-profile') {
+      return sendJson(res, 200, {
+        employee: { name: employee.name, nationalId: employee.nationalId },
+        vehicle: buildQuickVehicleProfile(vehicle, employee),
+      });
+    }
+
+    if (method === 'POST' && path === '/quick-access/monthly-appointment') {
+      const body = await readBody(req);
+      const scheduledAt = body.scheduledAt || new Date().toISOString().slice(0, 10);
+      const appointment = {
+        id: uid(),
+        vehicleId: vehicle.id,
+        type: 'موعد صيانة شهري',
+        scheduledAt,
+        notes: body.notes || '',
+        status: 'pending',
+        source: 'quick-access',
+        createdByEmployeeId: employee.id,
+        createdAt: nowIso(),
+      };
+      state.appointments.push(appointment);
+      addLog(`حجز موعد صيانة شهري ${vehicle.plate}`, employee.name || employee.id);
+      return sendJson(res, 201, appointment);
+    }
+
+    if (method === 'POST' && path === '/quick-access/attachments') {
+      const body = await readBody(req);
+      const files = Array.isArray(body.files) ? body.files : [];
+      if (files.length === 0) return sendJson(res, 400, { error: 'يجب إرسال مرفق واحد على الأقل' });
+      const allowedTypes = new Set([
+        'front', 'back', 'left', 'right',
+        'oil_sticker', 'odometer', 'additional', 'handover_receipt',
+      ]);
+      const accepted = files
+        .filter(f => f && allowedTypes.has(String(f.type || '')) && f.data)
+        .map(f => ({
+          id: uid(),
+          type: String(f.type),
+          name: String(f.name || `${f.type}.jpg`),
+          data: f.data,
+          uploadedBy: employee.id,
+          uploadedAt: nowIso(),
+        }));
+      if (accepted.length === 0) return sendJson(res, 400, { error: 'لا توجد مرفقات بصيغة صحيحة' });
+      vehicle.quickAccessAttachments.push(...accepted);
+      addLog(`رفع ${accepted.length} مرفقات للمركبة ${vehicle.plate}`, employee.name || employee.id);
+      return sendJson(res, 201, { uploaded: accepted.length });
+    }
+
+    if (method === 'GET' && path === '/quick-access/latest-maintenance') {
+      return sendJson(res, 200, { latestMaintenance: latestMaintenanceForVehicle(vehicle.id) });
+    }
   }
 
   if (method === 'GET' && path === '/auth/me') {
@@ -566,13 +829,62 @@ module.exports = async (req, res) => {
     return sendJson(res, 200, fleetVehicles());
   }
 
+  {
+    const pprofile = matchPath('/vehicles/:id/profile', path);
+    if (pprofile && method === 'GET') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const vehicle = state.vehicles.find(v => v.id === pprofile.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const employee = (state.employees || []).find(e => e.vehicleId === vehicle.id) || null;
+      const maintenance = (state.maintenance || []).filter(m => m.vehicleId === vehicle.id);
+      const appointments = (state.appointments || []).filter(a => a.vehicleId === vehicle.id);
+      const accidents = (state.accidents || []).filter(a => a.vehicleId === vehicle.id);
+      const violations = (state.violations || []).filter(v => v.vehicleId === vehicle.id);
+      const handovers = (state.handovers || []).filter(h => h.vehicleId === vehicle.id);
+      return sendJson(res, 200, {
+        vehicle,
+        employee,
+        maintenance,
+        appointments,
+        accidents,
+        violations,
+        handovers,
+      });
+    }
+  }
+
   if (method === 'POST' && path === '/vehicles') {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
     if (!['admin','supervisor','operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
     const body = await readBody(req);
     if (!body.name || !body.plate) return sendJson(res, 400, { error: 'اسم المركبة ورقم اللوحة مطلوبان' });
-    const v = { id: uid(), name: body.name, plate: body.plate, city: body.city || '', driver: body.driver || '', status: 'active', location: body.city || '', lat: null, lng: null };
+    if (!isVehiclePlateUnique(body.plate)) return sendJson(res, 409, { error: 'رقم اللوحة مستخدم مسبقاً' });
+    if (body.projectId && !isProjectInCity(body.projectId, body.cityId || null)) {
+      return sendJson(res, 400, { error: 'المشروع المحدد غير مرتبط بالمدينة المحددة' });
+    }
+    const city = (state.cities || []).find(c => c.id === body.cityId) || null;
+    const v = {
+      id: uid(),
+      name: body.name,
+      plate: String(body.plate).trim(),
+      plateNormalized: normalizePlate(body.plate),
+      city: city?.name || body.city || '',
+      cityId: body.cityId || null,
+      projectId: body.projectId || null,
+      driver: body.driver || '',
+      driverId: body.driverId || null,
+      status: 'active',
+      location: city?.name || body.city || '',
+      lat: null,
+      lng: null,
+      insurance: body.insurance || { company: '', policyNo: '', expiry: '', status: 'غير محدد' },
+      inspection: body.inspection || { status: 'غير محدد', expiry: '', center: '' },
+      notes: body.notes || '',
+      driverNotes: body.driverNotes || '',
+      quickAccessAttachments: [],
+    };
     state.vehicles.push(v);
     addLog(`إضافة مركبة ${v.name}`, cu.username);
     return sendJson(res, 201, v);
@@ -594,12 +906,24 @@ module.exports = async (req, res) => {
       const v = state.vehicles.find(x => x.id === pm.id);
       if (!v) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
       const body = await readBody(req);
+      if (body.plate && !isVehiclePlateUnique(body.plate, v.id)) return sendJson(res, 409, { error: 'رقم اللوحة مستخدم مسبقاً' });
+      const nextCityId = body.cityId || v.cityId || null;
+      const nextProjectId = body.projectId || v.projectId || null;
+      if (nextProjectId && !isProjectInCity(nextProjectId, nextCityId)) {
+        return sendJson(res, 400, { error: 'المشروع المحدد غير مرتبط بالمدينة المحددة' });
+      }
       const updates = pickAllowedFields(body, [
         'name', 'plate', 'city', 'driver', 'status', 'location',
         'lat', 'lng', 'gpsUpdatedAt', 'type', 'brand', 'model', 'year',
         'vin', 'color', 'odometer', 'fuelType', 'fuelLevel',
-        'lastServiceAt', 'nextServiceAt', 'insurance', 'inspection', 'notes',
+        'lastServiceAt', 'nextServiceAt', 'insurance', 'inspection', 'notes', 'driverNotes',
+        'cityId', 'projectId', 'driverId',
       ]);
+      if (updates.plate) updates.plateNormalized = normalizePlate(updates.plate);
+      if (updates.cityId) {
+        const city = (state.cities || []).find(c => c.id === updates.cityId);
+        if (city) updates.city = city.name;
+      }
       Object.assign(v, updates);
       addLog(`تعديل مركبة ${v.name}`, cu.username);
       return sendJson(res, 200, v);
@@ -1034,7 +1358,27 @@ module.exports = async (req, res) => {
     if (!['admin','supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
     const body = await readBody(req);
     if (!state.employees) state.employees = [];
-    const emp = { id: uid(), ...body, status: body.status || 'active', createdAt: nowIso() };
+    const nationalId = normalizeNationalId(body.nationalId);
+    if (!nationalId) return sendJson(res, 400, { error: 'رقم الهوية مطلوب لمنع التكرار' });
+    if (!isEmployeeUnique(nationalId)) return sendJson(res, 409, { error: 'الموظف موجود مسبقاً بنفس رقم الهوية' });
+    if (body.vehicleId && !state.vehicles.some(v => v.id === body.vehicleId)) {
+      return sendJson(res, 400, { error: 'المركبة المرتبطة غير موجودة' });
+    }
+    const targetVehicle = body.vehicleId ? state.vehicles.find(v => v.id === body.vehicleId) : null;
+    const cityId = body.cityId || targetVehicle?.cityId || null;
+    const projectId = body.projectId || targetVehicle?.projectId || null;
+    if (projectId && !isProjectInCity(projectId, cityId)) {
+      return sendJson(res, 400, { error: 'المشروع المحدد غير مرتبط بالمدينة المحددة' });
+    }
+    const emp = {
+      id: uid(),
+      ...body,
+      nationalId,
+      cityId,
+      projectId,
+      status: body.status || 'active',
+      createdAt: nowIso(),
+    };
     state.employees.push(emp);
     addLog(`إضافة موظف: ${emp.name || emp.id}`, cu.username);
     return sendJson(res, 201, emp);
@@ -1046,15 +1390,37 @@ module.exports = async (req, res) => {
       if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
       const emp = (state.employees || []).find(e => e.id === pme.id);
       if (!emp) return sendJson(res, 404, { error: 'الموظف غير موجود' });
-      if (method === 'GET') return sendJson(res, 200, emp);
+      if (method === 'GET') {
+        const vehicle = emp.vehicleId ? state.vehicles.find(v => v.id === emp.vehicleId) || null : null;
+        const handovers = (state.handovers || []).filter(h => h.employeeId === emp.id || h.employeeName === emp.name);
+        const violations = (state.violations || []).filter(v => v.employeeId === emp.id);
+        const accidents = (state.accidents || []).filter(a => a.employeeId === emp.id);
+        return sendJson(res, 200, { employee: emp, vehicle, handovers, violations, accidents });
+      }
       if (method === 'PUT') {
         if (!['admin','supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
         const body = await readBody(req);
+        const normalizedNationalId = body.nationalId !== undefined ? normalizeNationalId(body.nationalId) : emp.nationalId;
+        if (!isEmployeeUnique(normalizedNationalId, emp.id)) {
+          return sendJson(res, 409, { error: 'رقم الهوية مسجل مسبقاً لموظف آخر' });
+        }
+        if (body.vehicleId && !state.vehicles.some(v => v.id === body.vehicleId)) {
+          return sendJson(res, 400, { error: 'المركبة المرتبطة غير موجودة' });
+        }
         const updates = pickAllowedFields(body, [
           'name', 'phone', 'email', 'status', 'department', 'jobTitle',
           'position', 'vehicleId', 'licenseNo', 'nationalId', 'iqamaNo',
-          'hireDate', 'notes',
+          'hireDate', 'notes', 'cityId', 'projectId',
         ]);
+        if (updates.nationalId !== undefined) updates.nationalId = normalizedNationalId;
+        const nextVehicle = (updates.vehicleId || emp.vehicleId) ? state.vehicles.find(v => v.id === (updates.vehicleId || emp.vehicleId)) : null;
+        const nextCityId = updates.cityId || nextVehicle?.cityId || emp.cityId || null;
+        const nextProjectId = updates.projectId || nextVehicle?.projectId || emp.projectId || null;
+        if (nextProjectId && !isProjectInCity(nextProjectId, nextCityId)) {
+          return sendJson(res, 400, { error: 'المشروع المحدد غير مرتبط بالمدينة المحددة' });
+        }
+        if (updates.cityId === undefined && nextCityId) updates.cityId = nextCityId;
+        if (updates.projectId === undefined && nextProjectId) updates.projectId = nextProjectId;
         Object.assign(emp, updates);
         return sendJson(res, 200, emp);
       }
@@ -1064,6 +1430,250 @@ module.exports = async (req, res) => {
         return sendJson(res, 200, { ok: true });
       }
     }
+  }
+
+  // ── CITIES ────────────────────────────────────────────────────────
+  if (method === 'GET' && path === '/cities') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    return sendJson(res, 200, state.cities || []);
+  }
+
+  if (method === 'POST' && path === '/cities') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+    const body = await readBody(req);
+    const name = String(body.name || '').trim();
+    if (!name) return sendJson(res, 400, { error: 'اسم المدينة مطلوب' });
+    if ((state.cities || []).some(c => String(c.name || '').trim().toLowerCase() === name.toLowerCase())) {
+      return sendJson(res, 409, { error: 'المدينة موجودة مسبقاً' });
+    }
+    const city = { id: uid(), name, createdAt: nowIso() };
+    state.cities.push(city);
+    addLog(`إضافة مدينة ${city.name}`, cu.username);
+    return sendJson(res, 201, city);
+  }
+
+  {
+    const pmCity = matchPath('/cities/:id', path);
+    if (pmCity && method === 'PUT') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const city = (state.cities || []).find(c => c.id === pmCity.id);
+      if (!city) return sendJson(res, 404, { error: 'المدينة غير موجودة' });
+      const body = await readBody(req);
+      const nextName = String(body.name || '').trim();
+      if (!nextName) return sendJson(res, 400, { error: 'اسم المدينة مطلوب' });
+      city.name = nextName;
+      return sendJson(res, 200, city);
+    }
+  }
+
+  // ── PROJECTS ──────────────────────────────────────────────────────
+  if (method === 'GET' && path === '/projects') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    return sendJson(res, 200, state.projects || []);
+  }
+
+  if (method === 'POST' && path === '/projects') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+    const body = await readBody(req);
+    const name = String(body.name || '').trim();
+    if (!name || !body.cityId) return sendJson(res, 400, { error: 'اسم المشروع والمدينة مطلوبان' });
+    if (!(state.cities || []).some(c => c.id === body.cityId)) return sendJson(res, 400, { error: 'المدينة غير موجودة' });
+    if ((state.projects || []).some(p => String(p.name || '').trim().toLowerCase() === name.toLowerCase() && p.cityId === body.cityId)) {
+      return sendJson(res, 409, { error: 'المشروع موجود مسبقاً داخل نفس المدينة' });
+    }
+    const project = { id: uid(), name, cityId: body.cityId, createdAt: nowIso() };
+    state.projects.push(project);
+    addLog(`إضافة مشروع ${project.name}`, cu.username);
+    return sendJson(res, 201, project);
+  }
+
+  {
+    const pmProject = matchPath('/projects/:id', path);
+    if (pmProject && method === 'PUT') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const project = (state.projects || []).find(p => p.id === pmProject.id);
+      if (!project) return sendJson(res, 404, { error: 'المشروع غير موجود' });
+      const body = await readBody(req);
+      if (body.cityId && !(state.cities || []).some(c => c.id === body.cityId)) return sendJson(res, 400, { error: 'المدينة غير موجودة' });
+      if (body.name) project.name = String(body.name).trim();
+      if (body.cityId) project.cityId = body.cityId;
+      return sendJson(res, 200, project);
+    }
+  }
+
+  {
+    const pfleet = matchPath('/projects/:id/fleet', path);
+    if (pfleet && method === 'GET') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const project = (state.projects || []).find(p => p.id === pfleet.id);
+      if (!project) return sendJson(res, 404, { error: 'المشروع غير موجود' });
+      const city = (state.cities || []).find(c => c.id === project.cityId) || null;
+      const vehicles = (state.vehicles || [])
+        .filter(v => v.projectId === project.id)
+        .map(v => {
+          const assignedEmployee = (state.employees || []).find(e => e.vehicleId === v.id) || null;
+          return {
+            id: v.id,
+            plate: v.plate,
+            name: v.name,
+            status: v.status,
+            cityId: v.cityId,
+            projectId: v.projectId,
+            assignedUser: assignedEmployee ? {
+              id: assignedEmployee.id,
+              name: assignedEmployee.name,
+              nationalId: assignedEmployee.nationalId,
+            } : null,
+          };
+        });
+      return sendJson(res, 200, { project, city, vehicles });
+    }
+  }
+
+  // ── TRANSFERS ─────────────────────────────────────────────────────
+  if (method === 'POST' && path === '/transfers/vehicle') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+    const body = await readBody(req);
+    const vehicle = (state.vehicles || []).find(v => v.id === body.vehicleId);
+    if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+    const nextCityId = body.toCityId || vehicle.cityId;
+    const nextProjectId = body.toProjectId || vehicle.projectId;
+    if (nextCityId && !(state.cities || []).some(c => c.id === nextCityId)) return sendJson(res, 400, { error: 'المدينة غير موجودة' });
+    if (nextProjectId && !isProjectInCity(nextProjectId, nextCityId)) return sendJson(res, 400, { error: 'المشروع غير مرتبط بالمدينة الجديدة' });
+    vehicle.cityId = nextCityId || null;
+    vehicle.projectId = nextProjectId || null;
+    const city = (state.cities || []).find(c => c.id === vehicle.cityId);
+    if (city) {
+      vehicle.city = city.name;
+      vehicle.location = city.name;
+    }
+    for (const emp of (state.employees || []).filter(e => e.vehicleId === vehicle.id)) {
+      emp.cityId = vehicle.cityId;
+      emp.projectId = vehicle.projectId;
+    }
+    addLog(`نقل مركبة ${vehicle.plate}`, cu.username);
+    return sendJson(res, 200, vehicle);
+  }
+
+  if (method === 'POST' && path === '/transfers/employee') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+    const body = await readBody(req);
+    const employee = (state.employees || []).find(e => e.id === body.employeeId);
+    if (!employee) return sendJson(res, 404, { error: 'الموظف غير موجود' });
+    const nextCityId = body.toCityId || employee.cityId;
+    const nextProjectId = body.toProjectId || employee.projectId;
+    if (nextCityId && !(state.cities || []).some(c => c.id === nextCityId)) return sendJson(res, 400, { error: 'المدينة غير موجودة' });
+    if (nextProjectId && !isProjectInCity(nextProjectId, nextCityId)) return sendJson(res, 400, { error: 'المشروع غير مرتبط بالمدينة الجديدة' });
+    employee.cityId = nextCityId || null;
+    employee.projectId = nextProjectId || null;
+    addLog(`نقل موظف ${employee.name}`, cu.username);
+    return sendJson(res, 200, employee);
+  }
+
+  // ── APPROVED FORMS ────────────────────────────────────────────────
+  if (method === 'GET' && path === '/forms/approved') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    return sendJson(res, 200, state.approvedForms || []);
+  }
+
+  if (method === 'POST' && path === '/forms/approved') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    const body = await readBody(req);
+    const title = String(body.title || '').trim();
+    if (!title) return sendJson(res, 400, { error: 'عنوان النموذج مطلوب' });
+    const form = {
+      id: uid(),
+      title,
+      type: body.type || 'delivery_receipt',
+      status: body.status || 'approved',
+      employeeId: body.employeeId || null,
+      vehicleId: body.vehicleId || null,
+      payload: body.payload || {},
+      attachments: Array.isArray(body.attachments) ? body.attachments : [],
+      createdBy: cu.username,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    if (form.employeeId) {
+      const emp = (state.employees || []).find(e => e.id === form.employeeId);
+      if (!emp) return sendJson(res, 400, { error: 'الموظف المحدد غير موجود' });
+    }
+    if (form.vehicleId) {
+      const veh = (state.vehicles || []).find(v => v.id === form.vehicleId);
+      if (!veh) return sendJson(res, 400, { error: 'المركبة المحددة غير موجودة' });
+    }
+    state.approvedForms.push(form);
+    addLog(`إضافة نموذج معتمد ${form.title}`, cu.username);
+    return sendJson(res, 201, form);
+  }
+
+  {
+    const pform = matchPath('/forms/approved/:id/work', path);
+    if (pform && method === 'POST') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const form = (state.approvedForms || []).find(f => f.id === pform.id);
+      if (!form) return sendJson(res, 404, { error: 'النموذج غير موجود' });
+      const body = await readBody(req);
+      form.payload = { ...(form.payload || {}), ...(body.payload || {}) };
+      if (Array.isArray(body.attachments) && body.attachments.length) {
+        form.attachments = [...(form.attachments || []), ...body.attachments];
+      }
+      form.updatedAt = nowIso();
+      form.lastWorkedBy = cu.username;
+      return sendJson(res, 200, form);
+    }
+  }
+
+  if (method === 'GET' && path === '/forms/autofill') {
+    const cu = currentUser(req);
+    if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+    const employeeId = url.searchParams.get('employeeId') || '';
+    const vehicleId = url.searchParams.get('vehicleId') || '';
+    const employee = employeeId ? (state.employees || []).find(e => e.id === employeeId) || null : null;
+    const vehicle = vehicleId ? (state.vehicles || []).find(v => v.id === vehicleId) || null : null;
+    let resolvedVehicle = vehicle;
+    if (!resolvedVehicle && employee?.vehicleId) {
+      resolvedVehicle = (state.vehicles || []).find(v => v.id === employee.vehicleId) || null;
+    }
+    let resolvedEmployee = employee;
+    if (!resolvedEmployee && resolvedVehicle) {
+      resolvedEmployee = (state.employees || []).find(e => e.vehicleId === resolvedVehicle.id) || null;
+    }
+    return sendJson(res, 200, {
+      employee: resolvedEmployee ? {
+        id: resolvedEmployee.id,
+        name: resolvedEmployee.name,
+        nationalId: resolvedEmployee.nationalId,
+        phone: resolvedEmployee.phone || '',
+        department: resolvedEmployee.department || '',
+      } : null,
+      vehicle: resolvedVehicle ? {
+        id: resolvedVehicle.id,
+        name: resolvedVehicle.name,
+        plate: resolvedVehicle.plate,
+        status: resolvedVehicle.status,
+        cityId: resolvedVehicle.cityId || null,
+        projectId: resolvedVehicle.projectId || null,
+      } : null,
+    });
   }
 
   // ── GPS POSITIONS (REST, no WebSocket on Vercel) ───────────────────
