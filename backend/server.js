@@ -39,7 +39,6 @@ if (IS_PROD && !process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
 const QUICK_ACCESS_EXPIRES_IN = process.env.QUICK_ACCESS_EXPIRES_IN || '24h';
-const QUICK_ACCESS_BOOTSTRAP_PIN = process.env.QUICK_ACCESS_BOOTSTRAP_PIN || '';
 let defaultAdminPasswordHash = null;
 
 function buildDefaultUsers() {
@@ -90,10 +89,10 @@ function buildDemoCollections() {
       { id: 'veh-221', name: 'TLD-221', plate: 'TLD-221', city: 'المدينة', driver: 'منى فهد', status: 'active', model: 'Hyundai H350', year: 2024, createdAt: nowIso },
     ],
     employees: [
-      { id: 'emp-ops-1', name: 'محمد راشد', department: 'العمليات', quickPin: '1357', createdAt: nowIso },
-      { id: 'emp-ops-2', name: 'ليان فهد', department: 'الدعم', quickPin: '2468', createdAt: nowIso },
-      { id: 'emp-fin-1', name: 'عبدالله خالد', department: 'المالية', quickPin: '1597', createdAt: nowIso },
-      { id: 'emp-maint-1', name: 'ريم سعد', department: 'الصيانة', quickPin: '2684', createdAt: nowIso },
+      { id: 'emp-ops-1', name: 'محمد راشد', department: 'العمليات', ...(IS_PROD ? {} : { quickPin: '1357' }), createdAt: nowIso },
+      { id: 'emp-ops-2', name: 'ليان فهد', department: 'الدعم', ...(IS_PROD ? {} : { quickPin: '2468' }), createdAt: nowIso },
+      { id: 'emp-fin-1', name: 'عبدالله خالد', department: 'المالية', ...(IS_PROD ? {} : { quickPin: '1597' }), createdAt: nowIso },
+      { id: 'emp-maint-1', name: 'ريم سعد', department: 'الصيانة', ...(IS_PROD ? {} : { quickPin: '2684' }), createdAt: nowIso },
     ],
     drivers: [
       { id: 'drv-1', name: 'أحمد سالم', phone: '0500000001', licenseNo: 'DL-1001', licenseExpiry: nextMonth, vehicleId: 'veh-102', status: 'active', createdAt: nowIso },
@@ -448,17 +447,10 @@ app.post('/quick-access/login', (req, res) => {
   if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
   const employee = employees.find(e => e.id === employeeId);
   if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
-  let expectedPin = String(employee.quickPin || '').trim();
-  if (!expectedPin) {
-    if (QUICK_ACCESS_BOOTSTRAP_PIN && String(pin) === QUICK_ACCESS_BOOTSTRAP_PIN) {
-      employee.quickPin = String(pin);
-      expectedPin = employee.quickPin;
-    } else {
-      return res.status(403).json({ error: 'الحساب غير مهيأ للدخول السريع' });
-    }
-  }
+  const expectedPin = String(employee.quickPin || '').trim();
+  if (!expectedPin) return res.status(403).json({ error: 'الحساب غير مهيأ للدخول السريع' });
   if (String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
-  const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
+  const token = jwt.sign({ sub: employee.id, role: 'quick' }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
   if (!quickAccessUsers.find(u => u.employeeId === employee.id)) {
     quickAccessUsers.push({ id: newId(), employeeId: employee.id, active: true, createdAt: new Date().toISOString() });
   }
@@ -474,7 +466,7 @@ app.post('/auth/quick-access', (req, res) => {
   const vehicle = vehicles.find(v => String(v.plate || '').trim().toLowerCase() === plate.toLowerCase());
   if (!vehicle) return res.status(403).json({ error: 'لا يوجد ملف مركبة مطابق' });
   if (employee.vehicleId !== vehicle.id) return res.status(403).json({ error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
-  const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
+  const token = jwt.sign({ sub: employee.id, role: 'quick' }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
   res.json({
     quickAccess: true,
     token,
@@ -493,14 +485,14 @@ app.post('/auth/quick-access', (req, res) => {
 app.post('/auth/quick-logout', (_req, res) => res.json({ ok: true }));
 
 app.get('/quick-access/vehicle', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const vehicle = employee.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) : null;
   if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
   res.json({ employee: { id: employee.id, name: employee.name }, vehicle });
 });
 app.get('/quick-access/vehicle-profile', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const vehicle = employee.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) : null;
   if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
@@ -520,7 +512,7 @@ app.get('/quick-access/vehicle-profile', requireQuickAuth, (req, res) => {
 });
 
 app.post('/quick-access/requests', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const request = {
     id: newId(),
@@ -536,7 +528,7 @@ app.post('/quick-access/requests', requireQuickAuth, (req, res) => {
   res.status(201).json(request);
 });
 app.post('/quick-access/monthly-appointment', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const request = {
     id: newId(),
@@ -554,7 +546,7 @@ app.post('/quick-access/monthly-appointment', requireQuickAuth, (req, res) => {
 });
 
 app.post('/quick-access/attachments', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const vehicle = employee.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) : null;
   if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
@@ -573,7 +565,7 @@ app.post('/quick-access/attachments', requireQuickAuth, (req, res) => {
 });
 
 app.get('/quick-access/latest-maintenance', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const list = maintenanceJobs
     .filter(m => m.vehicleId === employee.vehicleId)
@@ -582,7 +574,7 @@ app.get('/quick-access/latest-maintenance', requireQuickAuth, (req, res) => {
 });
 
 app.post('/quick-access/reports', requireQuickAuth, (req, res) => {
-  const employee = employees.find(e => e.id === req.quick.employeeId);
+  const employee = employees.find(e => e.id === (req.quick.employeeId || req.quick.sub));
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const report = {
     id: newId(),

@@ -28,7 +28,6 @@ const PORT           = parseInt(process.env.PORT || '3000', 10);
 const IS_PROD        = process.env.NODE_ENV === 'production';
 const JWT_SECRET     = process.env.JWT_SECRET || 'telad-fleet-super-secret-jwt-2024!';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
-const QUICK_ACCESS_BOOTSTRAP_PIN = process.env.QUICK_ACCESS_BOOTSTRAP_PIN || '';
 const ADMIN_PASS     = process.env.ADMIN_PASSWORD || 'telad2024';
 const DEPLOY_ID      = process.env.DEPLOY_ID || Date.now().toString();
 const FRONTEND_DIR   = path.join(__dirname, 'frontend');
@@ -499,23 +498,16 @@ app.post('/api/quick-access/login', (req, res) => {
   if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
   const employee = (s.employees || []).find(x => x.id === employeeId);
   if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
-  let expectedPin = String(employee.quickPin || '').trim();
-  if (!expectedPin) {
-    if (QUICK_ACCESS_BOOTSTRAP_PIN && String(pin) === QUICK_ACCESS_BOOTSTRAP_PIN) {
-      employee.quickPin = String(pin);
-      db.writeStore();
-      expectedPin = employee.quickPin;
-    } else {
-      return res.status(403).json({ error: 'الحساب غير مهيأ للدخول السريع' });
-    }
-  }
+  const expectedPin = String(employee.quickPin || '').trim();
+  if (!expectedPin) return res.status(403).json({ error: 'الحساب غير مهيأ للدخول السريع' });
   if (String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
-  const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
+  const token = jwt.sign({ sub: employee.id, role: 'quick' }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
   res.json({ token, quickAccess: true, employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId } });
 });
 
 app.get('/api/quick-access/vehicle', quickAuth, (req, res) => {
-  const employee = db.findOne('employees', x => x.id === req.quick.employeeId);
+  const employeeId = req.quick.employeeId || req.quick.sub;
+  const employee = db.findOne('employees', x => x.id === employeeId);
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const vehicle = employee.vehicleId ? db.findOne('vehicles', x => x.id === employee.vehicleId) : null;
   if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
@@ -523,7 +515,8 @@ app.get('/api/quick-access/vehicle', quickAuth, (req, res) => {
 });
 
 app.post('/api/quick-access/requests', quickAuth, (req, res) => {
-  const employee = db.findOne('employees', x => x.id === req.quick.employeeId);
+  const employeeId = req.quick.employeeId || req.quick.sub;
+  const employee = db.findOne('employees', x => x.id === employeeId);
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const request = db.insert('appointments', {
     vehicleId: employee.vehicleId || null,
@@ -538,7 +531,8 @@ app.post('/api/quick-access/requests', quickAuth, (req, res) => {
 });
 
 app.post('/api/quick-access/reports', quickAuth, (req, res) => {
-  const employee = db.findOne('employees', x => x.id === req.quick.employeeId);
+  const employeeId = req.quick.employeeId || req.quick.sub;
+  const employee = db.findOne('employees', x => x.id === employeeId);
   if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
   const report = db.insert('reports', {
     title: req.body?.title || 'Quick Access Report',

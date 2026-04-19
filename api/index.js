@@ -26,7 +26,6 @@ const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
 const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
-const QUICK_ACCESS_BOOTSTRAP_PIN = process.env.QUICK_ACCESS_BOOTSTRAP_PIN || '';
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -201,7 +200,7 @@ function ensureStateStructure() {
         id: uid(),
         name: v.driver || `موظف ${v.id}`,
         nationalId: nat || generateFallbackNationalId([...state.employees, ...seeded]),
-        quickPin: QUICK_ACCESS_BOOTSTRAP_PIN || String(crypto.randomInt(100000, 1000000)),
+        quickPin: IS_PROD ? undefined : String(crypto.randomInt(100000, 1000000)),
         phone: '',
         department: 'العمليات',
         jobTitle: 'مستخدم مركبة',
@@ -217,7 +216,6 @@ function ensureStateStructure() {
 
   for (const emp of state.employees) {
     emp.nationalId = normalizeNationalId(emp.nationalId);
-    if (!emp.quickPin && QUICK_ACCESS_BOOTSTRAP_PIN) emp.quickPin = QUICK_ACCESS_BOOTSTRAP_PIN;
     if (emp.vehicleId) {
       const v = state.vehicles.find(x => x.id === emp.vehicleId);
       if (v) {
