@@ -3,7 +3,8 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
-const INSTALLATION_TOKEN_CACHE_TTL_MS = 50 * 60 * 1000;
+// GitHub installation tokens typically expire after ~1 hour; cache for 50 minutes.
+const INSTALLATION_TOKEN_CACHE_TTL_MS = Number(process.env.GITHUB_APP_TOKEN_CACHE_MS || (50 * 60 * 1000));
 const installationTokenCache = new Map();
 
 let appClient = null;
