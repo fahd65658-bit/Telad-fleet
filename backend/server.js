@@ -22,6 +22,7 @@ const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const { generateFleetAnswer } = require('../lib/ai-chat');
 const { isWithdrawalOperation, FINANCIAL_TRANSACTION_TYPES } = require('../lib/financial');
+const { setSocketIO } = require('../github-app/fleet-integration');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
@@ -242,6 +243,8 @@ const server = http.createServer(app);
 const io     = new Server(server, {
   cors: { origin: (origin, cb) => cb(null, isAllowedOrigin(origin)), methods: ['GET', 'POST'] },
 });
+app.set('io', io);
+setSocketIO(io);
 
 app.set('trust proxy', 1);
 
@@ -1408,6 +1411,10 @@ app.delete('/dev-requests/:id', adminOnly, (req, res) => {
   audit('حذف طلب تطوير', req.user.username);
   res.json({ ok: true });
 });
+
+// GitHub App Routes
+const githubRoutes = require('./routes/github');
+app.use('/api/github', githubRoutes);
 
 // ─── 404 fallback ─────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'المسار غير موجود' }));

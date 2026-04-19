@@ -11,6 +11,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@octokit/app": "^14.0.0",
+    "@octokit/rest": "^20.0.0",
+    "@octokit/webhooks": "^13.0.0",
     "@ai-sdk/openai": "^3.0.53",
     "ai": "^6.0.168",
     "bcryptjs": "^2.4.3",
@@ -20,6 +23,7 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "pg": "^8.20.0",
     "socket.io": "^4.7.2"
   },
   "devDependencies": {
