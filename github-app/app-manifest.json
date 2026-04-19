@@ -1,0 +1,29 @@
+{
+  "name": "TELAD Fleet Manager",
+  "description": "نظام إدارة أسطول المركبات والخدمات اللوجستية",
+  "url": "https://fna.sa",
+  "hook_attributes": {
+    "url": "https://fna.sa/api/github/webhook"
+  },
+  "redirect_url": "https://fna.sa/github/callback",
+  "public": true,
+  "default_permissions": {
+    "metadata": "read",
+    "contents": "read",
+    "issues": "write",
+    "pull_requests": "write",
+    "deployments": "write",
+    "checks": "write"
+  },
+  "default_events": [
+    "push",
+    "pull_request",
+    "issues",
+    "deployment",
+    "deployment_status",
+    "check_run",
+    "check_suite",
+    "release",
+    "workflow_run"
+  ]
+}

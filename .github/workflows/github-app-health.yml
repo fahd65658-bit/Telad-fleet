@@ -1,0 +1,51 @@
+name: GitHub App Health
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.GITHUB_APP_ID != '' && secrets.GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@b649b4af6ff74ed28e7ce6c2ff8d2dd4e0a3ea23 # v1
+        with:
+          app-id: ${{ secrets.GITHUB_APP_ID }}
+          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Validate token and installation status
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "GitHub App token is not configured" >&2
+            exit 1
+          fi
+          curl -sSf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}" > /tmp/repo.json
+          echo "Repository access healthy ✅"
+
+      - name: Send health report to dashboard
+        env:
+          DASHBOARD_HEALTH_URL: ${{ secrets.GITHUB_APP_DASHBOARD_HEALTH_URL }}
+        run: |
+          if [ -n "$DASHBOARD_HEALTH_URL" ]; then
+            curl -sS -X POST "$DASHBOARD_HEALTH_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"status\":\"ok\",\"source\":\"github-app-health\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+          else
+            echo "Dashboard health URL not configured; skipped report."
+          fi

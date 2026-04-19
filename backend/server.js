@@ -22,6 +22,7 @@ const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const { generateFleetAnswer } = require('../lib/ai-chat');
 const { isWithdrawalOperation, FINANCIAL_TRANSACTION_TYPES } = require('../lib/financial');
+const createGitHubRoutes = require('./routes/github');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
@@ -30,7 +31,7 @@ const IS_PROD  = process.env.NODE_ENV === 'production';
 // Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
 // value.  Falls back to a random hex string so every cold start gets its own ID
 // when DEPLOY_ID is not injected by CI/CD.
-const DEPLOY_ID = process.env.DEPLOY_ID || crypto.randomBytes(8).toString('hex');
+let DEPLOY_ID = process.env.DEPLOY_ID || crypto.randomBytes(8).toString('hex');
 
 // Fail fast in production if JWT_SECRET is not set
 if (IS_PROD && !process.env.JWT_SECRET) {
@@ -268,7 +269,12 @@ app.use(cors({
   exposedHeaders: ['X-Deploy-Id'],  // allow client JS to read the skew-protection header
 }));
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, _res, buf) => {
+    if (req.originalUrl === '/api/github/webhook') req.rawBody = Buffer.from(buf);
+  },
+}));
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
 
@@ -330,6 +336,15 @@ function requireAuth(roles = []) {
 const authAll      = requireAuth();
 const adminOnly    = requireAuth(['admin']);
 const supervisorUp = requireAuth(['admin', 'supervisor']);
+
+app.use('/api/github', createGitHubRoutes({
+  io,
+  adminOnly,
+  getDeployId: () => DEPLOY_ID,
+  setDeployId: (nextDeployId) => {
+    if (typeof nextDeployId === 'string' && nextDeployId.trim()) DEPLOY_ID = nextDeployId.trim();
+  },
+}));
 
 // ─── Apply global API rate limiter to all routes ─────────────────────────────
 app.use(apiLimiter);

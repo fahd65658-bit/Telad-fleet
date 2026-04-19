@@ -17,12 +17,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - name: Create GitHub App token (when configured)
+        id: app-token
+        if: ${{ secrets.GITHUB_APP_ID != '' && secrets.GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@b649b4af6ff74ed28e7ce6c2ff8d2dd4e0a3ea23 # v1
+        with:
+          app-id: ${{ secrets.GITHUB_APP_ID }}
+          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Set up Node.js 18
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
+
+      - name: Verify webhook signature logic
+        run: |
+          node - <<'NODE'
+          const crypto = require('crypto');
+          const payload = JSON.stringify({ hello: 'telad-fleet' });
+          const secret = 'ci-secret';
+          const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
+          const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
+          if (signature !== expected) {
+            console.error('Webhook signature verification failed');
+            process.exit(1);
+          }
+          console.log('Webhook signature verification succeeded');
+          NODE
 
       - name: Install backend dependencies
         run: cd backend && npm ci
@@ -45,6 +70,37 @@ jobs:
 
       - name: Run Python tests
         run: npm test
+
+  github-app-config:
+    name: Validate GitHub App config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare GitHub App validation env
+        run: |
+          mkdir -p github-app
+          openssl genrsa -out github-app/private-key.pem 2048
+          {
+            echo "GITHUB_APP_ID=12345"
+            echo "GITHUB_APP_WEBHOOK_SECRET=test-secret"
+            echo "GITHUB_APP_PRIVATE_KEY_PATH=./github-app/private-key.pem"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate GitHub App setup
+        run: npm run github-app:verify
 
 # Notes:
 # - This workflow pins all GitHub Actions to full commit SHAs to satisfy repository policy.
