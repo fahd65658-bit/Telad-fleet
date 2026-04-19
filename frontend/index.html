@@ -1022,6 +1022,7 @@
       <button class="ptab active" data-tab="basic"       onclick="switchProfileTab('basic')">📋 أساسي</button>
       <button class="ptab" data-tab="insurance"          onclick="switchProfileTab('insurance')">🛡️ التأمين</button>
       <button class="ptab" data-tab="maintenance"        onclick="switchProfileTab('maintenance')">🔧 الصيانة</button>
+      <button class="ptab" data-tab="maint-cards"        onclick="switchProfileTab('maint-cards')">🃏 كروت الصيانة</button>
       <button class="ptab" data-tab="violations"         onclick="switchProfileTab('violations')">🚦 المخالفات</button>
       <button class="ptab" data-tab="accidents"          onclick="switchProfileTab('accidents')">⚠️ الحوادث</button>
       <button class="ptab" data-tab="handovers-vp"       onclick="switchProfileTab('handovers-vp')">🔄 التسليم</button>
@@ -1087,6 +1088,33 @@
         <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
         <tbody><tr><td colspan="4">—</td></tr></tbody>
       </table>
+    </div>
+
+    <div class="ptab-pane" id="ptab-maint-cards" style="display:none">
+      <form id="form-maint-card" class="data-form" onsubmit="submitMaintenanceCard(event, _currentProfileVehicleId)">
+        <h4>إضافة كرت صيانة جديد</h4>
+        <div class="form-row">
+          <div class="form-group"><label>اسم السائق أثناء الصيانة</label><input id="mc-driver"></div>
+          <div class="form-group"><label>تاريخ الصيانة</label><input id="mc-date" type="date"></div>
+          <div class="form-group"><label>نوع الصيانة</label>
+            <select id="mc-type" required>
+              <option value="زيت">تغيير زيت</option>
+              <option value="فرامل">فرامل</option>
+              <option value="إطارات">إطارات</option>
+              <option value="كهرباء">كهرباء</option>
+              <option value="هيكل">هيكل</option>
+              <option value="دورية">صيانة دورية</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+          </div>
+          <div class="form-group"><label>وصف العمل</label><input id="mc-description"></div>
+          <div class="form-group"><label>المبلغ (ر.س)</label><input id="mc-cost" type="number" min="0" step="0.01"></div>
+          <div class="form-group"><label>الورشة / مزود الخدمة</label><input id="mc-provider"></div>
+          <div class="form-group"><label>ملاحظات</label><input id="mc-notes"></div>
+        </div>
+        <button type="submit" class="btn-primary">➕ إضافة كرت</button>
+      </form>
+      <div id="ptab-maint-cards-list" style="margin-top:16px"></div>
     </div>
 
     <!-- Violations -->

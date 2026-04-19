@@ -293,7 +293,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   // ── Skew Protection: prime the baseline deploy ID ──
   fetch(API_BASE + '/version').then(r => { _checkDeployId(r); }).catch(() => {});
 
-  const token = localStorage.getItem('telad_token');
   const quickToken = localStorage.getItem('telad_quick_token');
   if (quickToken) {
     try {
@@ -305,6 +304,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     localStorage.removeItem('telad_quick_token');
   }
 
+  const token = localStorage.getItem('telad_token');
   if (token) {
     try {
       const res = await apiFetch('/auth/me');
@@ -1980,6 +1980,7 @@ async function openVehicleProfile(vehicleId) {
   _currentProfileVehicleId = vehicleId;
   document.getElementById('modal-vehicle-profile').style.display = 'flex';
   document.getElementById('vp-title').textContent = 'جارٍ التحميل…';
+  switchProfileTab('basic');
 
   try {
     const res = await apiFetch('/vehicles/' + vehicleId + '/profile');
@@ -2058,6 +2059,7 @@ async function openVehicleProfile(vehicleId) {
     const onHandover = () => openHandoverForm(vehicleId);
     document.getElementById('vp-handover-btn').onclick          = onHandover;
     document.getElementById('vp-handover-footer-btn').onclick   = onHandover;
+    await loadMaintenanceCards(vehicleId);
 
   } catch {
     document.getElementById('vp-title').textContent = 'تعذّر تحميل البيانات';
@@ -2069,6 +2071,90 @@ function switchProfileTab(tab) {
   document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
   const pane = document.getElementById('ptab-' + tab);
   if (pane) pane.style.display = '';
+  if (tab === 'maint-cards' && _currentProfileVehicleId) {
+    const list = document.getElementById('ptab-maint-cards-list');
+    if (list && !list.dataset.loadedForVehicle) loadMaintenanceCards(_currentProfileVehicleId);
+  }
+}
+
+async function loadMaintenanceCards(vehicleId) {
+  const container = document.getElementById('ptab-maint-cards-list');
+  if (!container) return;
+  try {
+    const res = await apiFetch('/vehicles/' + vehicleId + '/maintenance-cards');
+    if (!res.ok) return;
+    const cards = await res.json();
+    const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
+    const statusLabel = { pending: 'معلّق', in_progress: 'جارٍ', completed: 'مكتمل', cancelled: 'ملغى' };
+    const typeColors = { زيت: '#f59e0b', فرامل: '#ef4444', إطارات: '#8b5cf6', كهرباء: '#3b82f6', هيكل: '#64748b', دورية: '#22c55e', أخرى: '#94a3b8' };
+    container.dataset.loadedForVehicle = String(vehicleId);
+    if (!cards.length) {
+      container.innerHTML = '<div class="tbl-empty">لا توجد كروت صيانة بعد</div>';
+      return;
+    }
+    container.innerHTML = `<div class="maint-cards-grid">${cards.map(c => `
+      <div class="maint-card">
+        <div class="maint-card-header">
+          <span style="background:${typeColors[c.maintenanceType] || '#64748b'}22;color:${typeColors[c.maintenanceType] || '#64748b'};padding:4px 10px;border-radius:20px;font-size:13px;font-weight:700">🔧 ${escHtml(c.maintenanceType || '—')}</span>
+          <span class="status-pill ${c.status === 'completed' ? 'pill-green' : c.status === 'in_progress' ? 'pill-orange' : 'pill-gray'}">${statusLabel[c.status] || c.status}</span>
+        </div>
+        <div style="display:grid;gap:6px;font-size:13px">
+          <div>🚗 <strong>اللوحة:</strong> ${escHtml(c.plate || '—')}</div>
+          <div>👨‍✈️ <strong>السائق:</strong> ${escHtml(c.driverDuringMaintenance || '—')}</div>
+          <div>📅 <strong>التاريخ:</strong> ${escHtml(c.maintenanceDate || '—')}</div>
+          ${c.serviceProvider ? `<div>🏪 <strong>الورشة:</strong> ${escHtml(c.serviceProvider)}</div>` : ''}
+          ${c.description ? `<div>📝 ${escHtml(c.description)}</div>` : ''}
+          <div>💰 <strong>المبلغ:</strong> ${(Number(c.totalCost) || 0).toFixed(2)} ر.س</div>
+          ${c.notes ? `<div>📌 ${escHtml(c.notes)}</div>` : ''}
+        </div>
+        ${canEdit ? `<div style="margin-top:12px;text-align:left"><button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(c.id))}">🗑️ حذف</button></div>` : ''}
+      </div>`).join('')}</div>`;
+    container.onclick = (event) => {
+      const button = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!button) return;
+      deleteMaintCard(button.dataset.vehicleId, button.dataset.cardId);
+    };
+  } catch {
+    container.innerHTML = '<div class="tbl-empty">تعذّر تحميل الكروت</div>';
+    delete container.dataset.loadedForVehicle;
+  }
+}
+
+async function deleteMaintCard(vehicleId, cardId) {
+  if (!confirm('هل تريد حذف كرت الصيانة؟')) return;
+  const res = await apiFetch('/vehicles/' + vehicleId + '/maintenance-cards/' + cardId, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم الحذف');
+    const list = document.getElementById('ptab-maint-cards-list');
+    if (list) delete list.dataset.loadedForVehicle;
+    loadMaintenanceCards(vehicleId);
+  } else {
+    showToast('فشل الحذف', 'error');
+  }
+}
+
+async function submitMaintenanceCard(event, vehicleId) {
+  event.preventDefault();
+  const body = {
+    driverDuringMaintenance: document.getElementById('mc-driver').value.trim(),
+    maintenanceDate: document.getElementById('mc-date').value,
+    maintenanceType: document.getElementById('mc-type').value,
+    description: document.getElementById('mc-description').value.trim(),
+    totalCost: document.getElementById('mc-cost').value,
+    serviceProvider: document.getElementById('mc-provider').value.trim(),
+    notes: document.getElementById('mc-notes').value.trim(),
+  };
+  const res = await apiFetch('/vehicles/' + vehicleId + '/maintenance-cards', { method: 'POST', body: JSON.stringify(body) });
+  if (res.ok) {
+    showToast('✅ تم إضافة كرت الصيانة');
+    const list = document.getElementById('ptab-maint-cards-list');
+    if (list) delete list.dataset.loadedForVehicle;
+    loadMaintenanceCards(vehicleId);
+    document.getElementById('form-maint-card').reset();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل الإضافة', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
