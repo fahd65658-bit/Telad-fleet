@@ -920,7 +920,7 @@ module.exports = async (req, res) => {
         id: uid(),
         vehicleId: vehicle.id,
         plate: vehicle.plate,
-        driverName: String(body.driverName || vehicle.driver || '').trim(),
+        driverName: String(body.driverName?.trim() || vehicle.driver || '').trim(),
         date: body.date || nowIso().slice(0, 10),
         type: String(body.type).trim(),
         details: String(body.details || '').trim(),
