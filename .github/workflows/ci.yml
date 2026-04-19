@@ -20,7 +20,7 @@ jobs:
       - name: Create GitHub App token (when configured)
         id: app-token
         if: ${{ secrets.GITHUB_APP_ID != '' && secrets.GITHUB_APP_PRIVATE_KEY != '' }}
-        uses: actions/create-github-app-token@b649b4af6ff74ed28e7ce6c2ff8d2dd4e0a3ea23 # v1
+        uses: actions/create-github-app-token@b649b4af6ff74ed28e7ce6c2ff8d2dd4e0a3ea23 # v1 (pinned SHA)
         with:
           app-id: ${{ secrets.GITHUB_APP_ID }}
           private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
@@ -38,12 +38,14 @@ jobs:
         run: |
           node - <<'NODE'
           const crypto = require('crypto');
+          const { verifyWebhookSignature } = require('./github-app/auth');
           const payload = JSON.stringify({ hello: 'telad-fleet' });
           const secret = 'ci-secret';
           const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
-          const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
-          if (signature !== expected) {
-            console.error('Webhook signature verification failed');
+          const ok = verifyWebhookSignature(payload, signature, secret);
+          const bad = verifyWebhookSignature(payload, signature, 'wrong-secret');
+          if (!ok || bad) {
+            console.error('Webhook signature verification logic is invalid');
             process.exit(1);
           }
           console.log('Webhook signature verification succeeded');

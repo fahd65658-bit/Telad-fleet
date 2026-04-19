@@ -25,6 +25,9 @@ function createGitHubAppCore(options = {}) {
     fleetIntegration,
     setDeployId: options.setDeployId,
   });
+  const cachedPrivateKey = process.env.GITHUB_APP_PRIVATE_KEY
+    ? process.env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n')
+    : require('fs').readFileSync(require('path').resolve(process.env.GITHUB_APP_PRIVATE_KEY_PATH || './github-app/private-key.pem'), 'utf8');
 
   /**
    * Creates app-level Octokit client authenticated via app JWT.
@@ -33,10 +36,7 @@ function createGitHubAppCore(options = {}) {
   function createAppClient() {
     const appId = process.env.GITHUB_APP_ID;
     if (!appId) throw new Error('GITHUB_APP_ID is missing');
-    const key = process.env.GITHUB_APP_PRIVATE_KEY
-      ? process.env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n')
-      : require('fs').readFileSync(require('path').resolve(process.env.GITHUB_APP_PRIVATE_KEY_PATH || './github-app/private-key.pem'), 'utf8');
-    const appJwt = generateJWT(appId, key);
+    const appJwt = generateJWT(appId, cachedPrivateKey);
     return new Octokit({ auth: appJwt });
   }
 

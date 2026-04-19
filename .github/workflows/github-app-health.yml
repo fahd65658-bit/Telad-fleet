@@ -17,7 +17,7 @@ jobs:
       - name: Create GitHub App token
         id: app-token
         if: ${{ secrets.GITHUB_APP_ID != '' && secrets.GITHUB_APP_PRIVATE_KEY != '' }}
-        uses: actions/create-github-app-token@b649b4af6ff74ed28e7ce6c2ff8d2dd4e0a3ea23 # v1
+        uses: actions/create-github-app-token@b649b4af6ff74ed28e7ce6c2ff8d2dd4e0a3ea23 # v1 (pinned SHA)
         with:
           app-id: ${{ secrets.GITHUB_APP_ID }}
           private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}

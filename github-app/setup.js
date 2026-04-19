@@ -41,7 +41,8 @@ function upsertEnv(content, key, value) {
  */
 function ensurePrivateKey(keyPath) {
   if (fs.existsSync(keyPath)) return fs.readFileSync(keyPath, 'utf8');
-  const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  // GitHub Apps require RSA private keys; use 4096 for stronger long-term security.
+  const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 4096 });
   const privateKey = generated.privateKey.export({ type: 'pkcs1', format: 'pem' });
   fs.mkdirSync(path.dirname(keyPath), { recursive: true });
   fs.writeFileSync(keyPath, privateKey, { mode: 0o600 });

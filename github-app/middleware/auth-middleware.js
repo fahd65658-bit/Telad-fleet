@@ -8,8 +8,9 @@ const jwt = require('jsonwebtoken');
  * @returns {import('express').RequestHandler} Express middleware.
  */
 function createAdminAuthMiddleware(options = {}) {
-  const secret = options.jwtSecret || process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+  const secret = options.jwtSecret || process.env.JWT_SECRET;
   return (req, res, next) => {
+    if (!secret) return res.status(500).json({ error: 'JWT_SECRET غير مضبوط في الخادم' });
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
     if (!token) return res.status(401).json({ error: 'رمز المصادقة مطلوب' });

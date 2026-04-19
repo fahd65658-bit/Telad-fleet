@@ -31,6 +31,9 @@ const IS_PROD  = process.env.NODE_ENV === 'production';
 // Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
 // value.  Falls back to a random hex string so every cold start gets its own ID
 // when DEPLOY_ID is not injected by CI/CD.
+// It remains mutable to reflect latest push SHA via GitHub App webhook updates.
+// This intentionally updates X-Deploy-Id/version responses after push webhooks.
+// So the "deployment id" here tracks latest deployed-or-pushed revision, not only process boot.
 let DEPLOY_ID = process.env.DEPLOY_ID || crypto.randomBytes(8).toString('hex');
 
 // Fail fast in production if JWT_SECRET is not set
@@ -272,7 +275,7 @@ app.use(cors({
 app.use(express.json({
   limit: '1mb',
   verify: (req, _res, buf) => {
-    if (req.originalUrl === '/api/github/webhook') req.rawBody = Buffer.from(buf);
+    if ((req.originalUrl || '').endsWith('/api/github/webhook')) req.rawBody = buf;
   },
 }));
 
