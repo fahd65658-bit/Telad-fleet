@@ -25,8 +25,9 @@ function buildWebhookRouter() {
   const router = express.Router();
 
   if (process.env.GITHUB_APP_WEBHOOK_SECRET) {
-    // Initialize official helper for compatibility checks and future extension.
-    new Webhooks({ secret: process.env.GITHUB_APP_WEBHOOK_SECRET });
+    // Keep a validated Webhooks instance ready for future signature/event extensions.
+    const _webhooks = new Webhooks({ secret: process.env.GITHUB_APP_WEBHOOK_SECRET });
+    void _webhooks;
   }
 
   router.post(

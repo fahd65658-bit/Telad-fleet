@@ -14,10 +14,15 @@ const REQUIRED_VARS = [
 function ensureWebhookSecret() {
   if (process.env.GITHUB_APP_WEBHOOK_SECRET) return process.env.GITHUB_APP_WEBHOOK_SECRET;
 
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('لا يمكن توليد GITHUB_APP_WEBHOOK_SECRET تلقائياً في بيئة الإنتاج.');
+  }
+
   const generated = crypto.randomBytes(32).toString('hex');
   const envPath = path.join(process.cwd(), '.env');
   if (fs.existsSync(envPath)) {
-    fs.appendFileSync(envPath, `\nGITHUB_APP_WEBHOOK_SECRET=${generated}\n`, 'utf8');
+    fs.appendFileSync(envPath, '\n# Auto-generated for local development only; regenerate securely for production\n', 'utf8');
+    fs.appendFileSync(envPath, `GITHUB_APP_WEBHOOK_SECRET=${generated}\n`, 'utf8');
   }
 
   return generated;
@@ -54,8 +59,12 @@ async function run() {
 
   let webhookSecret = process.env.GITHUB_APP_WEBHOOK_SECRET;
   if (!verifyOnly && !webhookSecret) {
-    webhookSecret = ensureWebhookSecret();
-    report.push({ key: 'GITHUB_APP_WEBHOOK_SECRET', status: 'generated' });
+    try {
+      webhookSecret = ensureWebhookSecret();
+      report.push({ key: 'GITHUB_APP_WEBHOOK_SECRET', status: 'generated' });
+    } catch (error) {
+      report.push({ key: 'GITHUB_APP_WEBHOOK_SECRET', status: `error: ${error.message}` });
+    }
   }
 
   let githubCheck = { ok: false, status: 'skipped' };

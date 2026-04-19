@@ -22,6 +22,7 @@ const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const { generateFleetAnswer } = require('../lib/ai-chat');
 const { isWithdrawalOperation, FINANCIAL_TRANSACTION_TYPES } = require('../lib/financial');
+const { setSocketIO } = require('../github-app/fleet-integration');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
@@ -243,6 +244,7 @@ const io     = new Server(server, {
   cors: { origin: (origin, cb) => cb(null, isAllowedOrigin(origin)), methods: ['GET', 'POST'] },
 });
 app.set('io', io);
+setSocketIO(io);
 
 app.set('trust proxy', 1);
 

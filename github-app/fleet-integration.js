@@ -1,6 +1,9 @@
 'use strict';
 
 const activityLog = [];
+const MAX_ACTIVITY_LOG_SIZE = 500;
+const VEHICLE_ID_PATTERN_EN = /vehicleId:\s*([\w-]+)/i;
+const VEHICLE_ID_PATTERN_AR = /مركبة:\s*([\w-]+)/i;
 let ioInstance = null;
 
 /**
@@ -26,7 +29,7 @@ function logActivity(type, data = {}) {
   };
 
   activityLog.unshift(entry);
-  if (activityLog.length > 500) activityLog.length = 500;
+  if (activityLog.length > MAX_ACTIVITY_LOG_SIZE) activityLog.length = MAX_ACTIVITY_LOG_SIZE;
 
   return entry;
 }
@@ -37,7 +40,7 @@ function logActivity(type, data = {}) {
  * @returns {Array<object>}
  */
 function getActivity(limit = 100) {
-  return activityLog.slice(0, Math.max(1, Math.min(limit, 500)));
+  return activityLog.slice(0, Math.max(1, Math.min(limit, MAX_ACTIVITY_LOG_SIZE)));
 }
 
 /**
@@ -48,7 +51,7 @@ function getActivity(limit = 100) {
 async function createMaintenanceFromIssue(issue) {
   const apiBase = process.env.GITHUB_APP_INTERNAL_API_BASE || `http://127.0.0.1:${process.env.PORT || 5000}`;
   const payload = {
-    vehicleId: issue?.body?.match(/vehicleId:\s*([\w-]+)/i)?.[1] || issue?.body?.match(/مركبة:\s*([\w-]+)/i)?.[1] || 'unknown',
+    vehicleId: issue?.body?.match(VEHICLE_ID_PATTERN_EN)?.[1] || issue?.body?.match(VEHICLE_ID_PATTERN_AR)?.[1] || 'unknown',
     type: 'بلاغ GitHub',
     description: issue?.title || 'طلب صيانة وارد من GitHub',
     scheduledDate: new Date().toISOString().slice(0, 10),

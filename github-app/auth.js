@@ -38,6 +38,7 @@ function generateJWT(appId, privateKey) {
   return jwt.sign(
     {
       iat: now - 60,
+      // GitHub App JWT must expire within 10 minutes; use 9 minutes for safety margin.
       exp: now + (9 * 60),
       iss: String(appId),
     },
@@ -75,7 +76,12 @@ function verifyWebhookSignature(payload, signature, secret) {
  * @returns {Promise<{token: string, expires_at: string}>}
  */
 async function getInstallationToken(installationId, jwtToken) {
-  const response = await fetch(`${GITHUB_API_BASE}/app/installations/${installationId}/access_tokens`, {
+  const normalizedInstallationId = String(installationId || '').trim();
+  if (!/^\d+$/.test(normalizedInstallationId)) {
+    throw new Error('installationId غير صالح.');
+  }
+
+  const response = await fetch(`${GITHUB_API_BASE}/app/installations/${encodeURIComponent(normalizedInstallationId)}/access_tokens`, {
     method: 'POST',
     headers: {
       Accept: 'application/vnd.github+json',

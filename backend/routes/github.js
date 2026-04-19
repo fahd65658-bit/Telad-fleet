@@ -63,9 +63,6 @@ router.get('/installations', requireAdminJwt, async (_req, res) => {
 
 router.post('/app/setup', requireAdminJwt, async (req, res) => {
   try {
-    const io = req.app.get('io');
-    if (io) integration.setSocketIO(io);
-
     const report = {
       enabled: isEnabled(),
       configured: isAppConfigured(),
@@ -96,8 +93,9 @@ router.get('/activity', requireAdminJwt, (_req, res) => {
 
 router.post('/test-webhook', requireAdminJwt, requireInstallationAccess, async (req, res) => {
   try {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(403).json({ error: 'هذا المسار مخصص للتطوير فقط.' });
+    const devTestEnabled = process.env.GITHUB_APP_ENABLE_DEV_TEST_WEBHOOK === 'true';
+    if (process.env.NODE_ENV === 'production' || !devTestEnabled) {
+      return res.status(403).json({ error: 'هذا المسار معطّل افتراضياً، ومتاح فقط للتطوير عند تفعيل المتغير المخصص.' });
     }
 
     const payload = {
