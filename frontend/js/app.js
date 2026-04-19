@@ -417,12 +417,11 @@ function switchLoginMode(mode) {
 
 function apiFetchQuick(path, options = {}) {
   const token = localStorage.getItem('telad_quick_token');
+  const headers = { ...(options.headers || {}) };
+  if (token) headers.Authorization = 'Bearer ' + token;
   return apiFetch(path, {
     ...options,
-    headers: {
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {}),
-    },
+    headers,
   });
 }
 
@@ -445,7 +444,7 @@ async function quickAccessLogin(e) {
       errEl.textContent = data.error || 'تعذّر الدخول السريع';
       return;
     }
-    localStorage.setItem('telad_quick_token', data.token);
+    localStorage.setItem('telad_quick_token', data.quickToken || data.token);
     await loadQuickAccessProfile();
   } catch {
     errEl.textContent = 'تعذّر الاتصال بالخادم';
@@ -2094,10 +2093,18 @@ async function loadMaintenanceCards(vehicleId) {
         <div>💰 ${escHtml(String(card.amount ?? 0))} ر.س</div>
         <div>📝 ${escHtml(card.details || '—')}</div>
         <div style="margin-top:10px">
-          <button class="btn-sm btn-danger" onclick="deleteMaintenanceCard('${escHtml(String(vehicleId))}', '${escHtml(String(card.id))}')">حذف</button>
+          <button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(card.id))}">حذف</button>
         </div>
       </div>
     `).join('');
+  if (!wrap.dataset.deleteBound) {
+    wrap.dataset.deleteBound = '1';
+    wrap.addEventListener('click', async (event) => {
+      const btn = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!btn) return;
+      await deleteMaintenanceCard(btn.dataset.vehicleId, btn.dataset.cardId);
+    });
+  }
 }
 
 async function addMaintenanceCard(vehicleId, data) {

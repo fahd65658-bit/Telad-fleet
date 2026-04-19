@@ -26,6 +26,7 @@ const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
 const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
+const QUICK_ACCESS_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -57,6 +58,7 @@ const STATUS_LABELS = {
   maintenance: 'صيانة',
 };
 
+// JSON storage schema reference used by the API data model.
 const FILES = {
   users: 'users.json',
   vehicles: 'vehicles.json',
@@ -73,7 +75,6 @@ const FILES = {
   financial: 'financial.json',
   logs: 'logs.json',
 };
-void FILES;
 
 const CITY_POOL = ['الرياض', 'جدة', 'الدمام', 'المدينة', 'مكة', 'أبها'];
 
@@ -289,15 +290,15 @@ function latestVehicleMaintenanceCard(vehicleId) {
 function issueQuickAccessToken({ vehicleId, employeeId }) {
   return jwt.sign(
     { role: 'quick', vehicleId, employeeId },
-    FALLBACK_TOKEN_SECRET,
+    QUICK_ACCESS_SECRET,
     { expiresIn: '24h', issuer: 'telad-fleet', audience: 'telad-quick' },
   );
 }
 
 function verifyQuickAccessToken(token) {
-  if (!token || !FALLBACK_TOKEN_SECRET) return null;
+  if (!token || !QUICK_ACCESS_SECRET) return null;
   try {
-    return jwt.verify(token, FALLBACK_TOKEN_SECRET, { issuer: 'telad-fleet', audience: 'telad-quick' });
+    return jwt.verify(token, QUICK_ACCESS_SECRET, { issuer: 'telad-fleet', audience: 'telad-quick' });
   } catch {
     return null;
   }
@@ -709,12 +710,12 @@ module.exports = async (req, res) => {
       return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
     }
 
+    if (!QUICK_ACCESS_SECRET) return sendJson(res, 500, { error: 'QUICK_ACCESS_SECRET غير مضبوط' });
     const quickToken = issueQuickAccessToken({ employeeId: employee.id, vehicleId: vehicle.id });
     addLog(`دخول سريع للمركبة ${vehicle.plate}`, employee.name || employee.id);
 
     return sendJson(res, 200, {
       quickAccess: true,
-      token: quickToken,
       quickToken,
       vehicleId: vehicle.id,
       employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId },
