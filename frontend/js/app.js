@@ -2058,6 +2058,11 @@ async function openVehicleProfile(vehicleId) {
     const onHandover = () => openHandoverForm(vehicleId);
     document.getElementById('vp-handover-btn').onclick          = onHandover;
     document.getElementById('vp-handover-footer-btn').onclick   = onHandover;
+    const maintForm = document.getElementById('form-maint-card');
+    if (maintForm) {
+      maintForm.dataset.vehicleId = String(vehicleId);
+      maintForm.onsubmit = e => submitMaintenanceCard(e);
+    }
     await loadMaintenanceCards(vehicleId);
 
   } catch {
@@ -2087,7 +2092,7 @@ async function loadMaintenanceCards(vehicleId) {
       <div class="maint-card">
         <div class="maint-card-header">
           <strong>${escHtml(c.maintenanceType || 'صيانة')}</strong>
-          <button class="btn-sm btn-danger" onclick="deleteMaintCard('${escHtml(String(vehicleId))}','${escHtml(String(c.id))}')">🗑️ حذف</button>
+          <button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(c.id))}">🗑️ حذف</button>
         </div>
         <div><b>🚗 لوحة:</b> ${escHtml(c.plate || '—')}</div>
         <div><b>👨‍✈️ السائق:</b> ${escHtml(c.driverName || '—')}</div>
@@ -2099,6 +2104,11 @@ async function loadMaintenanceCards(vehicleId) {
       </div>
     `).join('')
     : '<div class="tbl-empty">لا توجد كروت صيانة</div>';
+  list.onclick = event => {
+    const btn = event.target.closest('button[data-action="delete-maint-card"]');
+    if (!btn) return;
+    deleteMaintCard(btn.dataset.vehicleId, btn.dataset.cardId);
+  };
 }
 
 async function deleteMaintCard(vehicleId, cardId) {
@@ -2109,8 +2119,10 @@ async function deleteMaintCard(vehicleId, cardId) {
   await loadMaintenanceCards(vehicleId);
 }
 
-async function submitMaintenanceCard(event, vehicleId) {
+async function submitMaintenanceCard(event, vehicleId = null) {
   event.preventDefault();
+  const resolvedVehicleId = vehicleId || event.currentTarget?.dataset?.vehicleId;
+  if (!resolvedVehicleId) return showToast('تعذّر تحديد المركبة', 'error');
   const payload = {
     maintenanceType: document.getElementById('mc-maintenance-type')?.value.trim(),
     driverName: document.getElementById('mc-driver-name')?.value.trim(),
@@ -2120,7 +2132,7 @@ async function submitMaintenanceCard(event, vehicleId) {
     amount: Number(document.getElementById('mc-amount')?.value || 0),
     notes: document.getElementById('mc-notes')?.value.trim(),
   };
-  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards`, {
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(resolvedVehicleId)}/maintenance-cards`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -2131,7 +2143,7 @@ async function submitMaintenanceCard(event, vehicleId) {
   const form = document.getElementById('form-maint-card');
   if (form) form.reset();
   showToast('تمت إضافة كرت الصيانة');
-  await loadMaintenanceCards(vehicleId);
+  await loadMaintenanceCards(resolvedVehicleId);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

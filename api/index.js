@@ -149,9 +149,13 @@ function ensureStateStructure() {
   if (!Array.isArray(state.handovers)) state.handovers = [];
   if (!Array.isArray(state.formsApproved)) state.formsApproved = [];
   if (!Array.isArray(state.approvedForms)) state.approvedForms = [];
-  if (!state.formsApproved.length && state.approvedForms.length) state.formsApproved = state.approvedForms;
-  if (!state.approvedForms.length && state.formsApproved.length) state.approvedForms = state.formsApproved;
-  if (state.approvedForms !== state.formsApproved) state.approvedForms = state.formsApproved;
+  if (state.approvedForms.length) {
+    const existingIds = new Set(state.formsApproved.map(f => f.id));
+    for (const form of state.approvedForms) {
+      if (!existingIds.has(form.id)) state.formsApproved.push(form);
+    }
+  }
+  state.approvedForms = state.formsApproved;
   if (!Array.isArray(state.maintenanceCards)) state.maintenanceCards = [];
   if (!Array.isArray(state.maintenance)) state.maintenance = [];
   if (!Array.isArray(state.appointments)) state.appointments = [];
@@ -736,10 +740,13 @@ module.exports = async (req, res) => {
         const body = await readBody(req);
         const files = Array.isArray(body.files) ? body.files : [];
         if (files.length === 0) return sendJson(res, 400, { error: 'يجب إرسال مرفق واحد على الأقل' });
-        if (!Array.isArray(vehicle.quickAccessAttachments)) vehicle.quickAccessAttachments = [];
+        const allowedTypes = new Set([
+          'front', 'back', 'left', 'right',
+          'oil_sticker', 'odometer', 'additional', 'handover_receipt',
+        ]);
         if (!Array.isArray(vehicle.attachments)) vehicle.attachments = [];
         const accepted = files
-          .filter(f => f && f.type && f.data)
+          .filter(f => f && allowedTypes.has(String(f.type || '')) && f.data)
           .map(f => ({
             id: uid(),
             type: String(f.type),
@@ -749,8 +756,8 @@ module.exports = async (req, res) => {
             uploadedAt: nowIso(),
           }));
         if (accepted.length === 0) return sendJson(res, 400, { error: 'لا توجد مرفقات بصيغة صحيحة' });
-        vehicle.quickAccessAttachments.push(...accepted);
         vehicle.attachments.push(...accepted);
+        vehicle.quickAccessAttachments = vehicle.attachments;
         addLog(`رفع ${accepted.length} مرفقات للمركبة ${vehicle.plate}`, employee.name || employee.id);
         return sendJson(res, 201, { uploaded: accepted.length });
       }
