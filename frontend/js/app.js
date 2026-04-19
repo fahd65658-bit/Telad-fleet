@@ -1985,7 +1985,7 @@ const MAINT_CARD_STATUS_LABELS = {
   cancelled: 'ملغى',
 };
 
-function maintainCardStatusClass(status) {
+function maintenanceCardStatusClass(status) {
   if (status === 'completed') return 'maint-status-completed';
   if (status === 'in_progress') return 'maint-status-progress';
   if (status === 'cancelled') return 'maint-status-cancelled';
@@ -2002,7 +2002,7 @@ async function loadMaintenanceCards(vehicleId) {
   grid.innerHTML = '<div class="tbl-empty">جارٍ التحميل…</div>';
 
   try {
-    const res = await apiFetch('/vehicles/' + vehicleId + '/maintenance-cards');
+    const res = await apiFetch(`/vehicles/${vehicleId}/maintenance-cards`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     const cards = data.cards || [];
@@ -2014,7 +2014,7 @@ async function loadMaintenanceCards(vehicleId) {
       <div class="maint-card">
         <div class="maint-card-header">
           <span class="maint-type-badge">🔧 ${escHtml(card.maintenanceType || '—')}</span>
-          <span class="maint-status-badge ${maintainCardStatusClass(card.status)}">${escHtml(MAINT_CARD_STATUS_LABELS[card.status] || card.status || '—')}</span>
+          <span class="maint-status-badge ${maintenanceCardStatusClass(card.status)}">${escHtml(MAINT_CARD_STATUS_LABELS[card.status] || card.status || '—')}</span>
         </div>
         <div class="maint-card-body">
           <div>🚗 لوحة: ${escHtml(card.plate || data.vehicle?.plate || '—')}</div>

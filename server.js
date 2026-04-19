@@ -225,10 +225,19 @@ const MAINTENANCE_CARD_STATUSES = new Set(['pending', 'in_progress', 'completed'
 
 function sortMaintenanceCards(cards) {
   return [...cards].sort((a, b) => {
-    const aDate = new Date(a.maintenanceDate || a.createdAt || 0).getTime();
-    const bDate = new Date(b.maintenanceDate || b.createdAt || 0).getTime();
+    const parseTs = (item) => {
+      const value = item.maintenanceDate || item.createdAt;
+      if (!value) return null;
+      const ts = new Date(value).getTime();
+      return Number.isFinite(ts) ? ts : null;
+    };
+    const aDate = parseTs(a);
+    const bDate = parseTs(b);
+    if (aDate == null && bDate == null) return 0;
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
     if (bDate !== aDate) return bDate - aDate;
-    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    return 0;
   });
 }
 
@@ -260,7 +269,8 @@ app.post('/api/vehicles/:vehicleId/maintenance-cards', auth('supervisor'), (req,
   const details = String(description || '').trim();
   const provider = String(serviceProvider || '').trim();
   const extraNotes = String(notes || '').trim();
-  const cardStatus = String(status || 'pending').trim() || 'pending';
+  const rawStatus = status == null ? 'pending' : String(status).trim();
+  const cardStatus = rawStatus || 'pending';
   const cost = Number(totalCost);
 
   if (!driverName || !date || !type || !details || !Number.isFinite(cost) || cost < 0) {

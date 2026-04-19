@@ -775,7 +775,6 @@ body {
   background: var(--surface-2, #1e293b);
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 12px;
   border: 1px solid rgba(255,255,255,0.08);
 }
 .maint-card-header {
