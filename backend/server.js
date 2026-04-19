@@ -38,6 +38,8 @@ if (IS_PROD && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
+const QUICK_ACCESS_EXPIRES_IN = process.env.QUICK_ACCESS_EXPIRES_IN || '24h';
+const DEFAULT_QUICK_ACCESS_PIN = process.env.QUICK_ACCESS_DEFAULT_PIN || '0241';
 let defaultAdminPasswordHash = null;
 
 function buildDefaultUsers() {
@@ -209,6 +211,10 @@ function persistAll() {
   saveCollection('accidents',      accidents);
   saveCollection('violations',     violations);
   saveCollection('financialItems', financialItems);
+  saveCollection('maintenanceCards', maintenanceCards);
+  saveCollection('approvedForms', approvedForms);
+  saveCollection('quickAccessUsers', quickAccessUsers);
+  saveCollection('vehicleConditions', vehicleConditions);
   saveCollection('notifications',  notifications);
   saveCollection('devRequests',    devRequests);
 }
@@ -341,6 +347,20 @@ function requireAuth(roles = []) {
   };
 }
 
+function requireQuickAuth(req, res, next) {
+  const header = req.headers['authorization'];
+  const token = header ? header.split(' ')[1] : null;
+  if (!token) return res.status(401).json({ error: 'مطلوب تسجيل الدخول السريع' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== 'quick') return res.status(403).json({ error: 'توكن غير صالح' });
+    req.quick = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: 'جلسة الدخول السريع منتهية' });
+  }
+}
+
 const authAll      = requireAuth();
 const adminOnly    = requireAuth(['admin']);
 const supervisorUp = requireAuth(['admin', 'supervisor']);
@@ -381,9 +401,15 @@ app.get('/health', (_req, res) => {
     status: 'ok',
     system: 'TELAD FLEET',
     domain: 'fna.sa',
+    uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     version: '2.1.0',
     deployId: DEPLOY_ID,
+    database: {
+      mode: 'json-file',
+      connected: true,
+      dataDir: DATA_DIR,
+    },
   });
 });
 
@@ -415,6 +441,152 @@ app.post('/auth/login', loginLimiter, (req, res) => {
 
 // GET /auth/me
 app.get('/auth/me', authAll, (req, res) => res.json(req.user));
+
+// MERGED: quick-access-portal
+app.post('/quick-access/login', (req, res) => {
+  const { employee_id: employeeId, pin } = req.body || {};
+  if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
+  const employee = employees.find(e => e.id === employeeId || e.nationalId === employeeId);
+  if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
+  const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4) || DEFAULT_QUICK_ACCESS_PIN;
+  if (!expectedPin || String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
+  const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
+  if (!quickAccessUsers.find(u => u.employeeId === employee.id)) {
+    quickAccessUsers.push({ id: newId(), employeeId: employee.id, active: true, createdAt: new Date().toISOString() });
+  }
+  res.json({ token, quickAccess: true, employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId } });
+});
+
+app.post('/auth/quick-access', (req, res) => {
+  const nationalId = String(req.body?.nationalId || '').trim();
+  const plate = String(req.body?.plate || '').trim();
+  if (!nationalId || !plate) return res.status(400).json({ error: 'رقم الهوية ورقم اللوحة مطلوبان' });
+  const employee = employees.find(e => String(e.nationalId || '') === nationalId);
+  if (!employee) return res.status(403).json({ error: 'لا يوجد موظف مطابق في النظام' });
+  const vehicle = vehicles.find(v => String(v.plate || '').trim().toLowerCase() === plate.toLowerCase());
+  if (!vehicle) return res.status(403).json({ error: 'لا يوجد ملف مركبة مطابق' });
+  if (employee.vehicleId !== vehicle.id) return res.status(403).json({ error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
+  const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
+  res.json({
+    quickAccess: true,
+    token,
+    employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId },
+    vehicle: {
+      id: vehicle.id,
+      name: vehicle.name,
+      plate: vehicle.plate,
+      status: vehicle.status,
+      insuranceStatus: vehicle.insurance?.status || '—',
+      inspectionStatus: vehicle.inspection?.status || '—',
+    },
+  });
+});
+
+app.post('/auth/quick-logout', (_req, res) => res.json({ ok: true }));
+
+app.get('/quick-access/vehicle', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const vehicle = employee.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) : null;
+  if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
+  res.json({ employee: { id: employee.id, name: employee.name }, vehicle });
+});
+app.get('/quick-access/vehicle-profile', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const vehicle = employee.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) : null;
+  if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
+  res.json({
+    employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId },
+    vehicle: {
+      id: vehicle.id,
+      name: vehicle.name,
+      plate: vehicle.plate,
+      status: vehicle.status,
+      insuranceStatus: vehicle.insurance?.status || '—',
+      inspectionStatus: vehicle.inspection?.status || '—',
+      city: vehicle.city || '—',
+      projectId: vehicle.projectId || null,
+    },
+  });
+});
+
+app.post('/quick-access/requests', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const request = {
+    id: newId(),
+    vehicleId: employee.vehicleId || null,
+    employeeId: employee.id,
+    type: req.body?.type || 'quick-request',
+    notes: req.body?.notes || '',
+    status: 'pending',
+    source: 'quick-access',
+    createdAt: new Date().toISOString(),
+  };
+  appointments.push(request);
+  res.status(201).json(request);
+});
+app.post('/quick-access/monthly-appointment', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const request = {
+    id: newId(),
+    vehicleId: employee.vehicleId || null,
+    employeeId: employee.id,
+    type: 'موعد صيانة شهري',
+    notes: req.body?.notes || '',
+    status: 'pending',
+    source: 'quick-access',
+    scheduledAt: req.body?.scheduledAt || new Date().toISOString().slice(0, 10),
+    createdAt: new Date().toISOString(),
+  };
+  appointments.push(request);
+  res.status(201).json(request);
+});
+
+app.post('/quick-access/attachments', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const vehicle = employee.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) : null;
+  if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
+  const files = Array.isArray(req.body?.files) ? req.body.files : [];
+  if (!Array.isArray(vehicle.quickAccessAttachments)) vehicle.quickAccessAttachments = [];
+  const accepted = files.filter(f => f && f.data).map(f => ({
+    id: newId(),
+    type: String(f.type || 'additional'),
+    name: String(f.name || 'attachment.jpg'),
+    data: f.data,
+    uploadedBy: employee.id,
+    uploadedAt: new Date().toISOString(),
+  }));
+  vehicle.quickAccessAttachments.push(...accepted);
+  res.status(201).json({ uploaded: accepted.length });
+});
+
+app.get('/quick-access/latest-maintenance', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const list = maintenanceJobs
+    .filter(m => m.vehicleId === employee.vehicleId)
+    .sort((a, b) => new Date(b.createdAt || b.scheduledDate || 0) - new Date(a.createdAt || a.scheduledDate || 0));
+  res.json({ latestMaintenance: list[0] || null });
+});
+
+app.post('/quick-access/reports', requireQuickAuth, (req, res) => {
+  const employee = employees.find(e => e.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const report = {
+    id: newId(),
+    title: req.body?.title || 'Quick Access Report',
+    type: req.body?.type || 'quick-access',
+    data: req.body?.data || {},
+    createdBy: employee.name || employee.id,
+    createdAt: new Date().toISOString(),
+  };
+  reports.push(report);
+  res.status(201).json(report);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // USER MANAGEMENT  (admin only)
@@ -729,6 +901,10 @@ let auditLogs      = loadOrBootstrapCollection('auditLogs');
 let accidents      = loadOrBootstrapCollection('accidents');
 let violations     = loadOrBootstrapCollection('violations');
 let financialItems = loadOrBootstrapCollection('financialItems');
+let maintenanceCards = loadOrBootstrapCollection('maintenanceCards');
+let approvedForms = loadOrBootstrapCollection('approvedForms');
+let quickAccessUsers = loadOrBootstrapCollection('quickAccessUsers');
+let vehicleConditions = loadOrBootstrapCollection('vehicleConditions');
 
 let devRequests    = loadOrBootstrapCollection('devRequests');
 
@@ -798,6 +974,14 @@ app.post('/projects', supervisorUp, (req, res) => {
   res.status(201).json(p);
 });
 app.get('/projects', authAll, (_req, res) => res.json(projects));
+// MERGED: projects-vehicles-alias
+app.get('/projects/:id/vehicles', authAll, (req, res) => {
+  const project = projects.find(p => p.id === req.params.id);
+  if (!project) return res.status(404).json({ error: 'المشروع غير موجود' });
+  const city = cities.find(c => c.id === project.cityId) || null;
+  const list = vehicles.filter(v => v.projectId === project.id || (city && v.city === city.name));
+  res.json({ project, city, vehicles: list });
+});
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 app.post('/vehicles', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
@@ -835,6 +1019,72 @@ app.delete('/vehicles/:id', supervisorUp, (req, res) => {
   vehicles.splice(idx, 1);
   audit(`حذف مركبة: ${plate}`, req.user.username);
   res.json({ ok: true });
+});
+
+// MERGED: maintenance-cards
+app.get('/vehicles/:id/maintenance-cards', authAll, (req, res) => {
+  res.json(maintenanceCards.filter(card => card.vehicleId === req.params.id));
+});
+app.post('/vehicles/:id/maintenance-cards', supervisorUp, (req, res) => {
+  const vehicle = vehicles.find(v => v.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const card = {
+    id: newId(),
+    vehicleId: req.params.id,
+    cardType: req.body?.cardType || 'general',
+    title: req.body?.title || '',
+    details: req.body?.details || {},
+    createdBy: req.user.username,
+    createdAt: new Date().toISOString(),
+  };
+  maintenanceCards.push(card);
+  res.status(201).json(card);
+});
+app.delete('/vehicles/:id/maintenance-cards/:cardId', supervisorUp, (req, res) => {
+  const idx = maintenanceCards.findIndex(card => card.vehicleId === req.params.id && card.id === req.params.cardId);
+  if (idx === -1) return res.status(404).json({ error: 'بطاقة الصيانة غير موجودة' });
+  maintenanceCards.splice(idx, 1);
+  res.json({ ok: true });
+});
+
+// MERGED: vehicle-inspection-insurance
+app.put('/vehicles/:id/insurance', supervisorUp, (req, res) => {
+  const idx = vehicles.findIndex(v => v.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  vehicles[idx].insurance = req.body || {};
+  vehicles[idx].updatedAt = new Date().toISOString();
+  res.json(vehicles[idx]);
+});
+app.put('/vehicles/:id/inspection', supervisorUp, (req, res) => {
+  const idx = vehicles.findIndex(v => v.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  vehicles[idx].inspection = req.body || {};
+  vehicles[idx].updatedAt = new Date().toISOString();
+  res.json(vehicles[idx]);
+});
+app.post('/vehicles/:id/condition-photos', requireAuth(['admin', 'supervisor', 'operator']), (req, res) => {
+  const vehicle = vehicles.find(v => v.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const record = {
+    id: newId(),
+    vehicleId: vehicle.id,
+    photos: Array.isArray(req.body?.photos) ? req.body.photos : [],
+    condition: req.body?.condition || 'normal',
+    notes: req.body?.notes || '',
+    capturedBy: req.user.username,
+    capturedAt: new Date().toISOString(),
+  };
+  vehicleConditions.push(record);
+  res.status(201).json(record);
+});
+app.get('/vehicles/:id/inspection-records', authAll, (req, res) => {
+  res.json(vehicleConditions.filter(x => x.vehicleId === req.params.id));
+});
+app.get('/vehicles/insurance-expiry', authAll, (_req, res) => {
+  const list = vehicles
+    .filter(v => v.insurance?.expiry)
+    .map(v => ({ vehicleId: v.id, name: v.name, plate: v.plate, expiry: v.insurance.expiry, status: v.insurance.status || 'unknown' }));
+  res.json(list);
 });
 
 // ─── Employees ────────────────────────────────────────────────────────────────
@@ -1092,6 +1342,76 @@ app.get('/reports/analytics', authAll, (_req, res) => {
       inactive: drivers.filter(d => d.status !== 'active').length,
     },
     generatedAt: new Date().toISOString(),
+  });
+});
+
+// MERGED: approved-forms
+app.get('/approved-forms', authAll, (_req, res) => res.json(approvedForms));
+app.post('/approved-forms', supervisorUp, (req, res) => {
+  const title = String(req.body?.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'عنوان النموذج مطلوب' });
+  const form = {
+    id: newId(),
+    title,
+    type: req.body?.type || 'general',
+    status: req.body?.status || 'approved',
+    employeeId: req.body?.employeeId || null,
+    vehicleId: req.body?.vehicleId || null,
+    payload: req.body?.payload || {},
+    attachments: Array.isArray(req.body?.attachments) ? req.body.attachments : [],
+    createdBy: req.user.username,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  approvedForms.push(form);
+  res.status(201).json(form);
+});
+app.get('/forms/approved', authAll, (_req, res) => res.json(approvedForms));
+app.post('/forms/approved', supervisorUp, (req, res) => {
+  const title = String(req.body?.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'عنوان النموذج مطلوب' });
+  const form = {
+    id: newId(),
+    title,
+    type: req.body?.type || 'general',
+    status: req.body?.status || 'approved',
+    employeeId: req.body?.employeeId || null,
+    vehicleId: req.body?.vehicleId || null,
+    payload: req.body?.payload || {},
+    attachments: Array.isArray(req.body?.attachments) ? req.body.attachments : [],
+    createdBy: req.user.username,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  approvedForms.push(form);
+  res.status(201).json(form);
+});
+app.post('/forms/approved/:id/work', authAll, (req, res) => {
+  const form = approvedForms.find(f => f.id === req.params.id);
+  if (!form) return res.status(404).json({ error: 'النموذج غير موجود' });
+  form.payload = { ...(form.payload || {}), ...(req.body?.payload || {}) };
+  if (Array.isArray(req.body?.attachments) && req.body.attachments.length) {
+    form.attachments = [...(form.attachments || []), ...req.body.attachments];
+  }
+  form.updatedAt = new Date().toISOString();
+  form.lastWorkedBy = req.user.username;
+  res.json(form);
+});
+app.get('/approved-forms/autofill', authAll, (req, res) => {
+  const form = approvedForms.find(f => f.id === req.query.formId);
+  if (!form) return res.status(404).json({ error: 'النموذج غير موجود' });
+  res.json({ payload: form.payload || {}, employeeId: form.employeeId || null, vehicleId: form.vehicleId || null });
+});
+app.get('/forms/autofill', authAll, (req, res) => {
+  const employeeId = req.query.employeeId || '';
+  const vehicleId = req.query.vehicleId || '';
+  const employee = employeeId ? employees.find(e => e.id === employeeId) || null : null;
+  const vehicle = vehicleId ? vehicles.find(v => v.id === vehicleId) || null : null;
+  const resolvedVehicle = vehicle || (employee?.vehicleId ? vehicles.find(v => v.id === employee.vehicleId) || null : null);
+  const resolvedEmployee = employee || (resolvedVehicle ? employees.find(e => e.vehicleId === resolvedVehicle.id) || null : null);
+  res.json({
+    employee: resolvedEmployee ? { id: resolvedEmployee.id, name: resolvedEmployee.name, nationalId: resolvedEmployee.nationalId, phone: resolvedEmployee.phone || '', department: resolvedEmployee.department || '' } : null,
+    vehicle: resolvedVehicle ? { id: resolvedVehicle.id, name: resolvedVehicle.name, plate: resolvedVehicle.plate, status: resolvedVehicle.status, cityId: resolvedVehicle.cityId || null, projectId: resolvedVehicle.projectId || null } : null,
   });
 });
 

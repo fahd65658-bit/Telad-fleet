@@ -28,6 +28,7 @@ const PORT           = parseInt(process.env.PORT || '3000', 10);
 const IS_PROD        = process.env.NODE_ENV === 'production';
 const JWT_SECRET     = process.env.JWT_SECRET || 'telad-fleet-super-secret-jwt-2024!';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
+const DEFAULT_QUICK_ACCESS_PIN = process.env.QUICK_ACCESS_DEFAULT_PIN || '0241';
 const ADMIN_PASS     = process.env.ADMIN_PASSWORD || 'telad2024';
 const DEPLOY_ID      = process.env.DEPLOY_ID || Date.now().toString();
 const FRONTEND_DIR   = path.join(__dirname, 'frontend');
@@ -497,7 +498,7 @@ app.post('/api/quick-access/login', (req, res) => {
   if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
   const employee = db.findOne('employees', x => x.id === employeeId || x.nationalId === employeeId);
   if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
-  const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4);
+  const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4) || DEFAULT_QUICK_ACCESS_PIN;
   if (!expectedPin || String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
   const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
   res.json({ token, quickAccess: true, employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId } });
