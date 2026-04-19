@@ -2058,6 +2058,12 @@ async function openVehicleProfile(vehicleId) {
     const onHandover = () => openHandoverForm(vehicleId);
     document.getElementById('vp-handover-btn').onclick          = onHandover;
     document.getElementById('vp-handover-footer-btn').onclick   = onHandover;
+    const maintForm = document.getElementById('form-maint-card');
+    if (maintForm) {
+      maintForm.dataset.vehicleId = String(vehicleId);
+      maintForm.onsubmit = e => submitMaintenanceCard(e);
+    }
+    await loadMaintenanceCards(vehicleId);
 
   } catch {
     document.getElementById('vp-title').textContent = 'تعذّر تحميل البيانات';
@@ -2069,6 +2075,75 @@ function switchProfileTab(tab) {
   document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
   const pane = document.getElementById('ptab-' + tab);
   if (pane) pane.style.display = '';
+}
+
+async function loadMaintenanceCards(vehicleId) {
+  const list = document.getElementById('ptab-maint-cards-list');
+  if (!list) return;
+  list.innerHTML = '<div class="tbl-empty">جارٍ التحميل…</div>';
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards`);
+  if (!res.ok) {
+    list.innerHTML = '<div class="tbl-empty">تعذّر تحميل كروت الصيانة</div>';
+    return;
+  }
+  const cards = await res.json();
+  list.innerHTML = Array.isArray(cards) && cards.length
+    ? cards.map(c => `
+      <div class="maint-card">
+        <div class="maint-card-header">
+          <strong>${escHtml(c.maintenanceType || 'صيانة')}</strong>
+          <button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(c.id))}">🗑️ حذف</button>
+        </div>
+        <div><b>🚗 لوحة:</b> ${escHtml(c.plate || '—')}</div>
+        <div><b>👨‍✈️ السائق:</b> ${escHtml(c.driverName || '—')}</div>
+        <div><b>📅 التاريخ:</b> ${escHtml(c.date || '—')}</div>
+        <div><b>🏪 الورشة:</b> ${escHtml(c.workshop || '—')}</div>
+        <div><b>📝 البيانات:</b> ${escHtml(c.details || '—')}</div>
+        <div><b>💰 المبلغ:</b> ${escHtml(String(c.amount || 0))}</div>
+        <div><b>📌 ملاحظات:</b> ${escHtml(c.notes || '—')}</div>
+      </div>
+    `).join('')
+    : '<div class="tbl-empty">لا توجد كروت صيانة</div>';
+  list.onclick = event => {
+    const btn = event.target.closest('button[data-action="delete-maint-card"]');
+    if (!btn) return;
+    deleteMaintCard(btn.dataset.vehicleId, btn.dataset.cardId);
+  };
+}
+
+async function deleteMaintCard(vehicleId, cardId) {
+  if (!confirm('هل تريد حذف كرت الصيانة؟')) return;
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+  if (!res.ok) return showToast('فشل حذف كرت الصيانة', 'error');
+  showToast('تم حذف كرت الصيانة');
+  await loadMaintenanceCards(vehicleId);
+}
+
+async function submitMaintenanceCard(event, vehicleId = null) {
+  event.preventDefault();
+  const resolvedVehicleId = vehicleId || event.currentTarget?.dataset?.vehicleId;
+  if (!resolvedVehicleId) return showToast('تعذّر تحديد المركبة', 'error');
+  const payload = {
+    maintenanceType: document.getElementById('mc-maintenance-type')?.value.trim(),
+    driverName: document.getElementById('mc-driver-name')?.value.trim(),
+    date: document.getElementById('mc-date')?.value,
+    workshop: document.getElementById('mc-workshop')?.value.trim(),
+    details: document.getElementById('mc-details')?.value.trim(),
+    amount: Number(document.getElementById('mc-amount')?.value || 0),
+    notes: document.getElementById('mc-notes')?.value.trim(),
+  };
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(resolvedVehicleId)}/maintenance-cards`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    return showToast(data.error || 'فشل إضافة كرت الصيانة', 'error');
+  }
+  const form = document.getElementById('form-maint-card');
+  if (form) form.reset();
+  showToast('تمت إضافة كرت الصيانة');
+  await loadMaintenanceCards(resolvedVehicleId);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

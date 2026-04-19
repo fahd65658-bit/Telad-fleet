@@ -3,6 +3,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const pathModule = require('path');
+const jwt = require('jsonwebtoken');
 const { isWithdrawalOperation } = require('../lib/financial');
 
 let generateFleetAnswer;
@@ -25,6 +26,7 @@ const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
 const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
+const JWT_SECRET = process.env.JWT_SECRET || AUTH_FALLBACK_SECRET || FALLBACK_TOKEN_SECRET;
 const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
@@ -145,7 +147,16 @@ function ensureStateStructure() {
   if (!Array.isArray(state.projects)) state.projects = [];
   if (!Array.isArray(state.employees)) state.employees = [];
   if (!Array.isArray(state.handovers)) state.handovers = [];
+  if (!Array.isArray(state.formsApproved)) state.formsApproved = [];
   if (!Array.isArray(state.approvedForms)) state.approvedForms = [];
+  if (state.approvedForms.length) {
+    const existingIds = new Set(state.formsApproved.map(f => f.id));
+    for (const form of state.approvedForms) {
+      if (!existingIds.has(form.id)) state.formsApproved.push(form);
+    }
+  }
+  state.approvedForms = state.formsApproved;
+  if (!Array.isArray(state.maintenanceCards)) state.maintenanceCards = [];
   if (!Array.isArray(state.maintenance)) state.maintenance = [];
   if (!Array.isArray(state.appointments)) state.appointments = [];
 
@@ -440,6 +451,26 @@ function issueToken(user) {
   return token;
 }
 
+function requireQuickAuth(req, res, next) {
+  const h = req.headers.authorization || '';
+  if (!h.startsWith('Bearer ')) {
+    sendJson(res, 401, { error: 'غير مصرح' });
+    return;
+  }
+  try {
+    const d = jwt.verify(h.slice(7), JWT_SECRET);
+    if (d.role !== 'quick') {
+      sendJson(res, 403, { error: 'صلاحية غير كافية' });
+      return;
+    }
+    req.quickVehicleId = d.vehicleId;
+    req.quickEmployeeId = d.employeeId;
+    next();
+  } catch {
+    sendJson(res, 401, { error: 'انتهت صلاحية الجلسة' });
+  }
+}
+
 function addLog(action, user = 'system') {
   state.logs.push({ id: uid(), action, user, time: nowIso() });
   state.logs = state.logs.slice(-200);
@@ -655,99 +686,86 @@ module.exports = async (req, res) => {
     const vehicle = findVehicleByPlate(plate);
     if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مطابق' });
 
-    if (employee.vehicleId !== vehicle.id) {
+    const isLinked = employee.vehicleId === vehicle.id || String(vehicle.driver || '').trim() === String(employee.name || '').trim();
+    if (!isLinked) {
       return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
     }
 
-    const quickToken = `qa.${uid()}.${uid()}`;
-    quickAccessSessions.set(quickToken, {
-      token: quickToken,
-      employeeId: employee.id,
-      vehicleId: vehicle.id,
-      createdAt: nowIso(),
-      expiresAt: Date.now() + QUICK_ACCESS_SESSION_TTL_MS,
-    });
+    const quickToken = jwt.sign(
+      { role: 'quick', vehicleId: vehicle.id, employeeId: employee.id },
+      JWT_SECRET,
+      { expiresIn: '24h' },
+    );
     addLog(`دخول سريع للمركبة ${vehicle.plate}`, employee.name || employee.id);
 
-    return sendJson(res, 200, {
-      quickAccess: true,
-      token: quickToken,
-      employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId },
-      vehicle: buildQuickVehicleProfile(vehicle, employee),
-    });
+    return sendJson(res, 200, { token: quickToken });
   }
 
   if (method === 'POST' && path === '/auth/quick-logout') {
-    const token = tokenFromRequest(req);
-    if (token) quickAccessSessions.delete(token);
     return sendJson(res, 200, { ok: true });
   }
 
   if (path.startsWith('/quick-access/')) {
-    const token = tokenFromRequest(req);
-    const session = token ? quickAccessSessions.get(token) : null;
-    if (!session) return sendJson(res, 401, { error: 'جلسة الدخول السريع غير صالحة' });
-    if (session.expiresAt && Date.now() > session.expiresAt) {
-      quickAccessSessions.delete(token);
-      return sendJson(res, 401, { error: 'انتهت صلاحية جلسة الدخول السريع' });
-    }
-    const employee = (state.employees || []).find(e => e.id === session.employeeId);
-    const vehicle = (state.vehicles || []).find(v => v.id === session.vehicleId);
-    if (!employee || !vehicle) return sendJson(res, 404, { error: 'بيانات المركبة أو الموظف غير موجودة' });
+    return requireQuickAuth(req, res, async () => {
+      const employee = (state.employees || []).find(e => e.id === req.quickEmployeeId);
+      const vehicle = (state.vehicles || []).find(v => v.id === req.quickVehicleId);
+      if (!employee || !vehicle) return sendJson(res, 404, { error: 'بيانات المركبة أو الموظف غير موجودة' });
 
-    if (method === 'GET' && path === '/quick-access/vehicle-profile') {
-      return sendJson(res, 200, {
-        employee: { name: employee.name, nationalId: employee.nationalId },
-        vehicle: buildQuickVehicleProfile(vehicle, employee),
-      });
-    }
+      if (method === 'GET' && path === '/quick-access/vehicle-profile') {
+        return sendJson(res, 200, {
+          employee: { name: employee.name, nationalId: employee.nationalId },
+          vehicle: buildQuickVehicleProfile(vehicle, employee),
+        });
+      }
 
-    if (method === 'POST' && path === '/quick-access/monthly-appointment') {
-      const body = await readBody(req);
-      const scheduledAt = body.scheduledAt || new Date().toISOString().slice(0, 10);
-      const appointment = {
-        id: uid(),
-        vehicleId: vehicle.id,
-        type: 'موعد صيانة شهري',
-        scheduledAt,
-        notes: body.notes || '',
-        status: 'pending',
-        source: 'quick-access',
-        createdByEmployeeId: employee.id,
-        createdAt: nowIso(),
-      };
-      state.appointments.push(appointment);
-      addLog(`حجز موعد صيانة شهري ${vehicle.plate}`, employee.name || employee.id);
-      return sendJson(res, 201, appointment);
-    }
-
-    if (method === 'POST' && path === '/quick-access/attachments') {
-      const body = await readBody(req);
-      const files = Array.isArray(body.files) ? body.files : [];
-      if (files.length === 0) return sendJson(res, 400, { error: 'يجب إرسال مرفق واحد على الأقل' });
-      const allowedTypes = new Set([
-        'front', 'back', 'left', 'right',
-        'oil_sticker', 'odometer', 'additional', 'handover_receipt',
-      ]);
-      const accepted = files
-        .filter(f => f && allowedTypes.has(String(f.type || '')) && f.data)
-        .map(f => ({
+      if (method === 'POST' && path === '/quick-access/monthly-appointment') {
+        const body = await readBody(req);
+        const appointment = {
           id: uid(),
-          type: String(f.type),
-          name: String(f.name || `${f.type}.jpg`),
-          data: f.data,
-          uploadedBy: employee.id,
-          uploadedAt: nowIso(),
-        }));
-      if (accepted.length === 0) return sendJson(res, 400, { error: 'لا توجد مرفقات بصيغة صحيحة' });
-      vehicle.quickAccessAttachments.push(...accepted);
-      addLog(`رفع ${accepted.length} مرفقات للمركبة ${vehicle.plate}`, employee.name || employee.id);
-      return sendJson(res, 201, { uploaded: accepted.length });
-    }
+          vehicleId: vehicle.id,
+          type: 'موعد صيانة شهري',
+          scheduledAt: body.scheduledAt || new Date().toISOString().slice(0, 10),
+          notes: body.notes || '',
+          status: 'pending',
+          source: 'quick-access',
+          createdByEmployeeId: employee.id,
+          createdAt: nowIso(),
+        };
+        state.appointments.push(appointment);
+        addLog(`حجز موعد صيانة شهري ${vehicle.plate}`, employee.name || employee.id);
+        return sendJson(res, 201, appointment);
+      }
 
-    if (method === 'GET' && path === '/quick-access/latest-maintenance') {
-      return sendJson(res, 200, { latestMaintenance: latestMaintenanceForVehicle(vehicle.id) });
-    }
+      if (method === 'POST' && path === '/quick-access/attachments') {
+        const body = await readBody(req);
+        const files = Array.isArray(body.files) ? body.files : [];
+        if (files.length === 0) return sendJson(res, 400, { error: 'يجب إرسال مرفق واحد على الأقل' });
+        const allowedTypes = new Set([
+          'front', 'back', 'left', 'right',
+          'oil_sticker', 'odometer', 'additional', 'handover_receipt',
+        ]);
+        if (!Array.isArray(vehicle.attachments)) vehicle.attachments = [];
+        const accepted = files
+          .filter(f => f && allowedTypes.has(String(f.type || '')) && f.data)
+          .map(f => ({
+            id: uid(),
+            type: String(f.type),
+            name: String(f.name || `${f.type}.jpg`),
+            data: f.data,
+            uploadedBy: employee.id,
+            uploadedAt: nowIso(),
+          }));
+        if (accepted.length === 0) return sendJson(res, 400, { error: 'لا توجد مرفقات بصيغة صحيحة' });
+        vehicle.attachments.push(...accepted);
+        vehicle.quickAccessAttachments = vehicle.attachments;
+        addLog(`رفع ${accepted.length} مرفقات للمركبة ${vehicle.plate}`, employee.name || employee.id);
+        return sendJson(res, 201, { uploaded: accepted.length });
+      }
+
+      if (method === 'GET' && path === '/quick-access/latest-maintenance') {
+        return sendJson(res, 200, { latestMaintenance: latestMaintenanceForVehicle(vehicle.id) });
+      }
+    });
   }
 
   if (method === 'GET' && path === '/auth/me') {
@@ -839,6 +857,7 @@ module.exports = async (req, res) => {
       if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
       const employee = (state.employees || []).find(e => e.vehicleId === vehicle.id) || null;
       const maintenance = (state.maintenance || []).filter(m => m.vehicleId === vehicle.id);
+      const maintenanceCards = (state.maintenanceCards || []).filter(c => c.vehicleId === vehicle.id);
       const appointments = (state.appointments || []).filter(a => a.vehicleId === vehicle.id);
       const accidents = (state.accidents || []).filter(a => a.vehicleId === vehicle.id);
       const violations = (state.violations || []).filter(v => v.vehicleId === vehicle.id);
@@ -847,11 +866,77 @@ module.exports = async (req, res) => {
         vehicle,
         employee,
         maintenance,
+        maintenanceCards,
         appointments,
         accidents,
         violations,
         handovers,
       });
+    }
+  }
+
+  {
+    const pmCards = matchPath('/vehicles/:id/maintenance-cards', path);
+    if (pmCards && method === 'GET') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const vehicle = state.vehicles.find(v => v.id === pmCards.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      return sendJson(res, 200, (state.maintenanceCards || []).filter(c => c.vehicleId === vehicle.id));
+    }
+    if (pmCards && method === 'POST') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor', 'operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = state.vehicles.find(v => v.id === pmCards.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const body = await readBody(req);
+      if (!String(body.maintenanceType || '').trim()) return sendJson(res, 400, { error: 'maintenanceType مطلوب' });
+      const card = {
+        id: uid(),
+        vehicleId: vehicle.id,
+        plate: vehicle.plate || '',
+        driverName: body.driverName || vehicle.driver || '',
+        date: body.date || new Date().toISOString().slice(0, 10),
+        maintenanceType: String(body.maintenanceType || '').trim(),
+        details: body.details || '',
+        amount: Number(body.amount) || 0,
+        workshop: body.workshop || '',
+        status: body.status || 'مكتمل',
+        notes: body.notes || '',
+        createdAt: nowIso(),
+      };
+      state.maintenanceCards.push(card);
+      return sendJson(res, 201, card);
+    }
+  }
+
+  {
+    const pmCard = matchPath('/vehicles/:id/maintenance-cards/:cardId', path);
+    if (pmCard && method === 'PUT') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor', 'operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = state.vehicles.find(v => v.id === pmCard.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const card = (state.maintenanceCards || []).find(c => c.id === pmCard.cardId && c.vehicleId === vehicle.id);
+      if (!card) return sendJson(res, 404, { error: 'كرت الصيانة غير موجود' });
+      const body = await readBody(req);
+      Object.assign(card, pickAllowedFields(body, ['driverName', 'date', 'maintenanceType', 'details', 'amount', 'workshop', 'status', 'notes']));
+      card.plate = vehicle.plate || card.plate || '';
+      if (!String(card.maintenanceType || '').trim()) return sendJson(res, 400, { error: 'maintenanceType مطلوب' });
+      card.amount = Number(card.amount) || 0;
+      card.updatedAt = nowIso();
+      return sendJson(res, 200, card);
+    }
+    if (pmCard && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const before = (state.maintenanceCards || []).length;
+      state.maintenanceCards = (state.maintenanceCards || []).filter(c => !(c.id === pmCard.cardId && c.vehicleId === pmCard.id));
+      if (state.maintenanceCards.length === before) return sendJson(res, 404, { error: 'كرت الصيانة غير موجود' });
+      return sendJson(res, 200, { ok: true });
     }
   }
 
@@ -861,7 +946,7 @@ module.exports = async (req, res) => {
     if (!['admin','supervisor','operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
     const body = await readBody(req);
     if (!body.name || !body.plate) return sendJson(res, 400, { error: 'اسم المركبة ورقم اللوحة مطلوبان' });
-    if (!isVehiclePlateUnique(body.plate)) return sendJson(res, 409, { error: 'رقم اللوحة مستخدم مسبقاً' });
+    if (!isVehiclePlateUnique(body.plate)) return sendJson(res, 409, { error: 'رقم اللوحة مسجل مسبقاً' });
     if (body.projectId && !isProjectInCity(body.projectId, body.cityId || null)) {
       return sendJson(res, 400, { error: 'المشروع المحدد غير مرتبط بالمدينة المحددة' });
     }
@@ -1367,7 +1452,7 @@ module.exports = async (req, res) => {
     if (!state.employees) state.employees = [];
     const nationalId = normalizeNationalId(body.nationalId);
     if (!nationalId) return sendJson(res, 400, { error: 'رقم الهوية مطلوب لمنع التكرار' });
-    if (!isEmployeeUnique(nationalId)) return sendJson(res, 409, { error: 'الموظف موجود مسبقاً بنفس رقم الهوية' });
+    if (!isEmployeeUnique(nationalId)) return sendJson(res, 409, { error: 'رقم الهوية مسجل مسبقاً' });
     if (body.vehicleId && !state.vehicles.some(v => v.id === body.vehicleId)) {
       return sendJson(res, 400, { error: 'المركبة المرتبطة غير موجودة' });
     }
@@ -1476,6 +1561,22 @@ module.exports = async (req, res) => {
       city.name = nextName;
       return sendJson(res, 200, city);
     }
+    if (pmCity && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const city = (state.cities || []).find(c => c.id === pmCity.id);
+      if (!city) return sendJson(res, 404, { error: 'المدينة غير موجودة' });
+      state.cities = (state.cities || []).filter(c => c.id !== pmCity.id);
+      state.projects = (state.projects || []).filter(p => p.cityId !== pmCity.id);
+      for (const vehicle of (state.vehicles || [])) {
+        if (vehicle.cityId === pmCity.id) vehicle.cityId = null;
+      }
+      for (const emp of (state.employees || [])) {
+        if (emp.cityId === pmCity.id) emp.cityId = null;
+      }
+      return sendJson(res, 200, { ok: true });
+    }
   }
 
   // ── PROJECTS ──────────────────────────────────────────────────────
@@ -1515,6 +1616,21 @@ module.exports = async (req, res) => {
       if (body.name) project.name = String(body.name).trim();
       if (body.cityId) project.cityId = body.cityId;
       return sendJson(res, 200, project);
+    }
+    if (pmProject && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const project = (state.projects || []).find(p => p.id === pmProject.id);
+      if (!project) return sendJson(res, 404, { error: 'المشروع غير موجود' });
+      state.projects = (state.projects || []).filter(p => p.id !== pmProject.id);
+      for (const vehicle of (state.vehicles || [])) {
+        if (vehicle.projectId === pmProject.id) vehicle.projectId = null;
+      }
+      for (const emp of (state.employees || [])) {
+        if (emp.projectId === pmProject.id) emp.projectId = null;
+      }
+      return sendJson(res, 200, { ok: true });
     }
   }
 
@@ -1596,7 +1712,7 @@ module.exports = async (req, res) => {
   if (method === 'GET' && path === '/forms/approved') {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-    return sendJson(res, 200, state.approvedForms || []);
+    return sendJson(res, 200, state.formsApproved || []);
   }
 
   if (method === 'POST' && path === '/forms/approved') {
@@ -1626,7 +1742,7 @@ module.exports = async (req, res) => {
       const veh = (state.vehicles || []).find(v => v.id === form.vehicleId);
       if (!veh) return sendJson(res, 400, { error: 'المركبة المحددة غير موجودة' });
     }
-    state.approvedForms.push(form);
+    state.formsApproved.push(form);
     addLog(`إضافة نموذج معتمد ${form.title}`, cu.username);
     return sendJson(res, 201, form);
   }
@@ -1636,7 +1752,7 @@ module.exports = async (req, res) => {
     if (pform && method === 'POST') {
       const cu = currentUser(req);
       if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-      const form = (state.approvedForms || []).find(f => f.id === pform.id);
+      const form = (state.formsApproved || []).find(f => f.id === pform.id);
       if (!form) return sendJson(res, 404, { error: 'النموذج غير موجود' });
       const body = await readBody(req);
       form.payload = { ...(form.payload || {}), ...(body.payload || {}) };
