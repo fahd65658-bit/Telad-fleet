@@ -8,12 +8,8 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Install dependencies
-      run: lein deps
-    - name: Run tests
-      run: lein test
+    - name: Skip non-applicable workflow
+      run: echo "Skipped: repository is not a Clojure project."
