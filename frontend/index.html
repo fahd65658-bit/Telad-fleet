@@ -1022,6 +1022,7 @@
       <button class="ptab active" data-tab="basic"       onclick="switchProfileTab('basic')">📋 أساسي</button>
       <button class="ptab" data-tab="insurance"          onclick="switchProfileTab('insurance')">🛡️ التأمين</button>
       <button class="ptab" data-tab="maintenance"        onclick="switchProfileTab('maintenance')">🔧 الصيانة</button>
+      <button class="ptab" data-tab="maintenance-cards"  onclick="switchProfileTab('maintenance-cards')">🃏 كروت الصيانة</button>
       <button class="ptab" data-tab="violations"         onclick="switchProfileTab('violations')">🚦 المخالفات</button>
       <button class="ptab" data-tab="accidents"          onclick="switchProfileTab('accidents')">⚠️ الحوادث</button>
       <button class="ptab" data-tab="handovers-vp"       onclick="switchProfileTab('handovers-vp')">🔄 التسليم</button>
@@ -1087,6 +1088,32 @@
         <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
         <tbody><tr><td colspan="4">—</td></tr></tbody>
       </table>
+    </div>
+
+    <div class="ptab-pane" id="ptab-maintenance-cards" style="display:none">
+      <form class="data-form" onsubmit="submitMaintenanceCard(event)">
+        <h3>إضافة كرت صيانة</h3>
+        <input id="vmc-vehicle-id" type="hidden">
+        <div class="form-row">
+          <div class="form-group"><label>النوع</label><input id="vmc-type" required></div>
+          <div class="form-group"><label>التاريخ</label><input id="vmc-date" type="date" required></div>
+          <div class="form-group"><label>الورشة</label><input id="vmc-workshop"></div>
+          <div class="form-group"><label>المبلغ</label><input id="vmc-amount" type="number" min="0" step="0.01"></div>
+          <div class="form-group">
+            <label>الحالة</label>
+            <select id="vmc-status">
+              <option value="pending">pending</option>
+              <option value="in_progress">in_progress</option>
+              <option value="completed">completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>ملاحظات</label><textarea id="vmc-notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--border-color);background:var(--surface);color:var(--text);border-radius:6px;resize:vertical"></textarea></div>
+        <button type="submit" class="btn-primary">💾 حفظ كرت الصيانة</button>
+      </form>
+      <div id="vp-maint-cards-grid" class="maint-cards-grid">
+        <div class="tbl-empty">اختر مركبة لعرض كروت الصيانة</div>
+      </div>
     </div>
 
     <!-- Violations -->
