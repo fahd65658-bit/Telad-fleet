@@ -31,11 +31,11 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "leaflet": "^1.9.4",
     "pg": "^8.20.0",
     "socket.io": "^4.7.2"
   },
   "devDependencies": {
-    "leaflet": "^1.9.4",
     "nodemon": "^3.0.2",
     "socket.io-client": "^4.7.2"
   }
