@@ -497,7 +497,7 @@ app.post('/api/quick-access/login', (req, res) => {
   const s = ensureMergedCollections();
   const { employee_id: employeeId, pin } = req.body || {};
   if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
-  const employee = (s.employees || []).find(x => x.id === employeeId || x.nationalId === employeeId);
+  const employee = (s.employees || []).find(x => x.id === employeeId);
   if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
   let expectedPin = String(employee.quickPin || '').trim();
   if (!expectedPin) {

@@ -446,7 +446,7 @@ app.get('/auth/me', authAll, (req, res) => res.json(req.user));
 app.post('/quick-access/login', (req, res) => {
   const { employee_id: employeeId, pin } = req.body || {};
   if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
-  const employee = employees.find(e => e.id === employeeId || e.nationalId === employeeId);
+  const employee = employees.find(e => e.id === employeeId);
   if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
   let expectedPin = String(employee.quickPin || '').trim();
   if (!expectedPin) {
