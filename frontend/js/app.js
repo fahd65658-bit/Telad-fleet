@@ -286,6 +286,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
   document.getElementById('sidebar-toggle-btn')?.addEventListener('click', openSidebar);
   document.getElementById('cmd-input')?.addEventListener('input', e => renderCmdResults(e.target.value));
+  document.getElementById('af-employee-search')?.addEventListener('input', filterApprovedFormSelects);
+  document.getElementById('af-vehicle-search')?.addEventListener('input', filterApprovedFormSelects);
   document.getElementById('cmd-input')?.addEventListener('keydown', cmdKeyNav);
   document.getElementById('cmd-palette')?.addEventListener('click', e => { if (e.target === document.getElementById('cmd-palette')) closeCmdPalette(); });
   document.getElementById('skew-reload-btn')?.addEventListener('click', () => location.reload());
@@ -2094,10 +2096,15 @@ async function loadMaintenanceCards(vehicleId) {
           <div>💰 المبلغ: ${escHtml(String(card.totalCost || 0))}</div>
           <div>📌 ملاحظات: ${escHtml(card.notes || '—')}</div>
           <div style="margin-top:10px">
-            <button class="btn-sm btn-danger" onclick="deleteMaintCard('${escHtml(String(vehicleId))}','${escHtml(String(card.id))}')">🗑️ حذف</button>
+            <button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(card.id))}">🗑️ حذف</button>
           </div>
         </article>
       `).join('');
+    list.onclick = (event) => {
+      const button = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!button) return;
+      deleteMaintCard(button.dataset.vehicleId, button.dataset.cardId);
+    };
   } catch {
     list.innerHTML = '<div class="tbl-empty">تعذّر تحميل كروت الصيانة</div>';
   }
@@ -2435,9 +2442,14 @@ async function loadProjectStructure() {
         : cities.map(c => `
           <tr>
             <td>${escHtml(c.name || '—')}</td>
-            <td><button class="btn-sm btn-danger" onclick="deleteCity('${escHtml(String(c.id))}')">حذف</button></td>
+            <td><button class="btn-sm btn-danger" data-action="delete-city" data-city-id="${escHtml(String(c.id))}">حذف</button></td>
           </tr>
         `).join('');
+      citiesTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-city"]');
+        if (!button) return;
+        deleteCity(button.dataset.cityId);
+      };
     }
     const cityById = new Map(cities.map(c => [c.id, c]));
     const projectsTbody = document.getElementById('projects-tbody');
@@ -2448,9 +2460,14 @@ async function loadProjectStructure() {
           <tr>
             <td>${escHtml(p.name || '—')}</td>
             <td>${escHtml(cityById.get(p.cityId)?.name || '—')}</td>
-            <td><button class="btn-sm btn-danger" onclick="deleteProject('${escHtml(String(p.id))}')">حذف</button></td>
+            <td><button class="btn-sm btn-danger" data-action="delete-project" data-project-id="${escHtml(String(p.id))}">حذف</button></td>
           </tr>
         `).join('');
+      projectsTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-project"]');
+        if (!button) return;
+        deleteProject(button.dataset.projectId);
+      };
     }
     _fillSelect('project-city-id', cities.map(c => ({ value: c.id, label: c.name })), true);
     _fillSelect('project-fleet-select', projects.map(p => ({ value: p.id, label: p.name })), true);

@@ -150,10 +150,8 @@ function ensureStateStructure() {
   if (!Array.isArray(state.cities)) state.cities = [];
   if (!Array.isArray(state.projects)) state.projects = [];
   if (!Array.isArray(state.maintenanceCards)) state.maintenanceCards = [];
-  if (!Array.isArray(state.formsApproved) && Array.isArray(state.approvedForms)) state.formsApproved = state.approvedForms;
-  if (!Array.isArray(state.approvedForms) && Array.isArray(state.formsApproved)) state.approvedForms = state.formsApproved;
-  if (!Array.isArray(state.formsApproved)) state.formsApproved = [];
-  if (state.approvedForms !== state.formsApproved) state.approvedForms = state.formsApproved;
+  if (!Array.isArray(state.formsApproved)) state.formsApproved = Array.isArray(state.approvedForms) ? state.approvedForms : [];
+  state.approvedForms = state.formsApproved;
   if (!Array.isArray(state.employees)) state.employees = [];
   if (!Array.isArray(state.handovers)) state.handovers = [];
   if (!Array.isArray(state.maintenance)) state.maintenance = [];
@@ -474,7 +472,7 @@ function requireQuickAuth(req, res) {
   }
   const token = auth.slice(7);
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role !== 'quick') {
       sendJson(res, 403, { error: 'صلاحية غير كافية' });
       return null;
@@ -715,14 +713,16 @@ module.exports = async (req, res) => {
     if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مطابق' });
 
     const linkedByVehicleId = employee.vehicleId === vehicle.id;
-    const linkedByDriverName = String(vehicle.driver || '').trim() && String(vehicle.driver || '').trim() === String(employee.name || '').trim();
+    const vehicleDriverName = String(vehicle.driver || '').trim();
+    const employeeName = String(employee.name || '').trim();
+    const linkedByDriverName = vehicleDriverName && vehicleDriverName === employeeName;
     if (!linkedByVehicleId && !linkedByDriverName) {
       return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
     }
 
     const quickToken = jwt.sign(
       { role: 'quick', vehicleId: vehicle.id, employeeId: employee.id },
-      process.env.JWT_SECRET || JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '24h' },
     );
     quickAccessSessions.set(quickToken, {
