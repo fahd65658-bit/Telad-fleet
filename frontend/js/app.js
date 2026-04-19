@@ -293,7 +293,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   // ── Skew Protection: prime the baseline deploy ID ──
   fetch(API_BASE + '/version').then(r => { _checkDeployId(r); }).catch(() => {});
 
-  const token = localStorage.getItem('telad_token');
   const quickToken = localStorage.getItem('telad_quick_token');
   if (quickToken) {
     try {
@@ -305,6 +304,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     localStorage.removeItem('telad_quick_token');
   }
 
+  const token = localStorage.getItem('telad_token');
   if (token) {
     try {
       const res = await apiFetch('/auth/me');

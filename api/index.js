@@ -4,6 +4,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const pathModule = require('path');
 const { isWithdrawalOperation } = require('../lib/financial');
+let jwtLib;
+try { jwtLib = require('jsonwebtoken'); } catch { jwtLib = null; }
 
 let generateFleetAnswer;
 try { generateFleetAnswer = require('../lib/ai-chat').generateFleetAnswer; } catch { generateFleetAnswer = null; }
@@ -26,6 +28,7 @@ const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
 const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
+const QUICK_ACCESS_TOKEN_SECRET = process.env.QUICK_ACCESS_JWT_SECRET || AUTH_FALLBACK_SECRET || FALLBACK_TOKEN_SECRET;
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -119,7 +122,7 @@ function seedState() {
 }
 
 const state = globalThis.__TELAD_FLEET_STATE || (globalThis.__TELAD_FLEET_STATE = seedState());
-const quickAccessSessions = globalThis.__TELAD_FLEET_QUICK_ACCESS_SESSIONS || (globalThis.__TELAD_FLEET_QUICK_ACCESS_SESSIONS = new Map());
+const revokedQuickAccessTokens = globalThis.__TELAD_FLEET_REVOKED_QUICK_ACCESS_TOKENS || (globalThis.__TELAD_FLEET_REVOKED_QUICK_ACCESS_TOKENS = new Map());
 
 function nowIso() { return new Date().toISOString(); }
 
@@ -179,6 +182,7 @@ function ensureStateStructure() {
     if (!vehicle.notes) vehicle.notes = '';
     if (!vehicle.driverNotes) vehicle.driverNotes = '';
     if (!Array.isArray(vehicle.quickAccessAttachments)) vehicle.quickAccessAttachments = [];
+    if (!Array.isArray(vehicle.maintenanceCards)) vehicle.maintenanceCards = [];
 
     if (!vehicle.cityId) {
       const city = citiesByNormName.get(String(vehicle.city || '').trim().toLowerCase());
@@ -440,6 +444,75 @@ function issueToken(user) {
   return token;
 }
 
+function issueQuickAccessToken(sessionPayload) {
+  if (jwtLib && QUICK_ACCESS_TOKEN_SECRET) {
+    return jwtLib.sign(
+      {
+        role: 'quick',
+        vehicleId: sessionPayload.vehicleId,
+        employeeId: sessionPayload.employeeId,
+      },
+      QUICK_ACCESS_TOKEN_SECRET,
+      {
+        expiresIn: Math.max(60, Math.floor(QUICK_ACCESS_SESSION_TTL_MS / 1000)),
+        issuer: 'telad-fleet-quick',
+      },
+    );
+  }
+
+  const payloadPart = Buffer.from(JSON.stringify({
+    role: 'quick',
+    vehicleId: sessionPayload.vehicleId,
+    employeeId: sessionPayload.employeeId,
+    exp: Date.now() + QUICK_ACCESS_SESSION_TTL_MS,
+  })).toString('base64url');
+  const signaturePart = crypto
+    .createHmac('sha256', QUICK_ACCESS_TOKEN_SECRET || FALLBACK_TOKEN_SECRET || 'telad-quick-dev')
+    .update(payloadPart)
+    .digest('base64url');
+  return `${payloadPart}.${signaturePart}`;
+}
+
+function verifyQuickAccessToken(token) {
+  if (!token) return null;
+  if (revokedQuickAccessTokens.has(token)) return null;
+
+  if (jwtLib && QUICK_ACCESS_TOKEN_SECRET) {
+    try {
+      const payload = jwtLib.verify(token, QUICK_ACCESS_TOKEN_SECRET, { issuer: 'telad-fleet-quick' });
+      if (!payload || payload.role !== 'quick' || !payload.vehicleId) return null;
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
+  const [payloadPart, signaturePart] = String(token || '').split('.');
+  if (!payloadPart || !signaturePart) return null;
+  const expected = crypto
+    .createHmac('sha256', QUICK_ACCESS_TOKEN_SECRET || FALLBACK_TOKEN_SECRET || 'telad-quick-dev')
+    .update(payloadPart)
+    .digest('base64url');
+  const signatureBuf = Buffer.from(signaturePart);
+  const expectedBuf = Buffer.from(expected);
+  if (signatureBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(signatureBuf, expectedBuf)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+    if (payload.exp && Date.now() > payload.exp) return null;
+    if (payload.role !== 'quick' || !payload.vehicleId) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function requireQuickAuth(req) {
+  const token = tokenFromRequest(req);
+  const payload = verifyQuickAccessToken(token);
+  if (!payload) return { ok: false, status: 401, error: 'جلسة الدخول السريع غير صالحة' };
+  return { ok: true, payload, token };
+}
+
 function addLog(action, user = 'system') {
   state.logs.push({ id: uid(), action, user, time: nowIso() });
   state.logs = state.logs.slice(-200);
@@ -659,13 +732,9 @@ module.exports = async (req, res) => {
       return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
     }
 
-    const quickToken = `qa.${uid()}.${uid()}`;
-    quickAccessSessions.set(quickToken, {
-      token: quickToken,
+    const quickToken = issueQuickAccessToken({
       employeeId: employee.id,
       vehicleId: vehicle.id,
-      createdAt: nowIso(),
-      expiresAt: Date.now() + QUICK_ACCESS_SESSION_TTL_MS,
     });
     addLog(`دخول سريع للمركبة ${vehicle.plate}`, employee.name || employee.id);
 
@@ -679,21 +748,20 @@ module.exports = async (req, res) => {
 
   if (method === 'POST' && path === '/auth/quick-logout') {
     const token = tokenFromRequest(req);
-    if (token) quickAccessSessions.delete(token);
+    if (token) revokedQuickAccessTokens.set(token, Date.now() + QUICK_ACCESS_SESSION_TTL_MS);
+    for (const [revokedToken, expiresAt] of revokedQuickAccessTokens) {
+      if (!expiresAt || expiresAt < Date.now()) revokedQuickAccessTokens.delete(revokedToken);
+    }
     return sendJson(res, 200, { ok: true });
   }
 
   if (path.startsWith('/quick-access/')) {
-    const token = tokenFromRequest(req);
-    const session = token ? quickAccessSessions.get(token) : null;
-    if (!session) return sendJson(res, 401, { error: 'جلسة الدخول السريع غير صالحة' });
-    if (session.expiresAt && Date.now() > session.expiresAt) {
-      quickAccessSessions.delete(token);
-      return sendJson(res, 401, { error: 'انتهت صلاحية جلسة الدخول السريع' });
-    }
-    const employee = (state.employees || []).find(e => e.id === session.employeeId);
-    const vehicle = (state.vehicles || []).find(v => v.id === session.vehicleId);
+    const quickAuth = requireQuickAuth(req);
+    if (!quickAuth.ok) return sendJson(res, quickAuth.status, { error: quickAuth.error });
+    const employee = (state.employees || []).find(e => e.id === quickAuth.payload.employeeId);
+    const vehicle = (state.vehicles || []).find(v => v.id === quickAuth.payload.vehicleId);
     if (!employee || !vehicle) return sendJson(res, 404, { error: 'بيانات المركبة أو الموظف غير موجودة' });
+    if (employee.vehicleId !== vehicle.id) return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
 
     if (method === 'GET' && path === '/quick-access/vehicle-profile') {
       return sendJson(res, 200, {
@@ -847,11 +915,85 @@ module.exports = async (req, res) => {
         vehicle,
         employee,
         maintenance,
+        maintenanceCards: vehicle.maintenanceCards || [],
         appointments,
         accidents,
         violations,
         handovers,
       });
+    }
+  }
+
+  {
+    const pCards = matchPath('/vehicles/:id/maintenance-cards', path);
+    if (pCards && method === 'GET') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const vehicle = state.vehicles.find(v => v.id === pCards.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      return sendJson(res, 200, vehicle.maintenanceCards || []);
+    }
+    if (pCards && method === 'POST') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor', 'operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = state.vehicles.find(v => v.id === pCards.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const body = await readBody(req);
+      const maintenanceType = String(body.maintenanceType || body.type || '').trim();
+      const maintenanceDate = String(body.maintenanceDate || body.date || nowIso().slice(0, 10)).trim();
+      if (!maintenanceType) return sendJson(res, 400, { error: 'نوع الصيانة مطلوب' });
+      const card = {
+        id: uid(),
+        vehicleId: vehicle.id,
+        plate: String(body.plate || vehicle.plate || '').trim(),
+        driverName: String(body.driverName || body.driver || vehicle.driver || '').trim(),
+        maintenanceDate,
+        maintenanceType,
+        details: String(body.details || body.description || '').trim(),
+        amount: Number(body.amount) || 0,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
+      vehicle.maintenanceCards.push(card);
+      addLog(`إضافة كرت صيانة للمركبة ${vehicle.plate}`, cu.username);
+      return sendJson(res, 201, card);
+    }
+  }
+
+  {
+    const pCard = matchPath('/vehicles/:id/maintenance-cards/:cardId', path);
+    if (pCard && method === 'PUT') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor', 'operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = state.vehicles.find(v => v.id === pCard.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const card = (vehicle.maintenanceCards || []).find(c => c.id === pCard.cardId);
+      if (!card) return sendJson(res, 404, { error: 'كرت الصيانة غير موجود' });
+      const body = await readBody(req);
+      const updates = pickAllowedFields(body, ['plate', 'driverName', 'maintenanceDate', 'maintenanceType', 'details', 'amount']);
+      if (updates.maintenanceType !== undefined) {
+        updates.maintenanceType = String(updates.maintenanceType || '').trim();
+        if (!updates.maintenanceType) return sendJson(res, 400, { error: 'نوع الصيانة مطلوب' });
+      }
+      if (updates.amount !== undefined) updates.amount = Number(updates.amount) || 0;
+      card.updatedAt = nowIso();
+      Object.assign(card, updates);
+      addLog(`تعديل كرت صيانة ${card.id}`, cu.username);
+      return sendJson(res, 200, card);
+    }
+    if (pCard && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = state.vehicles.find(v => v.id === pCard.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const before = (vehicle.maintenanceCards || []).length;
+      vehicle.maintenanceCards = (vehicle.maintenanceCards || []).filter(c => c.id !== pCard.cardId);
+      if (vehicle.maintenanceCards.length === before) return sendJson(res, 404, { error: 'كرت الصيانة غير موجود' });
+      addLog(`حذف كرت صيانة ${pCard.cardId}`, cu.username);
+      return sendJson(res, 200, { ok: true });
     }
   }
 
@@ -1476,6 +1618,16 @@ module.exports = async (req, res) => {
       city.name = nextName;
       return sendJson(res, 200, city);
     }
+    if (pmCity && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      if ((state.projects || []).some(p => p.cityId === pmCity.id)) {
+        return sendJson(res, 409, { error: 'لا يمكن حذف المدينة لوجود مشاريع مرتبطة بها' });
+      }
+      state.cities = (state.cities || []).filter(c => c.id !== pmCity.id);
+      return sendJson(res, 200, { ok: true });
+    }
   }
 
   // ── PROJECTS ──────────────────────────────────────────────────────
@@ -1515,6 +1667,16 @@ module.exports = async (req, res) => {
       if (body.name) project.name = String(body.name).trim();
       if (body.cityId) project.cityId = body.cityId;
       return sendJson(res, 200, project);
+    }
+    if (pmProject && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      if ((state.vehicles || []).some(v => v.projectId === pmProject.id) || (state.employees || []).some(e => e.projectId === pmProject.id)) {
+        return sendJson(res, 409, { error: 'لا يمكن حذف المشروع لوجود مركبات أو موظفين مرتبطين به' });
+      }
+      state.projects = (state.projects || []).filter(p => p.id !== pmProject.id);
+      return sendJson(res, 200, { ok: true });
     }
   }
 
