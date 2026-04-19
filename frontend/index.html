@@ -408,41 +408,56 @@
 
       <div id="maintenance-form-wrap">
         <form id="form-maintenance" class="data-form" onsubmit="addMaintenance(event)">
-          <h3>إضافة مهمة صيانة</h3>
+          <h3>إضافة كرت صيانة</h3>
           <div class="form-row">
             <div class="form-group">
-              <label>معرّف المركبة</label>
-              <input id="m-vehicleId" required placeholder="Vehicle ID">
+              <label>المركبة</label>
+              <select id="m-vehicleId" required></select>
+            </div>
+            <div class="form-group">
+              <label>اسم السائق أثناء الصيانة</label>
+              <input id="m-driverDuringMaintenance" required placeholder="اسم السائق">
+            </div>
+            <div class="form-group">
+              <label>تاريخ الصيانة</label>
+              <input id="m-maintenanceDate" type="date" required>
             </div>
             <div class="form-group">
               <label>نوع الصيانة</label>
-              <input id="m-type" required placeholder="مثال: تغيير زيت">
+              <select id="m-maintenanceType" required>
+                <option value="">— اختر النوع —</option>
+                <option value="زيت">زيت</option>
+                <option value="فرامل">فرامل</option>
+                <option value="إطارات">إطارات</option>
+                <option value="كهرباء">كهرباء</option>
+                <option value="هيكل">هيكل</option>
+                <option value="دورية">دورية</option>
+                <option value="أخرى">أخرى</option>
+              </select>
             </div>
             <div class="form-group">
-              <label>الوصف</label>
-              <input id="m-description" placeholder="وصف اختياري">
+              <label>المبلغ الإجمالي (ر.س)</label>
+              <input id="m-totalCost" type="number" min="0" step="0.01" placeholder="0.00" required>
             </div>
-            <div class="form-group">
-              <label>تاريخ الجدولة</label>
-              <input id="m-scheduledDate" type="date">
+            <div class="form-group"><label>اسم الورشة / مزود الخدمة</label><input id="m-serviceProvider" placeholder="اختياري"></div>
+            <div class="form-group"><label>حالة الصيانة</label>
+              <select id="m-status">
+                <option value="pending">معلّق</option>
+                <option value="in_progress">جارٍ</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغى</option>
+              </select>
             </div>
-            <div class="form-group">
-              <label>التكلفة (ر.س)</label>
-              <input id="m-cost" type="number" min="0" step="0.01">
-            </div>
+            <div class="form-group form-group-full"><label>وصف/بيانات الصيانة</label><textarea id="m-description" rows="2" required></textarea></div>
+            <div class="form-group form-group-full"><label>ملاحظات إضافية</label><textarea id="m-notes" rows="2" placeholder="اختياري"></textarea></div>
           </div>
           <button type="submit" class="btn-primary">➕ إضافة</button>
         </form>
       </div>
 
-      <table class="data-table">
-        <thead>
-          <tr><th>المركبة</th><th>النوع</th><th>الوصف</th><th>الموعد</th><th>التكلفة</th><th>الحالة</th><th>إجراءات</th></tr>
-        </thead>
-        <tbody id="maintenance-tbody">
-          <tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>
-        </tbody>
-      </table>
+      <div id="maintenance-tbody" class="maintenance-cards-grid">
+        <div class="tbl-empty">جارٍ التحميل…</div>
+      </div>
     </div>
 
     <!-- ── الحوادث ───────────────────────────────────── -->
@@ -1083,10 +1098,46 @@
 
     <!-- Maintenance -->
     <div class="ptab-pane" id="ptab-maintenance" style="display:none">
-      <table class="mini-table" id="vp-maint-table">
-        <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
-        <tbody><tr><td colspan="4">—</td></tr></tbody>
-      </table>
+      <div id="vp-maint-actions" style="margin-bottom:12px"></div>
+      <form id="vp-maint-form" class="data-form" style="display:none;margin-bottom:12px" onsubmit="addProfileMaintenanceCard(event)">
+        <h3>إضافة كرت صيانة جديد</h3>
+        <div class="form-row">
+          <div class="form-group"><label>اسم السائق أثناء الصيانة</label><input id="vp-m-driverDuringMaintenance" required></div>
+          <div class="form-group"><label>تاريخ الصيانة</label><input id="vp-m-maintenanceDate" type="date" required></div>
+          <div class="form-group">
+            <label>نوع الصيانة</label>
+            <select id="vp-m-maintenanceType" required>
+              <option value="">— اختر النوع —</option>
+              <option value="زيت">زيت</option>
+              <option value="فرامل">فرامل</option>
+              <option value="إطارات">إطارات</option>
+              <option value="كهرباء">كهرباء</option>
+              <option value="هيكل">هيكل</option>
+              <option value="دورية">دورية</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+          </div>
+          <div class="form-group"><label>المبلغ الإجمالي (ر.س)</label><input id="vp-m-totalCost" type="number" min="0" step="0.01" placeholder="0.00" required></div>
+          <div class="form-group"><label>اسم الورشة / مزود الخدمة</label><input id="vp-m-serviceProvider"></div>
+          <div class="form-group"><label>حالة الصيانة</label>
+            <select id="vp-m-status">
+              <option value="pending">معلّق</option>
+              <option value="in_progress">جارٍ</option>
+              <option value="completed">مكتمل</option>
+              <option value="cancelled">ملغى</option>
+            </select>
+          </div>
+          <div class="form-group form-group-full"><label>وصف/بيانات الصيانة</label><textarea id="vp-m-description" rows="2" required></textarea></div>
+          <div class="form-group form-group-full"><label>ملاحظات إضافية</label><textarea id="vp-m-notes" rows="2"></textarea></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="submit" class="btn-primary">💾 حفظ الكرت</button>
+          <button type="button" class="btn-secondary" onclick="toggleProfileMaintenanceForm(false)">إلغاء</button>
+        </div>
+      </form>
+      <div id="vp-maint-cards" class="maintenance-cards-grid">
+        <div class="tbl-empty">—</div>
+      </div>
     </div>
 
     <!-- Violations -->

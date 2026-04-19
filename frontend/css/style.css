@@ -344,6 +344,7 @@ body {
 
 .form-row { display: flex; flex-wrap: wrap; gap: 16px; }
 .form-row .form-group { flex: 1; min-width: 185px; }
+.form-row .form-group.form-group-full { min-width: 100%; flex-basis: 100%; }
 
 .btn-primary {
   margin-top: 18px; padding: 10px 26px;
@@ -764,6 +765,46 @@ body {
   font-size: 13px;
 }
 
+.maintenance-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.maintenance-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.maintenance-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.maintenance-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.maintenance-card-row {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.maintenance-card-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ── Handover Photos ── */
 .handover-photos { margin: 16px 0; }
 .photo-grid {
@@ -829,4 +870,3 @@ body {
   .ops-grid { grid-template-columns: 1fr; }
   .dash-grid-2 { grid-template-columns: 1fr; }
 }
-
