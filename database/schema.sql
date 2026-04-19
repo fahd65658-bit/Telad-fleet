@@ -255,3 +255,57 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, read);
+
+-- ─── MERGED: QUICK ACCESS USERS ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS quick_access_users (
+  id            BIGSERIAL   PRIMARY KEY,
+  employee_id   INTEGER     REFERENCES employees(id) ON DELETE CASCADE,
+  employee_code TEXT        NOT NULL UNIQUE,
+  pin_hash      TEXT        NOT NULL,
+  active        BOOLEAN     NOT NULL DEFAULT TRUE,
+  last_login_at TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_quick_access_users_employee ON quick_access_users(employee_id);
+
+-- ─── MERGED: MAINTENANCE CARDS ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS maintenance_cards (
+  id            BIGSERIAL   PRIMARY KEY,
+  vehicle_id    INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  card_type     TEXT        NOT NULL,
+  title         TEXT,
+  details       JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  created_by    TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_maintenance_cards_vehicle ON maintenance_cards(vehicle_id);
+
+-- ─── MERGED: VEHICLE CONDITIONS ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vehicle_conditions (
+  id             BIGSERIAL   PRIMARY KEY,
+  vehicle_id     INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  inspection_type TEXT       NOT NULL DEFAULT 'handover',
+  condition_data JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  photos         JSONB       NOT NULL DEFAULT '[]'::jsonb,
+  recorded_by    TEXT,
+  recorded_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_vehicle_conditions_vehicle_time ON vehicle_conditions(vehicle_id, recorded_at DESC);
+
+-- ─── MERGED: APPROVED FORMS ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS approved_forms (
+  id            BIGSERIAL   PRIMARY KEY,
+  form_code     TEXT        UNIQUE,
+  title         TEXT        NOT NULL,
+  form_type     TEXT        NOT NULL DEFAULT 'general',
+  employee_id   INTEGER     REFERENCES employees(id) ON DELETE SET NULL,
+  vehicle_id    INTEGER     REFERENCES vehicles(id) ON DELETE SET NULL,
+  form_payload  JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  status        TEXT        NOT NULL DEFAULT 'approved',
+  approved_by   TEXT,
+  approved_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_approved_forms_employee ON approved_forms(employee_id);
+CREATE INDEX IF NOT EXISTS idx_approved_forms_vehicle ON approved_forms(vehicle_id);

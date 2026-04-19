@@ -239,6 +239,8 @@ function isAllowedOrigin(origin) {
 // ─── App setup ───────────────────────────────────────────────────────────────
 const app    = express();
 const server = http.createServer(app);
+server.requestTimeout = Number(process.env.REQUEST_TIMEOUT_MS || 30_000);
+server.headersTimeout = Number(process.env.HEADERS_TIMEOUT_MS || 35_000);
 const io     = new Server(server, {
   cors: { origin: (origin, cb) => cb(null, isAllowedOrigin(origin)), methods: ['GET', 'POST'] },
 });
@@ -269,6 +271,18 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' }));
+// MERGED: api-prefix-compatibility
+app.use((req, _res, next) => {
+  if (req.url === '/api') req.url = '/';
+  else if (req.url.startsWith('/api/')) req.url = req.url.slice(4);
+  next();
+});
+// MERGED: performance-hardening
+app.use((_req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=5, max=1000');
+  next();
+});
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
 

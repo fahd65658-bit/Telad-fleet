@@ -5,7 +5,7 @@ const BASE = import.meta.env.VITE_API_BASE || '/api';
 const api = axios.create({ baseURL: BASE });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('telad_token');
+  const token = localStorage.getItem('telad_token') || localStorage.getItem('telad_quick_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

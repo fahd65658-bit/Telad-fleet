@@ -61,6 +61,8 @@ app.use(express.json({ limit: '10mb' }));  // 10 MB for base64 vehicle photos
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use((_req, res, next) => { res.setHeader('X-Powered-By','TELAD-FLEET/3.1'); res.setHeader('X-Deploy-Id', DEPLOY_ID); next(); });
+// MERGED: performance-hardening
+app.use((_req, res, next) => { res.setHeader('Connection', 'keep-alive'); res.setHeader('Keep-Alive', 'timeout=5, max=1000'); next(); });
 
 // ── Rate limiting ──────────────────────────────────────────────────────────
 app.use('/api/', rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }));
@@ -68,6 +70,7 @@ app.use('/api/auth/login', rateLimit({ windowMs: 15*60_000, max: 20, message: { 
 
 // ── JWT middleware ─────────────────────────────────────────────────────────
 const ROLES = { admin: 4, supervisor: 3, operator: 2, viewer: 1 };
+const QUICK_ACCESS_EXPIRES_IN = process.env.QUICK_ACCESS_EXPIRES_IN || '24h';
 
 function auth(minRole = 'viewer') {
   return (req, res, next) => {
@@ -81,6 +84,31 @@ function auth(minRole = 'viewer') {
       next();
     } catch { res.status(401).json({ error: 'جلسة منتهية – سجّل دخولك مجدداً' }); }
   };
+}
+
+function quickAuth(req, res, next) {
+  const hdr = req.headers.authorization || '';
+  const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'مطلوب تسجيل الدخول السريع' });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.role !== 'quick') return res.status(403).json({ error: 'توكن دخول سريع غير صالح' });
+    req.quick = payload;
+    next();
+  } catch {
+    res.status(401).json({ error: 'جلسة الدخول السريع منتهية' });
+  }
+}
+
+function ensureMergedCollections() {
+  const s = db.store;
+  if (!Array.isArray(s.cities)) s.cities = [];
+  if (!Array.isArray(s.projects)) s.projects = [];
+  if (!Array.isArray(s.maintenanceCards)) s.maintenanceCards = [];
+  if (!Array.isArray(s.approvedForms)) s.approvedForms = [];
+  if (!Array.isArray(s.quickAccessUsers)) s.quickAccessUsers = [];
+  if (!Array.isArray(s.vehicleConditions)) s.vehicleConditions = [];
+  return s;
 }
 
 // ── Request logger ─────────────────────────────────────────────────────────
@@ -199,6 +227,31 @@ app.put('/api/vehicles/:id',         auth('operator'), (req, res) => { const v=d
 app.delete('/api/vehicles/:id',      auth('supervisor'), (req, res) => { const ok=db.remove('vehicles',req.params.id); ok?res.json({message:'تم الحذف'}):res.status(404).json({error:'المركبة غير موجودة'}); });
 app.post('/api/vehicles/:id/gps',    auth('operator'), (req, res) => { const {lat,lng}=req.body; if(!lat||!lng)return res.status(400).json({error:'lat و lng مطلوبان'}); db.updateGPS(req.params.id,parseFloat(lat),parseFloat(lng)); const v=db.findOne('vehicles',x=>x.id===req.params.id); io.emit('gps:update',{vehicleId:req.params.id,lat:v.lat,lng:v.lng,t:db.nowIso()}); res.json({ok:true}); });
 app.get('/api/vehicles/:id/gps/history', auth(), (req, res) => res.json(db.store.gpsHistory[req.params.id]||[]));
+
+// MERGED: maintenance-cards
+app.get('/api/vehicles/:id/maintenance-cards', auth(), (req, res) => {
+  const s = ensureMergedCollections();
+  res.json(s.maintenanceCards.filter(card => card.vehicleId === req.params.id));
+});
+
+app.post('/api/vehicles/:id/maintenance-cards', auth('supervisor'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const s = ensureMergedCollections();
+  const card = { id: db.uid(), vehicleId: req.params.id, ...(req.body || {}), createdAt: db.nowIso(), createdBy: req.user.username };
+  s.maintenanceCards.push(card);
+  db.writeStore();
+  res.status(201).json(card);
+});
+
+app.delete('/api/vehicles/:id/maintenance-cards/:cardId', auth('supervisor'), (req, res) => {
+  const s = ensureMergedCollections();
+  const before = s.maintenanceCards.length;
+  s.maintenanceCards = s.maintenanceCards.filter(card => !(card.vehicleId === req.params.id && card.id === req.params.cardId));
+  if (s.maintenanceCards.length === before) return res.status(404).json({ error: 'بطاقة الصيانة غير موجودة' });
+  db.writeStore();
+  res.json({ ok: true });
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // DRIVERS
@@ -438,6 +491,151 @@ app.delete('/api/employees/:id', auth('admin'), (req, res) => {
   ok ? res.json({ message: 'تم الحذف' }) : res.status(404).json({ error: 'الموظف غير موجود' });
 });
 
+// MERGED: quick-access-portal
+app.post('/api/quick-access/login', (req, res) => {
+  const { employee_id: employeeId, pin } = req.body || {};
+  if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
+  const employee = db.findOne('employees', x => x.id === employeeId || x.nationalId === employeeId);
+  if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
+  const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4);
+  if (!expectedPin || String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
+  const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
+  res.json({ token, quickAccess: true, employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId } });
+});
+
+app.get('/api/quick-access/vehicle', quickAuth, (req, res) => {
+  const employee = db.findOne('employees', x => x.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const vehicle = employee.vehicleId ? db.findOne('vehicles', x => x.id === employee.vehicleId) : null;
+  if (!vehicle) return res.status(404).json({ error: 'لا توجد مركبة مرتبطة بالموظف' });
+  res.json({ employee: { id: employee.id, name: employee.name }, vehicle });
+});
+
+app.post('/api/quick-access/requests', quickAuth, (req, res) => {
+  const employee = db.findOne('employees', x => x.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const request = db.insert('appointments', {
+    vehicleId: employee.vehicleId || null,
+    employeeId: employee.id,
+    type: req.body?.type || 'quick-request',
+    status: 'pending',
+    notes: req.body?.notes || '',
+    source: 'quick-access',
+    requestedAt: db.nowIso(),
+  });
+  res.status(201).json(request);
+});
+
+app.post('/api/quick-access/reports', quickAuth, (req, res) => {
+  const employee = db.findOne('employees', x => x.id === req.quick.employeeId);
+  if (!employee) return res.status(404).json({ error: 'الموظف غير موجود' });
+  const report = db.insert('reports', {
+    title: req.body?.title || 'Quick Access Report',
+    type: req.body?.type || 'quick-access',
+    data: req.body?.data || {},
+    createdBy: employee.name || employee.id,
+  });
+  res.status(201).json(report);
+});
+
+// MERGED: cities-projects-linkage
+app.get('/api/cities', auth(), (_req, res) => {
+  const s = ensureMergedCollections();
+  res.json(s.cities);
+});
+
+app.post('/api/cities', auth('supervisor'), (req, res) => {
+  const s = ensureMergedCollections();
+  const name = String(req.body?.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'اسم المدينة مطلوب' });
+  if (s.cities.some(c => String(c.name).trim().toLowerCase() === name.toLowerCase())) return res.status(409).json({ error: 'المدينة موجودة مسبقاً' });
+  const city = { id: db.uid(), name, createdAt: db.nowIso(), createdBy: req.user.username };
+  s.cities.push(city);
+  db.writeStore();
+  res.status(201).json(city);
+});
+
+app.get('/api/projects', auth(), (_req, res) => {
+  const s = ensureMergedCollections();
+  res.json(s.projects);
+});
+
+app.post('/api/projects', auth('supervisor'), (req, res) => {
+  const s = ensureMergedCollections();
+  const name = String(req.body?.name || '').trim();
+  const cityId = req.body?.cityId || null;
+  if (!name || !cityId) return res.status(400).json({ error: 'اسم المشروع والمدينة مطلوبان' });
+  if (!s.cities.some(c => c.id === cityId)) return res.status(400).json({ error: 'المدينة غير موجودة' });
+  const project = { id: db.uid(), name, cityId, createdAt: db.nowIso(), createdBy: req.user.username };
+  s.projects.push(project);
+  db.writeStore();
+  res.status(201).json(project);
+});
+
+app.get('/api/projects/:id/vehicles', auth(), (req, res) => {
+  const s = ensureMergedCollections();
+  const project = s.projects.find(p => p.id === req.params.id);
+  if (!project) return res.status(404).json({ error: 'المشروع غير موجود' });
+  const cityName = s.cities.find(c => c.id === project.cityId)?.name;
+  const vehicles = db.store.vehicles.filter(v => v.projectId === project.id || (cityName && v.city === cityName));
+  res.json({ project, vehicles });
+});
+
+// MERGED: approved-forms
+app.get('/api/approved-forms', auth(), (_req, res) => {
+  const s = ensureMergedCollections();
+  res.json(s.approvedForms);
+});
+
+app.post('/api/approved-forms', auth('supervisor'), (req, res) => {
+  const s = ensureMergedCollections();
+  const title = String(req.body?.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'عنوان النموذج مطلوب' });
+  const form = { id: db.uid(), title, payload: req.body?.payload || {}, employeeId: req.body?.employeeId || null, vehicleId: req.body?.vehicleId || null, status: req.body?.status || 'approved', createdAt: db.nowIso() };
+  s.approvedForms.push(form);
+  db.writeStore();
+  res.status(201).json(form);
+});
+
+app.get('/api/approved-forms/autofill', auth(), (req, res) => {
+  const s = ensureMergedCollections();
+  const form = s.approvedForms.find(x => x.id === req.query.formId);
+  if (!form) return res.status(404).json({ error: 'النموذج غير موجود' });
+  res.json({ payload: form.payload || {}, employeeId: form.employeeId || null, vehicleId: form.vehicleId || null });
+});
+
+// MERGED: vehicle-inspection-insurance
+app.post('/api/vehicles/:id/condition-photos', auth('operator'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const s = ensureMergedCollections();
+  const record = {
+    id: db.uid(),
+    vehicleId: vehicle.id,
+    photos: Array.isArray(req.body?.photos) ? req.body.photos : [],
+    condition: req.body?.condition || 'normal',
+    notes: req.body?.notes || '',
+    capturedBy: req.user.username,
+    capturedAt: db.nowIso(),
+  };
+  s.vehicleConditions.push(record);
+  db.writeStore();
+  res.status(201).json(record);
+});
+
+app.get('/api/vehicles/:id/inspection-records', auth(), (req, res) => {
+  const s = ensureMergedCollections();
+  const records = s.vehicleConditions.filter(x => x.vehicleId === req.params.id);
+  res.json(records);
+});
+
+app.get('/api/vehicles/insurance-expiry', auth(), (_req, res) => {
+  const list = db.store.vehicles
+    .filter(v => v.insurance?.expiry)
+    .map(v => ({ vehicleId: v.id, plate: v.plate, name: v.name, expiry: v.insurance.expiry, status: v.insurance.status || 'unknown' }));
+  res.json(list);
+});
+
 // ══════════════════════════════════════════════════════════════════════════
 // GPS LIVE STREAMING ROUTES
 // ══════════════════════════════════════════════════════════════════════════
@@ -449,11 +647,12 @@ app.get('/api/gps/positions/:id', auth(), gps.routeGetVehiclePosition);
 // ══════════════════════════════════════════════════════════════════════════
 // HEALTH & VERSION
 // ══════════════════════════════════════════════════════════════════════════
-app.get(['/healthz', '/api/health'], (_req, res) => {
+app.get(['/healthz', '/health', '/api/health'], (_req, res) => {
   const persistence = db.getPersistenceStatus();
   res.json({
     status: 'ok',
     service: 'telad-fleet',
+    uptime: process.uptime(),
     time: db.nowIso(),
     deployId: DEPLOY_ID,
     persistence,
@@ -474,6 +673,8 @@ app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR,'index.html')));
 // HTTP SERVER + SOCKET.IO
 // ══════════════════════════════════════════════════════════════════════════
 const httpServer = http.createServer(app);
+httpServer.requestTimeout = Number(process.env.REQUEST_TIMEOUT_MS || 30_000);
+httpServer.headersTimeout = Number(process.env.HEADERS_TIMEOUT_MS || 35_000);
 const io = new Server(httpServer, {
   cors: { origin: process.env.CORS_ORIGIN || '*', methods:['GET','POST'], credentials: true },
   transports: ['websocket','polling'],
@@ -594,5 +795,16 @@ async function start() {
     console.log(`   GPS Sim   : ${process.env.NODE_ENV!=='production'?'ON':'OFF'}\n`);
   });
 }
+
+function gracefulShutdown(signal) {
+  console.log(`\n[TELAD FLEET] ${signal} received, shutting down gracefully...`);
+  httpServer.close(() => {
+    db.writeStore(true);
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 start().catch(err => { console.error('Startup error:', err); process.exit(1); });

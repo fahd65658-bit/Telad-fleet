@@ -643,20 +643,35 @@ module.exports = async (req, res) => {
     return sendJson(res, 200, { token, accessToken: token, user: sanitizeUser(user) });
   }
 
-  if (method === 'POST' && path === '/auth/quick-access') {
+  // MERGED: quick-access-portal
+  if (method === 'POST' && (path === '/auth/quick-access' || path === '/quick-access/login')) {
     const body = await readBody(req);
-    const nationalId = normalizeNationalId(body.nationalId);
-    const plate = String(body.plate || '').trim();
-    if (!nationalId || !plate) return sendJson(res, 400, { error: 'رقم الهوية ورقم اللوحة مطلوبان' });
+    let employee = null;
+    let vehicle = null;
 
-    const employee = findEmployeeByNationalId(nationalId);
-    if (!employee) return sendJson(res, 403, { error: 'لا يوجد موظف مطابق في النظام' });
+    if (path === '/quick-access/login') {
+      const employeeId = String(body.employee_id || '').trim();
+      const pin = String(body.pin || '').trim();
+      employee = (state.employees || []).find(e => e.id === employeeId || e.nationalId === employeeId) || null;
+      if (!employee) return sendJson(res, 403, { error: 'لا يوجد موظف مطابق في النظام' });
+      const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4);
+      if (!expectedPin || pin !== expectedPin) return sendJson(res, 401, { error: 'PIN غير صحيح' });
+      vehicle = employee.vehicleId ? (state.vehicles || []).find(v => v.id === employee.vehicleId) || null : null;
+      if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مرتبط بالموظف' });
+    } else {
+      const nationalId = normalizeNationalId(body.nationalId);
+      const plate = String(body.plate || '').trim();
+      if (!nationalId || !plate) return sendJson(res, 400, { error: 'رقم الهوية ورقم اللوحة مطلوبان' });
 
-    const vehicle = findVehicleByPlate(plate);
-    if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مطابق' });
+      employee = findEmployeeByNationalId(nationalId);
+      if (!employee) return sendJson(res, 403, { error: 'لا يوجد موظف مطابق في النظام' });
 
-    if (employee.vehicleId !== vehicle.id) {
-      return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
+      vehicle = findVehicleByPlate(plate);
+      if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مطابق' });
+
+      if (employee.vehicleId !== vehicle.id) {
+        return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
+      }
     }
 
     const quickToken = `qa.${uid()}.${uid()}`;
@@ -695,14 +710,14 @@ module.exports = async (req, res) => {
     const vehicle = (state.vehicles || []).find(v => v.id === session.vehicleId);
     if (!employee || !vehicle) return sendJson(res, 404, { error: 'بيانات المركبة أو الموظف غير موجودة' });
 
-    if (method === 'GET' && path === '/quick-access/vehicle-profile') {
+    if (method === 'GET' && (path === '/quick-access/vehicle-profile' || path === '/quick-access/vehicle')) {
       return sendJson(res, 200, {
         employee: { name: employee.name, nationalId: employee.nationalId },
         vehicle: buildQuickVehicleProfile(vehicle, employee),
       });
     }
 
-    if (method === 'POST' && path === '/quick-access/monthly-appointment') {
+    if (method === 'POST' && (path === '/quick-access/monthly-appointment' || path === '/quick-access/requests')) {
       const body = await readBody(req);
       const scheduledAt = body.scheduledAt || new Date().toISOString().slice(0, 10);
       const appointment = {
@@ -719,6 +734,21 @@ module.exports = async (req, res) => {
       state.appointments.push(appointment);
       addLog(`حجز موعد صيانة شهري ${vehicle.plate}`, employee.name || employee.id);
       return sendJson(res, 201, appointment);
+    }
+
+    if (method === 'POST' && path === '/quick-access/reports') {
+      const body = await readBody(req);
+      const report = {
+        id: uid(),
+        title: String(body.title || 'Quick Access Report'),
+        type: 'quick-access',
+        data: body.data || {},
+        createdBy: employee.name || employee.id,
+        createdAt: nowIso(),
+      };
+      state.reports.push(report);
+      addLog(`تقرير دخول سريع ${vehicle.plate}`, employee.name || employee.id);
+      return sendJson(res, 201, report);
     }
 
     if (method === 'POST' && path === '/quick-access/attachments') {
@@ -1519,7 +1549,7 @@ module.exports = async (req, res) => {
   }
 
   {
-    const pfleet = matchPath('/projects/:id/fleet', path);
+    const pfleet = matchPath('/projects/:id/fleet', path) || matchPath('/projects/:id/vehicles', path);
     if (pfleet && method === 'GET') {
       const cu = currentUser(req);
       if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
@@ -1593,13 +1623,14 @@ module.exports = async (req, res) => {
   }
 
   // ── APPROVED FORMS ────────────────────────────────────────────────
-  if (method === 'GET' && path === '/forms/approved') {
+  // MERGED: approved-forms
+  if (method === 'GET' && (path === '/forms/approved' || path === '/approved-forms')) {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
     return sendJson(res, 200, state.approvedForms || []);
   }
 
-  if (method === 'POST' && path === '/forms/approved') {
+  if (method === 'POST' && (path === '/forms/approved' || path === '/approved-forms')) {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
     const body = await readBody(req);
@@ -1649,7 +1680,7 @@ module.exports = async (req, res) => {
     }
   }
 
-  if (method === 'GET' && path === '/forms/autofill') {
+  if (method === 'GET' && (path === '/forms/autofill' || path === '/approved-forms/autofill')) {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
     const employeeId = url.searchParams.get('employeeId') || '';

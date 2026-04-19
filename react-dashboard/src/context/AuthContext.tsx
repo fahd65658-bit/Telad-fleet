@@ -8,11 +8,25 @@ const Ctx = createContext<AuthCtx>({} as AuthCtx);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,  setUser]  = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('telad_token'));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('telad_token') || localStorage.getItem('telad_quick_token'));
 
   useEffect(() => {
     if (token) {
-      api.get('/auth/me').then(r => setUser(r.data)).catch(() => { setToken(null); localStorage.removeItem('telad_token'); });
+      api.get('/auth/me')
+        .then(r => setUser(r.data))
+        .catch(async () => {
+          try {
+            const quick = await api.get('/quick-access/vehicle');
+            const employee = quick?.data?.employee;
+            if (employee?.id || employee?.name) {
+              setUser({ id: employee.id || 'quick', name: employee.name || 'Quick Access', username: 'quick', role: 'quick' });
+              return;
+            }
+          } catch { /* ignore */ }
+          setToken(null);
+          localStorage.removeItem('telad_token');
+          localStorage.removeItem('telad_quick_token');
+        });
     }
   }, [token]);
 
@@ -25,7 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     api.post('/auth/logout').catch(() => {});
+    api.post('/auth/quick-logout').catch(() => {});
     localStorage.removeItem('telad_token');
+    localStorage.removeItem('telad_quick_token');
     setToken(null);
     setUser(null);
   };

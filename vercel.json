@@ -30,6 +30,10 @@
     { "source": "/api/logs",                   "destination": "/api/index.js" },
     { "source": "/api/dev-requests/:path*",    "destination": "/api/index.js" },
     { "source": "/api/users/:path*",           "destination": "/api/index.js" },
+    { "source": "/api/quick-access/:path*",    "destination": "/api/index.js" },
+    { "source": "/api/approved-forms/:path*",  "destination": "/api/index.js" },
+    { "source": "/api/cities/:path*",          "destination": "/api/index.js" },
+    { "source": "/api/projects/:path*",        "destination": "/api/index.js" },
     { "source": "/api/health",                 "destination": "/api/index.js" },
     { "source": "/api/version",                "destination": "/api/index.js" },
     { "source": "/api/dashboard",              "destination": "/api/index.js" },
@@ -71,4 +75,3 @@
     "NODE_ENV": "production"
   }
 }
-
