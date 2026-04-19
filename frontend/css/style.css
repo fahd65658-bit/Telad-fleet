@@ -770,6 +770,16 @@ body {
   margin-bottom: 8px;
 }
 
+.maint-card-notes {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 6px;
+  resize: vertical;
+}
+
 /* ── Mini Tables (in modals) ── */
 .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .mini-table thead th {

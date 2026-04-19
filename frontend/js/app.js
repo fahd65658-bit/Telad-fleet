@@ -2071,6 +2071,16 @@ async function loadMaintenanceCards(vehicleId = _currentProfileVehicleId) {
   const grid = document.getElementById('vp-maint-cards-grid');
   if (!grid || !vehicleId) return;
   grid.innerHTML = '<div class="tbl-empty">جارٍ تحميل كروت الصيانة…</div>';
+  const cardStatusLabel = {
+    pending: 'قيد الانتظار',
+    in_progress: 'قيد التنفيذ',
+    completed: 'مكتمل',
+  };
+  const cardStatusClass = {
+    pending: 'pill-red',
+    in_progress: 'pill-orange',
+    completed: 'pill-green',
+  };
   try {
     const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards`);
     if (!res.ok) throw new Error();
@@ -2083,17 +2093,22 @@ async function loadMaintenanceCards(vehicleId = _currentProfileVehicleId) {
       <div class="maint-card">
         <div class="maint-card-header">
           <strong>${escHtml(card.type || 'صيانة')}</strong>
-          <span class="status-pill ${card.status === 'completed' ? 'pill-green' : card.status === 'in_progress' ? 'pill-orange' : 'pill-red'}">${escHtml(card.status || 'pending')}</span>
+          <span class="status-pill ${cardStatusClass[card.status] || cardStatusClass.pending}">${escHtml(cardStatusLabel[card.status] || cardStatusLabel.pending)}</span>
         </div>
         <div class="pinfo-label">📅 ${escHtml(card.date || '—')}</div>
         <div class="pinfo-label">🏪 ${escHtml(card.workshop || '—')}</div>
         <div class="pinfo-label">💰 ${escHtml(String(card.amount || 0))} ر.س</div>
         <div class="pinfo-label" style="white-space:pre-wrap">${escHtml(card.notes || '—')}</div>
         <div style="margin-top:8px">
-          <button class="btn-sm btn-danger" onclick="deleteMaintCard('${escHtml(String(card.id))}')">🗑️ حذف</button>
+          <button class="btn-sm btn-danger" data-action="delete-maint-card" data-card-id="${encodeURIComponent(String(card.id || ''))}">🗑️ حذف</button>
         </div>
       </div>
     `).join('');
+    grid.onclick = (event) => {
+      const button = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!button) return;
+      deleteMaintCard(decodeURIComponent(button.dataset.cardId || ''));
+    };
   } catch {
     grid.innerHTML = '<div class="tbl-empty">تعذّر تحميل كروت الصيانة</div>';
   }
