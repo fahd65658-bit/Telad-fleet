@@ -1162,6 +1162,9 @@ document.addEventListener('click', async (e) => {
     case 'delete-financial':
       await deleteFinancial(id);
       break;
+    case 'delete-maint-card':
+      await deleteMaintenanceCard(id);
+      break;
     case 'delete-dev-request':
       await deleteDevRequest(id);
       break;
@@ -1975,6 +1978,109 @@ async function aiDashChat() {
 // VEHICLE PROFILE MODAL
 // ═══════════════════════════════════════════════════════════════════════════
 let _currentProfileVehicleId = null;
+const MAINT_CARD_STATUS_LABELS = {
+  pending: 'معلّق',
+  in_progress: 'جارٍ',
+  completed: 'مكتمل',
+  cancelled: 'ملغى',
+};
+
+function maintenanceCardStatusClass(status) {
+  if (status === 'completed') return 'maint-status-completed';
+  if (status === 'in_progress') return 'maint-status-progress';
+  if (status === 'cancelled') return 'maint-status-cancelled';
+  return 'maint-status-pending';
+}
+
+async function loadMaintenanceCards(vehicleId) {
+  const grid = document.getElementById('vp-maint-cards-grid');
+  const formWrap = document.getElementById('vp-maint-card-form-wrap');
+  if (!grid) return;
+
+  const canManage = ['admin', 'supervisor'].includes(currentUser?.role);
+  if (formWrap) formWrap.style.display = canManage ? '' : 'none';
+  grid.innerHTML = '<div class="tbl-empty">جارٍ التحميل…</div>';
+
+  try {
+    const res = await apiFetch(`/vehicles/${vehicleId}/maintenance-cards`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const cards = data.cards || [];
+    if (cards.length === 0) {
+      grid.innerHTML = '<div class="tbl-empty">لا توجد كروت صيانة بعد</div>';
+      return;
+    }
+    grid.innerHTML = cards.map(card => `
+      <div class="maint-card">
+        <div class="maint-card-header">
+          <span class="maint-type-badge">🔧 ${escHtml(card.maintenanceType || '—')}</span>
+          <span class="maint-status-badge ${maintenanceCardStatusClass(card.status)}">${escHtml(MAINT_CARD_STATUS_LABELS[card.status] || card.status || '—')}</span>
+        </div>
+        <div class="maint-card-body">
+          <div>🚗 لوحة: ${escHtml(card.plate || data.vehicle?.plate || '—')}</div>
+          <div>👨‍✈️ السائق: ${escHtml(card.driverDuringMaintenance || '—')}</div>
+          <div>📅 التاريخ: ${escHtml(formatDate(card.maintenanceDate || card.createdAt))}</div>
+          <div>🏪 الورشة: ${escHtml(card.serviceProvider || '—')}</div>
+          <div>📝 ${escHtml(card.description || '—')}</div>
+          <div>💰 المبلغ: ${escHtml((Number(card.totalCost || 0)).toLocaleString('ar-SA'))} ر.س</div>
+          <div>📌 ${escHtml(card.notes || '—')}</div>
+        </div>
+        ${canManage ? `<div class="maint-card-footer">
+          <button class="btn-sm btn-danger" data-action="delete-maint-card" data-id="${escHtml(String(card.id))}">حذف</button>
+        </div>` : ''}
+      </div>`).join('');
+  } catch {
+    grid.innerHTML = '<div class="tbl-empty">تعذّر تحميل كروت الصيانة</div>';
+  }
+}
+
+async function submitMaintenanceCard(e) {
+  e.preventDefault();
+  if (!_currentProfileVehicleId) return;
+
+  const body = {
+    driverDuringMaintenance: document.getElementById('vp-mc-driver')?.value.trim(),
+    maintenanceDate: document.getElementById('vp-mc-date')?.value,
+    maintenanceType: document.getElementById('vp-mc-type')?.value,
+    description: document.getElementById('vp-mc-description')?.value.trim(),
+    totalCost: document.getElementById('vp-mc-cost')?.value,
+    serviceProvider: document.getElementById('vp-mc-provider')?.value.trim(),
+    status: document.getElementById('vp-mc-status')?.value || 'pending',
+    notes: document.getElementById('vp-mc-notes')?.value.trim(),
+  };
+
+  try {
+    const res = await apiFetch('/vehicles/' + _currentProfileVehicleId + '/maintenance-cards', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'تعذّر إضافة كرت الصيانة');
+    }
+    document.getElementById('form-vp-maint-card')?.reset();
+    showToast('تم إضافة كرت الصيانة بنجاح');
+    await loadMaintenanceCards(_currentProfileVehicleId);
+  } catch (err) {
+    showToast(err.message || 'تعذّر إضافة كرت الصيانة', 'error');
+  }
+}
+
+async function deleteMaintenanceCard(cardId) {
+  if (!_currentProfileVehicleId || !cardId) return;
+  if (!confirm('هل تريد حذف كرت الصيانة؟')) return;
+  try {
+    const res = await apiFetch('/vehicles/' + _currentProfileVehicleId + '/maintenance-cards/' + cardId, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'تعذّر حذف كرت الصيانة');
+    }
+    showToast('تم حذف كرت الصيانة');
+    await loadMaintenanceCards(_currentProfileVehicleId);
+  } catch (err) {
+    showToast(err.message || 'تعذّر حذف كرت الصيانة', 'error');
+  }
+}
 
 async function openVehicleProfile(vehicleId) {
   _currentProfileVehicleId = vehicleId;
@@ -2058,6 +2164,9 @@ async function openVehicleProfile(vehicleId) {
     const onHandover = () => openHandoverForm(vehicleId);
     document.getElementById('vp-handover-btn').onclick          = onHandover;
     document.getElementById('vp-handover-footer-btn').onclick   = onHandover;
+    const maintDateInput = document.getElementById('vp-mc-date');
+    if (maintDateInput && !maintDateInput.value) maintDateInput.value = new Date().toISOString().slice(0, 10);
+    await loadMaintenanceCards(vehicleId);
 
   } catch {
     document.getElementById('vp-title').textContent = 'تعذّر تحميل البيانات';

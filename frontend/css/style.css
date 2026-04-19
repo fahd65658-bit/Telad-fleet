@@ -764,6 +764,58 @@ body {
   font-size: 13px;
 }
 
+/* ── Maintenance Cards ── */
+.maint-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 8px 0;
+}
+.maint-card {
+  background: var(--surface-2, #1e293b);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.maint-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+.maint-type-badge {
+  display: inline-block;
+  background: rgba(201,162,39,.15);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.maint-status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.maint-status-pending { background: rgba(245,158,11,.2); color: #f59e0b; }
+.maint-status-progress { background: rgba(59,130,246,.2); color: #60a5fa; }
+.maint-status-completed { background: rgba(34,197,94,.2); color: #4ade80; }
+.maint-status-cancelled { background: rgba(239,68,68,.2); color: #f87171; }
+.maint-card-body {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+.maint-card-footer {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ── Handover Photos ── */
 .handover-photos { margin: 16px 0; }
 .photo-grid {
@@ -829,4 +881,3 @@ body {
   .ops-grid { grid-template-columns: 1fr; }
   .dash-grid-2 { grid-template-columns: 1fr; }
 }
-

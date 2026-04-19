@@ -1022,6 +1022,7 @@
       <button class="ptab active" data-tab="basic"       onclick="switchProfileTab('basic')">📋 أساسي</button>
       <button class="ptab" data-tab="insurance"          onclick="switchProfileTab('insurance')">🛡️ التأمين</button>
       <button class="ptab" data-tab="maintenance"        onclick="switchProfileTab('maintenance')">🔧 الصيانة</button>
+      <button class="ptab" data-tab="maint-cards"        onclick="switchProfileTab('maint-cards')">كروت الصيانة 🃏</button>
       <button class="ptab" data-tab="violations"         onclick="switchProfileTab('violations')">🚦 المخالفات</button>
       <button class="ptab" data-tab="accidents"          onclick="switchProfileTab('accidents')">⚠️ الحوادث</button>
       <button class="ptab" data-tab="handovers-vp"       onclick="switchProfileTab('handovers-vp')">🔄 التسليم</button>
@@ -1087,6 +1088,66 @@
         <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
         <tbody><tr><td colspan="4">—</td></tr></tbody>
       </table>
+    </div>
+
+    <div class="ptab-pane" id="ptab-maint-cards" style="display:none">
+      <div id="vp-maint-card-form-wrap" style="display:none;margin-bottom:14px">
+        <form id="form-vp-maint-card" class="data-form" onsubmit="submitMaintenanceCard(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم السائق أثناء الصيانة</label>
+              <input id="vp-mc-driver" required>
+            </div>
+            <div class="form-group">
+              <label>تاريخ الصيانة</label>
+              <input id="vp-mc-date" type="date" required>
+            </div>
+            <div class="form-group">
+              <label>نوع الصيانة</label>
+              <select id="vp-mc-type" required>
+                <option value="زيت">زيت</option>
+                <option value="فرامل">فرامل</option>
+                <option value="إطارات">إطارات</option>
+                <option value="كهرباء">كهرباء</option>
+                <option value="هيكل">هيكل</option>
+                <option value="دورية">دورية</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>المبلغ الإجمالي (ر.س)</label>
+              <input id="vp-mc-cost" type="number" min="0" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم الورشة / مزود الخدمة</label>
+              <input id="vp-mc-provider">
+            </div>
+            <div class="form-group">
+              <label>الحالة</label>
+              <select id="vp-mc-status">
+                <option value="pending">معلّق</option>
+                <option value="in_progress">جارٍ</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغى</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>وصف/بيانات الصيانة</label>
+            <textarea id="vp-mc-description" rows="2" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>ملاحظات إضافية</label>
+            <textarea id="vp-mc-notes" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn-primary">➕ إضافة كرت صيانة</button>
+        </form>
+      </div>
+      <div id="vp-maint-cards-grid" class="maint-cards-grid">
+        <div class="tbl-empty">جارٍ التحميل…</div>
+      </div>
     </div>
 
     <!-- Violations -->
