@@ -417,16 +417,11 @@ function switchLoginMode(mode) {
 
 function apiFetchQuick(path, options = {}) {
   const token = localStorage.getItem('telad_quick_token');
-  return fetch(API_BASE + path, {
+  const headers = { ...(options.headers || {}) };
+  if (token) headers.Authorization = 'Bearer ' + token;
+  return apiFetch(path, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {}),
-    },
-  }).then(res => {
-    _checkDeployId(res);
-    return res;
+    headers,
   });
 }
 
@@ -440,9 +435,8 @@ async function quickAccessLogin(e) {
   btn.disabled = true;
   btn.textContent = 'جارٍ التحقق…';
   try {
-    const res = await fetch(`${API_BASE}/auth/quick-access`, {
+    const res = await apiFetchQuick('/auth/quick-access', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nationalId, plate }),
     });
     const data = await res.json();
@@ -450,7 +444,7 @@ async function quickAccessLogin(e) {
       errEl.textContent = data.error || 'تعذّر الدخول السريع';
       return;
     }
-    localStorage.setItem('telad_quick_token', data.token);
+    localStorage.setItem('telad_quick_token', data.quickToken || data.token);
     await loadQuickAccessProfile();
   } catch {
     errEl.textContent = 'تعذّر الاتصال بالخادم';
@@ -490,8 +484,11 @@ async function loadQuickAccessProfile() {
 function formatQuickMaintenanceSummary(maintenance) {
   const type = maintenance?.type || 'صيانة';
   const status = maintenance?.status || '—';
-  const date = maintenance?.scheduledDate || maintenance?.completedAt || '—';
-  return `${type} — ${status} — ${date}`;
+  const date = maintenance?.scheduledDate || maintenance?.date || maintenance?.completedAt || '—';
+  const amount = maintenance?.amount ?? maintenance?.cost;
+  return amount !== undefined && amount !== null
+    ? `${type} — ${status} — ${date} — ${amount} ر.س`
+    : `${type} — ${status} — ${date}`;
 }
 
 async function quickAccessLogout() {
@@ -2035,6 +2032,9 @@ async function openVehicleProfile(vehicleId) {
     maintTbody.innerHTML = (d.maintenance||[]).length === 0
       ? '<tr><td colspan="4" class="tbl-empty">لا يوجد</td></tr>'
       : (d.maintenance||[]).map(m=>`<tr><td>${escHtml(m.type||'—')}</td><td>${escHtml(m.scheduledDate||'—')}</td><td>${escHtml(String(m.cost||0))}</td><td>${escHtml(m.status||'—')}</td></tr>`).join('');
+    await loadMaintenanceCards(vehicleId);
+    const defaultDriver = document.getElementById('vp-mc-driver');
+    if (defaultDriver) defaultDriver.value = v.driver || '';
 
     // Violations
     const violTbody = document.querySelector('#vp-viol-table tbody');
@@ -2069,6 +2069,88 @@ function switchProfileTab(tab) {
   document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
   const pane = document.getElementById('ptab-' + tab);
   if (pane) pane.style.display = '';
+}
+
+async function loadMaintenanceCards(vehicleId) {
+  const wrap = document.getElementById('vp-maint-cards');
+  if (!wrap) return;
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards`);
+  if (!res.ok) {
+    wrap.innerHTML = '<div class="tbl-empty">تعذّر تحميل كروت الصيانة</div>';
+    return;
+  }
+  const cards = await res.json();
+  wrap.innerHTML = !cards.length
+    ? '<div class="tbl-empty">لا توجد كروت صيانة</div>'
+    : cards.map(card => `
+      <div class="maint-card">
+        <div class="maint-card-header">
+          <span>${escHtml(card.type || 'صيانة')}</span>
+          <span>${escHtml(card.date || '—')}</span>
+        </div>
+        <div>🚗 ${escHtml(card.plate || '—')}</div>
+        <div>👨‍✈️ ${escHtml(card.driverName || '—')}</div>
+        <div>💰 ${escHtml(String(card.amount ?? 0))} ر.س</div>
+        <div>📝 ${escHtml(card.details || '—')}</div>
+        <div style="margin-top:10px">
+          <button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(card.id))}">حذف</button>
+        </div>
+      </div>
+    `).join('');
+  if (!wrap.dataset.deleteBound) {
+    wrap.dataset.deleteBound = '1';
+    wrap.addEventListener('click', async (event) => {
+      const btn = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!btn) return;
+      await deleteMaintenanceCard(btn.dataset.vehicleId, btn.dataset.cardId);
+    });
+  }
+}
+
+async function addMaintenanceCard(vehicleId, data) {
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'فشل إضافة كرت الصيانة');
+  }
+  return res.json();
+}
+
+async function deleteMaintenanceCard(vehicleId, cardId) {
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف كرت الصيانة');
+    await loadMaintenanceCards(vehicleId);
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'فشل حذف كرت الصيانة', 'error');
+  }
+}
+
+async function addMaintenanceCardFromProfile(event) {
+  event.preventDefault();
+  if (!_currentProfileVehicleId) return;
+  try {
+    await addMaintenanceCard(_currentProfileVehicleId, {
+      driverName: document.getElementById('vp-mc-driver')?.value?.trim() || '',
+      date: document.getElementById('vp-mc-date')?.value || '',
+      type: document.getElementById('vp-mc-type')?.value?.trim() || '',
+      details: document.getElementById('vp-mc-details')?.value?.trim() || '',
+      amount: document.getElementById('vp-mc-amount')?.value || 0,
+    });
+    showToast('تمت إضافة كرت الصيانة');
+    ['vp-mc-driver', 'vp-mc-date', 'vp-mc-type', 'vp-mc-details', 'vp-mc-amount'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    await openVehicleProfile(_currentProfileVehicleId);
+    switchProfileTab('maintenance');
+  } catch (error) {
+    showToast(error.message || 'فشل إضافة كرت الصيانة', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2361,10 +2443,24 @@ async function loadProjectStructure() {
     _fillSelect('transfer-employee-id', employees.map(e => ({ value: e.id, label: `${e.name} – ${e.nationalId || '—'}` })), true);
     _fillSelect('transfer-employee-city-id', cities.map(c => ({ value: c.id, label: c.name })), false);
     _fillSelect('transfer-employee-project-id', projects.map(p => ({ value: p.id, label: p.name })), false);
+    const structureTbody = document.getElementById('project-structure-tbody');
+    if (structureTbody) {
+      const cityById = new Map(cities.map(c => [c.id, c.name]));
+      structureTbody.innerHTML = projects.length === 0
+        ? '<tr><td colspan="2" class="tbl-empty">لا توجد مشاريع</td></tr>'
+        : projects.map(p => `
+          <tr>
+            <td>${escHtml(cityById.get(p.cityId) || '—')}</td>
+            <td>${escHtml(p.name || '—')}</td>
+          </tr>
+        `).join('');
+    }
     await loadProjectFleet();
   } catch {
     const tbody = document.getElementById('project-fleet-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    const structureTbody = document.getElementById('project-structure-tbody');
+    if (structureTbody) structureTbody.innerHTML = '<tr><td colspan="2" class="tbl-empty">تعذّر التحميل</td></tr>';
   }
 }
 
