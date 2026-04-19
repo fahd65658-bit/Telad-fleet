@@ -1,0 +1,17 @@
+{
+  "name": "telad-fleet",
+  "version": "1.0.0",
+  "description": "TELAD FLEET – نظام إدارة الأسطول",
+  "private": true,
+  "scripts": {
+    "backend:dev": "cd backend && npm run dev",
+    "backend:start": "cd backend && npm start"
+  },
+  "dependencies": {
+    "@vercel/speed-insights": "^1.0.14"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fahd65658-bit/Telad-fleet"
+  }
+}
