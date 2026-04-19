@@ -36,6 +36,11 @@ const ROLE_SECTIONS = {
 // ─── State ───────────────────────────────────────────────────────────────────
 let currentUser = null;
 let currentLoginMode = 'admin';
+let formsEmployeesCache = [];
+let formsVehiclesCache = [];
+const formsEmployeeLookup = new Map();
+const formsVehicleLookup = new Map();
+const MAX_AUTOCOMPLETE_RESULTS = 20;
 
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // _serverDeployId: the X-Deploy-Id value received from the first API response.
@@ -2353,6 +2358,40 @@ async function loadProjectStructure() {
     const projects = projectsRes.ok ? await projectsRes.json() : [];
     const vehicles = vehiclesRes.ok ? await vehiclesRes.json() : [];
     const employees = employeesRes.ok ? await employeesRes.json() : [];
+    const citiesTbody = document.getElementById('cities-tbody');
+    const projectsTbody = document.getElementById('projects-tbody');
+    const cityById = new Map(cities.map(c => [c.id, c]));
+    if (citiesTbody) {
+      citiesTbody.innerHTML = cities.length === 0
+        ? '<tr><td colspan="2" class="tbl-empty">لا توجد مدن</td></tr>'
+        : cities.map(c => `
+          <tr>
+            <td>${escHtml(c.name || '—')}</td>
+            <td><button class="btn-sm btn-danger" data-action="delete-city" data-id="${escHtml(String(c.id))}">حذف</button></td>
+          </tr>
+        `).join('');
+      citiesTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-city"]');
+        if (!button) return;
+        deleteCity(button.dataset.id);
+      };
+    }
+    if (projectsTbody) {
+      projectsTbody.innerHTML = projects.length === 0
+        ? '<tr><td colspan="3" class="tbl-empty">لا توجد مشاريع</td></tr>'
+        : projects.map(p => `
+          <tr>
+            <td>${escHtml(p.name || '—')}</td>
+            <td>${escHtml(p.cityName || cityById.get(p.cityId)?.name || '—')}</td>
+            <td><button class="btn-sm btn-danger" data-action="delete-project" data-id="${escHtml(String(p.id))}">حذف</button></td>
+          </tr>
+        `).join('');
+      projectsTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-project"]');
+        if (!button) return;
+        deleteProject(button.dataset.id);
+      };
+    }
     _fillSelect('project-city-id', cities.map(c => ({ value: c.id, label: c.name })), true);
     _fillSelect('project-fleet-select', projects.map(p => ({ value: p.id, label: p.name })), true);
     _fillSelect('transfer-vehicle-id', vehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), true);
@@ -2365,6 +2404,12 @@ async function loadProjectStructure() {
   } catch {
     const tbody = document.getElementById('project-fleet-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    const empTbody = document.getElementById('project-employees-tbody');
+    if (empTbody) empTbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    const citiesTbody = document.getElementById('cities-tbody');
+    if (citiesTbody) citiesTbody.innerHTML = '<tr><td colspan="2" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    const projectsTbody = document.getElementById('projects-tbody');
+    if (projectsTbody) projectsTbody.innerHTML = '<tr><td colspan="3" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
   }
 }
 
@@ -2373,6 +2418,30 @@ function _fillSelect(selectId, options, requiredChoice) {
   if (!select) return;
   const placeholder = requiredChoice ? '<option value="">— اختر —</option>' : '<option value="">— بدون تغيير —</option>';
   select.innerHTML = placeholder + options.map(o => `<option value="${escHtml(String(o.value))}">${escHtml(String(o.label))}</option>`).join('');
+}
+
+async function deleteCity(cityId) {
+  if (!cityId || !confirm('هل تريد حذف هذه المدينة؟')) return;
+  const res = await apiFetch(`/cities/${encodeURIComponent(cityId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف المدينة');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حذف المدينة', 'error');
+  }
+}
+
+async function deleteProject(projectId) {
+  if (!projectId || !confirm('هل تريد حذف هذا المشروع؟')) return;
+  const res = await apiFetch(`/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف المشروع');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حذف المشروع', 'error');
+  }
 }
 
 async function addCity(event) {
@@ -2407,18 +2476,22 @@ async function addProject(event) {
 async function loadProjectFleet() {
   const projectId = document.getElementById('project-fleet-select')?.value;
   const tbody = document.getElementById('project-fleet-tbody');
-  if (!tbody) return;
+  const empTbody = document.getElementById('project-employees-tbody');
+  if (!tbody || !empTbody) return;
   if (!projectId) {
     tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">اختر مشروعاً للعرض</td></tr>';
+    empTbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">اختر مشروعاً للعرض</td></tr>';
     return;
   }
   const res = await apiFetch(`/projects/${projectId}/fleet`);
   if (!res.ok) {
     tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل ملف المشروع</td></tr>';
+    empTbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل ملف المشروع</td></tr>';
     return;
   }
   const data = await res.json();
   const rows = data.vehicles || [];
+  const employees = data.employees || [];
   tbody.innerHTML = rows.length === 0
     ? '<tr><td colspan="4" class="tbl-empty">لا توجد مركبات في هذا المشروع</td></tr>'
     : rows.map(v => `
@@ -2427,6 +2500,16 @@ async function loadProjectFleet() {
         <td>${escHtml(v.plate || '—')}</td>
         <td>${escHtml(v.status || '—')}</td>
         <td>${escHtml(v.assignedUser?.name || 'غير معيّن')}</td>
+      </tr>
+    `).join('');
+  empTbody.innerHTML = employees.length === 0
+    ? '<tr><td colspan="4" class="tbl-empty">لا يوجد موظفون في هذا المشروع</td></tr>'
+    : employees.map(e => `
+      <tr>
+        <td>${escHtml(e.name || '—')}</td>
+        <td>${escHtml(e.nationalId || '—')}</td>
+        <td>${escHtml(e.status || '—')}</td>
+        <td>${escHtml(e.vehiclePlate || '—')}</td>
       </tr>
     `).join('');
 }
@@ -2468,7 +2551,7 @@ async function transferEmployee(event) {
 async function loadApprovedForms() {
   const tbody = document.getElementById('approved-forms-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">جارٍ التحميل…</td></tr>';
   try {
     const [formsRes, employeesRes, vehiclesRes] = await Promise.all([
       apiFetch('/forms/approved'),
@@ -2478,13 +2561,15 @@ async function loadApprovedForms() {
     const forms = formsRes.ok ? await formsRes.json() : [];
     const employees = employeesRes.ok ? await employeesRes.json() : [];
     const vehicles = vehiclesRes.ok ? await vehiclesRes.json() : [];
-    _fillSelect('af-employee-id', employees.map(e => ({ value: e.id, label: `${e.name} – ${e.nationalId || '—'}` })), false);
-    _fillSelect('af-vehicle-id', vehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), false);
+    formsEmployeesCache = employees;
+    formsVehiclesCache = vehicles;
+    searchEmployees('');
+    searchVehicles('');
 
     const empById = new Map(employees.map(e => [e.id, e]));
     const vehById = new Map(vehicles.map(v => [v.id, v]));
     tbody.innerHTML = forms.length === 0
-      ? '<tr><td colspan="7" class="tbl-empty">لا توجد نماذج معتمدة</td></tr>'
+      ? '<tr><td colspan="8" class="tbl-empty">لا توجد نماذج معتمدة</td></tr>'
       : forms.map(f => `
         <tr>
           <td>${escHtml(f.title || '—')}</td>
@@ -2493,6 +2578,7 @@ async function loadApprovedForms() {
           <td>${escHtml(vehById.get(f.vehicleId)?.plate || '—')}</td>
           <td>${escHtml(f.status || '—')}</td>
           <td>${escHtml(String((f.attachments || []).length))}</td>
+          <td>${escHtml(formatDate((f.createdAt || '').slice(0, 10)))}</td>
           <td><button class="btn-sm btn-info" data-action="work-approved-form" data-id="${escHtml(String(f.id))}">تحديث</button></td>
         </tr>
       `).join('');
@@ -2502,8 +2588,56 @@ async function loadApprovedForms() {
       workOnApprovedForm(button.dataset.id);
     };
   } catch {
-    tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر التحميل</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">تعذّر التحميل</td></tr>';
   }
+}
+
+function searchEmployees(query) {
+  const list = document.getElementById('af-employees-list');
+  if (!list) return;
+  const q = String(query || '').trim().toLowerCase();
+  const rows = formsEmployeesCache.filter(e => {
+    const name = String(e.name || '').toLowerCase();
+    const nationalId = String(e.nationalId || '');
+    return !q || name.includes(q) || nationalId.includes(q);
+  }).slice(0, MAX_AUTOCOMPLETE_RESULTS);
+  formsEmployeeLookup.clear();
+  list.innerHTML = rows.map(e => {
+    const label = `${e.name || '—'} — ${e.nationalId || '—'}`;
+    formsEmployeeLookup.set(label, e.id);
+    return `<option value="${escHtml(label)}"></option>`;
+  }).join('');
+}
+
+function searchVehicles(query) {
+  const list = document.getElementById('af-vehicles-list');
+  if (!list) return;
+  const q = String(query || '').trim().toLowerCase();
+  const rows = formsVehiclesCache.filter(v => {
+    const plate = String(v.plate || '').toLowerCase();
+    const name = String(v.name || '').toLowerCase();
+    return !q || plate.includes(q) || name.includes(q);
+  }).slice(0, MAX_AUTOCOMPLETE_RESULTS);
+  formsVehicleLookup.clear();
+  list.innerHTML = rows.map(v => {
+    const label = `${v.plate || '—'} — ${v.name || '—'}`;
+    formsVehicleLookup.set(label, v.id);
+    return `<option value="${escHtml(label)}"></option>`;
+  }).join('');
+}
+
+function autofillFromEmployee(value) {
+  const employeeId = formsEmployeeLookup.get(String(value || '').trim()) || '';
+  const hidden = document.getElementById('af-employee-id');
+  if (hidden) hidden.value = employeeId;
+  loadFormAutofill();
+}
+
+function autofillFromVehicle(value) {
+  const vehicleId = formsVehicleLookup.get(String(value || '').trim()) || '';
+  const hidden = document.getElementById('af-vehicle-id');
+  if (hidden) hidden.value = vehicleId;
+  loadFormAutofill();
 }
 
 async function loadFormAutofill() {
@@ -2556,6 +2690,12 @@ async function createApprovedForm(event) {
   if (res.ok) {
     document.getElementById('af-title').value = '';
     document.getElementById('af-attachments').value = '';
+    document.getElementById('af-employee-search').value = '';
+    document.getElementById('af-vehicle-search').value = '';
+    document.getElementById('af-employee-id').value = '';
+    document.getElementById('af-vehicle-id').value = '';
+    document.getElementById('af-employee-preview').value = '';
+    document.getElementById('af-vehicle-preview').value = '';
     showToast('تم حفظ النموذج المعتمد');
     loadApprovedForms();
   } else {
