@@ -16,6 +16,9 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
+// Alias for consistency with frontend/js/app.js naming (escHtml).
+const escHtml = escapeHtml;
+
 function setMetaStatus(text) {
   document.getElementById('apiStatus').textContent = text;
 }
