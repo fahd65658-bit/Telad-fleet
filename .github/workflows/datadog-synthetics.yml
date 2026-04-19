@@ -22,7 +22,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ secrets.DD_API_KEY != '' && secrets.DD_APP_KEY != '' }}
+    if: ${{ secrets.DD_API_KEY && secrets.DD_APP_KEY }}
 
     steps:
     - uses: actions/checkout@v4
@@ -35,4 +35,3 @@ jobs:
         api_key: ${{secrets.DD_API_KEY}}
         app_key: ${{secrets.DD_APP_KEY}}
         test_search_query: 'tag:e2e-tests' #Modify this tag to suit your tagging strategy
-
