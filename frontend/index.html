@@ -68,11 +68,11 @@
     <form id="quick-login-form" class="login-form" style="display:none" onsubmit="quickAccessLogin(event)">
       <div class="form-group">
         <label>رقم الهوية الوطنية</label>
-        <input id="inp-quick-national-id" type="text" inputmode="numeric" required>
+        <input id="inp-quick-national-id" type="text" inputmode="numeric" placeholder="رقم الهوية" required>
       </div>
       <div class="form-group">
         <label>رقم اللوحة</label>
-        <input id="inp-quick-plate" type="text" required>
+        <input id="inp-quick-plate" type="text" placeholder="رقم اللوحة" required>
       </div>
       <p id="quick-login-error" class="error-msg"></p>
       <button type="submit" class="btn-login" id="btn-quick-login">دخول سريع إلى ملف المركبة</button>
@@ -123,6 +123,9 @@
     <div class="data-form">
       <h3>آخر صيانة للمركبة</h3>
       <div id="qa-latest-maintenance" class="tbl-empty">جارٍ التحميل…</div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn-secondary" onclick="quickAccessLogout()">تسجيل الخروج</button>
     </div>
   </div>
 </div>
@@ -931,6 +934,14 @@
       </form>
 
       <div class="data-form">
+        <h3>هيكل المدن والمشاريع</h3>
+        <table class="data-table">
+          <thead><tr><th>المدينة</th><th>المشروع</th></tr></thead>
+          <tbody id="project-structure-tbody"><tr><td colspan="2" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="data-form">
         <h3>ملف مركبات المشروع</h3>
         <div class="form-row">
           <div class="form-group"><label>اختر المشروع</label><select id="project-fleet-select" onchange="loadProjectFleet()"></select></div>
@@ -1083,6 +1094,18 @@
 
     <!-- Maintenance -->
     <div class="ptab-pane" id="ptab-maintenance" style="display:none">
+      <form class="data-form" onsubmit="addMaintenanceCardFromProfile(event)">
+        <h3>إضافة كرت صيانة</h3>
+        <div class="form-row">
+          <div class="form-group"><label>اسم السائق</label><input id="vp-mc-driver"></div>
+          <div class="form-group"><label>التاريخ</label><input id="vp-mc-date" type="date"></div>
+          <div class="form-group"><label>نوع الصيانة</label><input id="vp-mc-type" required></div>
+          <div class="form-group"><label>البيانات</label><input id="vp-mc-details"></div>
+          <div class="form-group"><label>المبلغ</label><input id="vp-mc-amount" type="number" min="0" step="0.01"></div>
+        </div>
+        <button type="submit" class="btn-primary">💾 إضافة كرت</button>
+      </form>
+      <div id="vp-maint-cards" class="maint-cards-grid"></div>
       <table class="mini-table" id="vp-maint-table">
         <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
         <tbody><tr><td colspan="4">—</td></tr></tbody>
