@@ -68,6 +68,16 @@ app.use('/api/auth/login', rateLimit({ windowMs: 15*60_000, max: 20, message: { 
 
 // ── JWT middleware ─────────────────────────────────────────────────────────
 const ROLES = { admin: 4, supervisor: 3, operator: 2, viewer: 1 };
+const MAINTENANCE_CARD_STATUSES = new Set(['pending', 'in_progress', 'completed', 'cancelled']);
+function maintenanceCardSortValue(card) {
+  const t = Date.parse(card?.maintenanceDate || card?.createdAt || '');
+  return Number.isNaN(t) ? 0 : t;
+}
+function parseMaintenanceCardTotalCost(value) {
+  if (value === undefined || value === null || value === '') return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
 
 function auth(minRole = 'viewer') {
   return (req, res, next) => {
@@ -218,6 +228,82 @@ app.put('/api/maintenance/:id',             auth('operator'), (req, res) => { co
 app.post('/api/maintenance/:id/complete',   auth('supervisor'), (req, res) => { const m=db.update('maintenance',req.params.id,{status:'completed',completedAt:db.nowIso()}); if(!m)return res.status(404).json({error:'السجل غير موجود'}); db.pushAlert(`اكتملت الصيانة: ${m.type}`,'success'); io.emit('maintenance:complete',m); res.json(m); });
 app.delete('/api/maintenance/:id',          auth('supervisor'), (req, res) => { const ok=db.remove('maintenance',req.params.id); ok?res.json({message:'تم الحذف'}):res.status(404).json({error:'السجل غير موجود'}); });
 
+app.get('/api/vehicles/:id/maintenance-cards', auth(), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const maintenanceCards = db.find('maintenanceCards', x => x.vehicleId === vehicle.id)
+    .sort((a, b) => maintenanceCardSortValue(b) - maintenanceCardSortValue(a));
+  res.json({
+    vehicle: { id: vehicle.id, name: vehicle.name || '', plate: vehicle.plate || '' },
+    maintenanceCards,
+  });
+});
+
+app.post('/api/vehicles/:id/maintenance-cards', auth('supervisor'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const body = req.body || {};
+  const maintenanceType = String(body.maintenanceType || '').trim();
+  if (!maintenanceType) return res.status(400).json({ error: 'نوع الصيانة مطلوب' });
+  const status = MAINTENANCE_CARD_STATUSES.has(body.status) ? body.status : 'pending';
+  const parsedTotalCost = parseMaintenanceCardTotalCost(body.totalCost);
+  if (parsedTotalCost === null) return res.status(400).json({ error: 'المبلغ الإجمالي غير صالح' });
+  const card = db.insert('maintenanceCards', {
+    vehicleId: vehicle.id,
+    plate: vehicle.plate || '',
+    driverDuringMaintenance: body.driverDuringMaintenance ? String(body.driverDuringMaintenance).trim() : '',
+    maintenanceDate: body.maintenanceDate || null,
+    maintenanceType,
+    description: body.description ? String(body.description).trim() : '',
+    totalCost: parsedTotalCost,
+    serviceProvider: body.serviceProvider ? String(body.serviceProvider).trim() : '',
+    status,
+    notes: body.notes ? String(body.notes).trim() : '',
+  });
+  db.pushAlert(`كرت صيانة جديد للمركبة: ${vehicle.name || vehicle.id}`,'info');
+  io.emit('maintenance-card:new', card);
+  res.status(201).json(card);
+});
+
+app.put('/api/vehicles/:id/maintenance-cards/:cardId', auth('supervisor'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const card = db.findOne('maintenanceCards', x => x.id === req.params.cardId);
+  if (!card || card.vehicleId !== vehicle.id) return res.status(404).json({ error: 'كرت الصيانة غير موجود' });
+  const body = req.body || {};
+  const patch = { plate: vehicle.plate || '' };
+  if (body.driverDuringMaintenance !== undefined) patch.driverDuringMaintenance = String(body.driverDuringMaintenance || '').trim();
+  if (body.maintenanceDate !== undefined) patch.maintenanceDate = body.maintenanceDate || null;
+  if (body.maintenanceType !== undefined) {
+    const maintenanceType = String(body.maintenanceType || '').trim();
+    if (!maintenanceType) return res.status(400).json({ error: 'نوع الصيانة مطلوب' });
+    patch.maintenanceType = maintenanceType;
+  }
+  if (body.description !== undefined) patch.description = String(body.description || '').trim();
+  if (body.serviceProvider !== undefined) patch.serviceProvider = String(body.serviceProvider || '').trim();
+  if (body.notes !== undefined) patch.notes = String(body.notes || '').trim();
+  if (body.status !== undefined) {
+    if (!MAINTENANCE_CARD_STATUSES.has(body.status)) return res.status(400).json({ error: 'حالة الصيانة غير صالحة' });
+    patch.status = body.status;
+  }
+  if (body.totalCost !== undefined) {
+    const parsedTotalCost = parseMaintenanceCardTotalCost(body.totalCost);
+    if (parsedTotalCost === null) return res.status(400).json({ error: 'المبلغ الإجمالي غير صالح' });
+    patch.totalCost = parsedTotalCost;
+  }
+  const updated = db.update('maintenanceCards', req.params.cardId, patch);
+  updated ? res.json(updated) : res.status(500).json({ error: 'فشل تحديث كرت الصيانة' });
+});
+
+app.delete('/api/vehicles/:id/maintenance-cards/:cardId', auth('supervisor'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const card = db.findOne('maintenanceCards', x => x.id === req.params.cardId);
+  if (!card || card.vehicleId !== vehicle.id) return res.status(404).json({ error: 'كرت الصيانة غير موجود' });
+  const ok = db.remove('maintenanceCards', req.params.cardId);
+  ok ? res.json({ message: 'تم الحذف' }) : res.status(500).json({ error: 'فشل حذف كرت الصيانة' });
+});
+
 // ══════════════════════════════════════════════════════════════════════════
 // APPOINTMENTS
 // ══════════════════════════════════════════════════════════════════════════
@@ -341,6 +427,8 @@ app.get('/api/vehicles/:id/profile', auth(), (req, res) => {
   const driver    = v.driverId ? db.findOne('drivers',  x => x.id === v.driverId)   : null;
   const employee  = v.driverId ? db.findOne('employees', x => x.vehicleId === v.id) : null;
   const maint     = db.find('maintenance',  x => x.vehicleId === v.id);
+  const maintenanceCards = db.find('maintenanceCards', x => x.vehicleId === v.id)
+    .sort((a, b) => maintenanceCardSortValue(b) - maintenanceCardSortValue(a));
   const appts     = db.find('appointments', x => x.vehicleId === v.id);
   const accidents = db.find('accidents',    x => x.vehicleId === v.id);
   const viol      = db.find('violations',   x => x.vehicleId === v.id);
@@ -350,7 +438,7 @@ app.get('/api/vehicles/:id/profile', auth(), (req, res) => {
   // Smart AI condition score
   const score = computeVehicleScore(v, maint, accidents, viol);
 
-  res.json({ vehicle: v, driver, employee, maintenance: maint, appointments: appts,
+  res.json({ vehicle: v, driver, employee, maintenance: maint, maintenanceCards, appointments: appts,
     accidents, violations: viol, handovers, financial: finItems, score });
 });
 

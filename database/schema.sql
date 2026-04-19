@@ -199,6 +199,25 @@ CREATE TABLE IF NOT EXISTS maintenance_jobs (
 CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON maintenance_jobs(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_status  ON maintenance_jobs(status);
 
+-- ─── MAINTENANCE CARDS ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS maintenance_cards (
+  id                         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id                 INTEGER     NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  plate                      TEXT,
+  driver_during_maintenance  TEXT,
+  maintenance_date           DATE,
+  maintenance_type           TEXT        NOT NULL,
+  description                TEXT,
+  total_cost                 NUMERIC(10,2) DEFAULT 0,
+  service_provider           TEXT,
+  status                     TEXT        NOT NULL DEFAULT 'pending'
+                                         CHECK (status IN ('pending','in_progress','completed','cancelled')),
+  notes                      TEXT,
+  created_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_maintenance_cards_vehicle ON maintenance_cards(vehicle_id, maintenance_date DESC, created_at DESC);
+
 -- ─── APPOINTMENTS ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS appointments (
   id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

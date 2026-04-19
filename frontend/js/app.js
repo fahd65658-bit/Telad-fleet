@@ -860,50 +860,130 @@ async function deleteDriver(id) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAINTENANCE
 // ═══════════════════════════════════════════════════════════════════════════
+const MAINTENANCE_STATUS_META = {
+  pending: { label: 'معلّق', pill: 'pill-orange' },
+  in_progress: { label: 'جارٍ', pill: 'pill-orange' },
+  completed: { label: 'مكتمل', pill: 'pill-green' },
+  cancelled: { label: 'ملغى', pill: 'pill-red' },
+};
+
+function canManageMaintenanceCards() {
+  return ['admin', 'supervisor'].includes(currentUser?.role);
+}
+
+function maintenanceStatusMeta(status) {
+  return MAINTENANCE_STATUS_META[status] || { label: status || '—', pill: 'pill-orange' };
+}
+
+function maintenanceCardSortValue(card) {
+  const t = Date.parse(card?.maintenanceDate || card?.createdAt || '');
+  return Number.isNaN(t) ? 0 : t;
+}
+
+function renderMaintenanceCard(card, options = {}) {
+  const {
+    showVehicle = false,
+    canDelete = false,
+    source = 'section',
+  } = options;
+  const statusMeta = maintenanceStatusMeta(card.status);
+  const totalCost = Number(card.totalCost || 0);
+  const dateLabel = card.maintenanceDate ? formatDate(card.maintenanceDate) : '—';
+  const vehicleLabel = card.vehicleName || card.vehiclePlate || card.plate || '—';
+  return `
+    <div class="maintenance-card">
+      <div class="maintenance-card-head">
+        <div class="maintenance-card-title">🔧 ${escHtml(card.maintenanceType || '—')}</div>
+        <span class="status-pill ${statusMeta.pill}">${escHtml(statusMeta.label)}</span>
+      </div>
+      ${showVehicle ? `<div class="maintenance-card-row"><strong>🚗 المركبة:</strong> ${escHtml(vehicleLabel || '—')}</div>` : ''}
+      <div class="maintenance-card-row"><strong>🚗 اللوحة:</strong> ${escHtml(card.plate || card.vehiclePlate || '—')}</div>
+      <div class="maintenance-card-row"><strong>👨‍✈️ السائق:</strong> ${escHtml(card.driverDuringMaintenance || '—')}</div>
+      <div class="maintenance-card-row"><strong>📅 التاريخ:</strong> ${escHtml(dateLabel)}</div>
+      <div class="maintenance-card-row"><strong>💰 المبلغ:</strong> ${escHtml(totalCost.toFixed(2))} ر.س</div>
+      <div class="maintenance-card-row"><strong>🏭 الورشة:</strong> ${escHtml(card.serviceProvider || '—')}</div>
+      <div class="maintenance-card-row"><strong>📝 الوصف:</strong> ${escHtml(card.description || '—')}</div>
+      ${card.notes ? `<div class="maintenance-card-row"><strong>📌 ملاحظات:</strong> ${escHtml(card.notes)}</div>` : ''}
+      ${canDelete
+        ? `<div class="maintenance-card-actions">
+            <button class="btn-sm btn-danger" data-action="delete-maintenance-card" data-id="${escHtml(String(card.id))}" data-vehicle-id="${escHtml(String(card.vehicleId))}" data-source="${escHtml(source)}">حذف</button>
+          </div>`
+        : ''
+      }
+    </div>`;
+}
+
+function setMaintenanceVehicleOptions(vehicles = []) {
+  const select = document.getElementById('m-vehicleId');
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">— اختر المركبة —</option>' +
+    vehicles.map(v => `<option value="${escHtml(String(v.id))}">${escHtml((v.name || '—') + ' — ' + (v.plate || '—'))}</option>`).join('');
+  if (currentValue) select.value = currentValue;
+}
+
 async function loadMaintenance() {
-  const tbody = document.getElementById('maintenance-tbody');
-  if (!tbody) return;
+  const cardsWrap = document.getElementById('maintenance-tbody');
+  if (!cardsWrap) return;
+  const formWrap = document.getElementById('maintenance-form-wrap');
+  if (formWrap) formWrap.style.display = canManageMaintenanceCards() ? '' : 'none';
   try {
-    const res  = await apiFetch('/maintenance');
-    if (!res.ok) return;
-    const jobs = await res.json();
-    const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
-    const statusLabel = { pending: 'معلّق', in_progress: 'جارٍ', completed: 'مكتمل', cancelled: 'ملغى' };
-    tbody.innerHTML = jobs.length === 0
-      ? '<tr><td colspan="7" class="tbl-empty">لا توجد مهام صيانة</td></tr>'
-      : jobs.map(j => `
-          <tr>
-            <td>${escHtml(j.vehicleId || '—')}</td>
-            <td>${escHtml(j.type || '—')}</td>
-            <td>${escHtml(j.description || '—')}</td>
-            <td>${formatDate(j.scheduledDate)}</td>
-            <td>${j.cost != null ? j.cost + ' ر.س' : '—'}</td>
-            <td>${statusLabel[j.status] || j.status}</td>
-            <td>${canEdit && j.status !== 'completed'
-              ? `<button class="btn-sm btn-warn" data-action="complete-maintenance" data-id="${escHtml(String(j.id))}">إتمام</button>
-                 <button class="btn-sm btn-danger" data-action="delete-maintenance" data-id="${escHtml(String(j.id))}">حذف</button>`
-              : '—'
-            }</td>
-          </tr>`).join('');
+    const vehiclesRes = await apiFetch('/vehicles');
+    if (!vehiclesRes.ok) throw new Error();
+    const vehicles = await vehiclesRes.json();
+    setMaintenanceVehicleOptions(vehicles);
+    const byVehicle = await Promise.all(vehicles.map(async (vehicle) => {
+      try {
+        const res = await apiFetch('/vehicles/' + encodeURIComponent(vehicle.id) + '/maintenance-cards');
+        if (!res.ok) return { vehicle, maintenanceCards: [] };
+        const data = await res.json();
+        return {
+          vehicle: data.vehicle || vehicle,
+          maintenanceCards: Array.isArray(data.maintenanceCards) ? data.maintenanceCards : [],
+        };
+      } catch {
+        return { vehicle, maintenanceCards: [] };
+      }
+    }));
+    const cards = byVehicle
+      .flatMap(item => item.maintenanceCards.map(card => ({
+        ...card,
+        vehicleName: item.vehicle?.name || '',
+        vehiclePlate: item.vehicle?.plate || '',
+      })))
+      .sort((a, b) => maintenanceCardSortValue(b) - maintenanceCardSortValue(a));
+    cardsWrap.innerHTML = cards.length === 0
+      ? '<div class="tbl-empty">لا توجد كروت صيانة</div>'
+      : cards.map(card => renderMaintenanceCard(card, { showVehicle: true, canDelete: canManageMaintenanceCards(), source: 'section' })).join('');
   } catch {
-    tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+    cardsWrap.innerHTML = '<div class="tbl-empty">تعذّر تحميل البيانات</div>';
   }
 }
 
 async function addMaintenance(e) {
   e.preventDefault();
+  if (!canManageMaintenanceCards()) { showToast('غير مصرح لك بإضافة كروت الصيانة', 'error'); return; }
+  const vehicleId = document.getElementById('m-vehicleId').value.trim();
+  if (!vehicleId) { showToast('يرجى اختيار المركبة', 'error'); return; }
   const body = {
-    vehicleId:     document.getElementById('m-vehicleId').value.trim(),
-    type:          document.getElementById('m-type').value.trim(),
+    driverDuringMaintenance: document.getElementById('m-driverDuringMaintenance').value.trim(),
+    maintenanceDate: document.getElementById('m-maintenanceDate').value || null,
+    maintenanceType: document.getElementById('m-maintenanceType').value,
     description:   document.getElementById('m-description').value.trim(),
-    scheduledDate: document.getElementById('m-scheduledDate').value || null,
-    cost:          document.getElementById('m-cost').value ? Number(document.getElementById('m-cost').value) : null,
+    totalCost:     document.getElementById('m-totalCost').value ? Number(document.getElementById('m-totalCost').value) : 0,
+    serviceProvider: document.getElementById('m-serviceProvider').value.trim(),
+    status:        document.getElementById('m-status').value,
+    notes:         document.getElementById('m-notes').value.trim(),
   };
-  const res = await apiFetch('/maintenance', { method: 'POST', body: JSON.stringify(body) });
+  const res = await apiFetch('/vehicles/' + encodeURIComponent(vehicleId) + '/maintenance-cards', { method: 'POST', body: JSON.stringify(body) });
   if (res.ok) {
     document.getElementById('form-maintenance').reset();
     loadMaintenance();
     loadDashboardStats();
+    showToast('تمت إضافة كرت الصيانة');
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل إضافة كرت الصيانة', 'error');
   }
 }
 
@@ -917,6 +997,20 @@ async function deleteMaintenance(id) {
   if (!confirm('هل تريد حذف مهمة الصيانة؟')) return;
   const res = await apiFetch('/maintenance/' + id, { method: 'DELETE' });
   if (res.ok) { loadMaintenance(); loadDashboardStats(); }
+}
+
+async function deleteMaintenanceCard(vehicleId, cardId, source = 'section') {
+  if (!canManageMaintenanceCards()) { showToast('غير مصرح لك بحذف كروت الصيانة', 'error'); return; }
+  if (!confirm('هل تريد حذف كرت الصيانة؟')) return;
+  const res = await apiFetch('/vehicles/' + encodeURIComponent(vehicleId) + '/maintenance-cards/' + encodeURIComponent(cardId), { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف كرت الصيانة');
+    await loadMaintenance();
+    if (source === 'profile' && _currentProfileVehicleId === vehicleId) await openVehicleProfile(vehicleId);
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حذف كرت الصيانة', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1131,6 +1225,9 @@ document.addEventListener('click', async (e) => {
       break;
     case 'delete-maintenance':
       await deleteMaintenance(id);
+      break;
+    case 'delete-maintenance-card':
+      await deleteMaintenanceCard(btn.dataset.vehicleId, id, btn.dataset.source || 'section');
       break;
     case 'confirm-appointment':
       await confirmAppointment(id);
@@ -2030,11 +2127,8 @@ async function openVehicleProfile(vehicleId) {
       <tr><td>تاريخ الانتهاء</td><td>${escHtml(insp.expiry||'—')}</td></tr>
       <tr><td>مركز الفحص</td><td>${escHtml(insp.center||'—')}</td></tr>`;
 
-    // Maintenance
-    const maintTbody = document.querySelector('#vp-maint-table tbody');
-    maintTbody.innerHTML = (d.maintenance||[]).length === 0
-      ? '<tr><td colspan="4" class="tbl-empty">لا يوجد</td></tr>'
-      : (d.maintenance||[]).map(m=>`<tr><td>${escHtml(m.type||'—')}</td><td>${escHtml(m.scheduledDate||'—')}</td><td>${escHtml(String(m.cost||0))}</td><td>${escHtml(m.status||'—')}</td></tr>`).join('');
+    // Maintenance cards
+    renderProfileMaintenanceCards(d.maintenanceCards || [], v);
 
     // Violations
     const violTbody = document.querySelector('#vp-viol-table tbody');
@@ -2069,6 +2163,61 @@ function switchProfileTab(tab) {
   document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
   const pane = document.getElementById('ptab-' + tab);
   if (pane) pane.style.display = '';
+}
+
+function renderProfileMaintenanceCards(cards, vehicle) {
+  const actionsEl = document.getElementById('vp-maint-actions');
+  const canManage = canManageMaintenanceCards();
+  if (actionsEl) {
+    actionsEl.innerHTML = canManage
+      ? '<button class="btn-primary" onclick="toggleProfileMaintenanceForm(true)">➕ إضافة كرت صيانة جديد</button>'
+      : '';
+  }
+  const listEl = document.getElementById('vp-maint-cards');
+  if (!listEl) return;
+  const normalizedCards = [...(Array.isArray(cards) ? cards : [])]
+    .sort((a, b) => maintenanceCardSortValue(b) - maintenanceCardSortValue(a))
+    .map(card => ({ ...card, vehicleId: vehicle.id, vehiclePlate: vehicle.plate || '', plate: card.plate || vehicle.plate || '' }));
+  listEl.innerHTML = normalizedCards.length === 0
+    ? '<div class="tbl-empty">لا توجد كروت صيانة</div>'
+    : normalizedCards.map(card => renderMaintenanceCard(card, { showVehicle: false, canDelete: canManage, source: 'profile' })).join('');
+  toggleProfileMaintenanceForm(false);
+}
+
+function toggleProfileMaintenanceForm(show) {
+  const form = document.getElementById('vp-maint-form');
+  if (!form) return;
+  form.style.display = show ? '' : 'none';
+  if (!show) form.reset();
+}
+
+async function addProfileMaintenanceCard(e) {
+  e.preventDefault();
+  if (!canManageMaintenanceCards()) { showToast('غير مصرح لك بإضافة كروت الصيانة', 'error'); return; }
+  if (!_currentProfileVehicleId) return;
+  const body = {
+    driverDuringMaintenance: document.getElementById('vp-m-driverDuringMaintenance').value.trim(),
+    maintenanceDate: document.getElementById('vp-m-maintenanceDate').value || null,
+    maintenanceType: document.getElementById('vp-m-maintenanceType').value,
+    description: document.getElementById('vp-m-description').value.trim(),
+    totalCost: document.getElementById('vp-m-totalCost').value ? Number(document.getElementById('vp-m-totalCost').value) : 0,
+    serviceProvider: document.getElementById('vp-m-serviceProvider').value.trim(),
+    status: document.getElementById('vp-m-status').value,
+    notes: document.getElementById('vp-m-notes').value.trim(),
+  };
+  const res = await apiFetch('/vehicles/' + encodeURIComponent(_currentProfileVehicleId) + '/maintenance-cards', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (res.ok) {
+    showToast('تمت إضافة كرت الصيانة');
+    toggleProfileMaintenanceForm(false);
+    await openVehicleProfile(_currentProfileVehicleId);
+    await loadMaintenance();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل إضافة كرت الصيانة', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
