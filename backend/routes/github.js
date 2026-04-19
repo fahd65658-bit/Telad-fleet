@@ -86,6 +86,14 @@ function createRouter({ io } = {}) {
       });
     }
 
+    const tokenFromHeader = req.headers['x-github-app-test-token'];
+    if (process.env.GITHUB_APP_TEST_TOKEN && tokenFromHeader !== process.env.GITHUB_APP_TEST_TOKEN) {
+      return res.status(403).json({
+        ok: false,
+        error: 'رمز اختبار webhook غير صالح.',
+      });
+    }
+
     const eventName = req.body?.event || 'push';
     const payload = req.body?.payload || {};
 

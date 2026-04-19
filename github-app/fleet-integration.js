@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const activityLogPath = path.join(__dirname, 'activity-log.json');
+const MAX_ACTIVITY_LOG_ENTRIES = 3000; // Keep bounded history and prevent unbounded disk growth.
 const integrationState = {
   io: null,
   logger: console,
@@ -99,7 +100,9 @@ function logActivity(type, data = {}) {
 
   const activities = readActivities();
   activities.push(entry);
-  if (activities.length > 3000) activities.splice(0, activities.length - 3000);
+  if (activities.length > MAX_ACTIVITY_LOG_ENTRIES) {
+    activities.splice(0, activities.length - MAX_ACTIVITY_LOG_ENTRIES);
+  }
   writeActivities(activities);
 
   return entry;

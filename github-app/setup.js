@@ -21,7 +21,7 @@ function validateEnv() {
   const hasInlineKey = Boolean(process.env.GITHUB_APP_PRIVATE_KEY);
   const hasPathKey = Boolean(process.env.GITHUB_APP_PRIVATE_KEY_PATH);
   if (!hasInlineKey && !hasPathKey) {
-    missing.push('GITHUB_APP_PRIVATE_KEY أو GITHUB_APP_PRIVATE_KEY_PATH');
+    missing.push('GITHUB_APP_PRIVATE_KEY_OR_PATH');
   }
 
   return {
@@ -90,8 +90,7 @@ function printHealthReport({ envState, secretState, connectivity }) {
   }
 
   if (secretState.generated) {
-    console.log('⚠️ GITHUB_APP_WEBHOOK_SECRET missing. Generated suggestion:');
-    console.log(`GITHUB_APP_WEBHOOK_SECRET=${secretState.value}`);
+    console.log('⚠️ GITHUB_APP_WEBHOOK_SECRET missing. Generate a secure secret before enabling production webhooks.');
   } else {
     console.log('✅ Webhook secret موجود');
   }

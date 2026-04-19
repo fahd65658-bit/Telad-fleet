@@ -11,6 +11,10 @@ const { Octokit } = require('@octokit/rest');
 
 // Token cache to avoid hitting rate limits
 const tokenCache = new Map();
+const JWT_CLOCK_SKEW_SECONDS = 60;
+const JWT_TTL_SECONDS = 9 * 60; // GitHub App JWT max is 10 minutes; keep 1-minute buffer.
+const TOKEN_REUSE_BUFFER_MS = 30_000; // Refresh slightly early to avoid edge-expiry race conditions.
+const INSTALLATION_TOKEN_CACHE_MS = 50 * 60 * 1000; // GitHub installation token lifetime is ~60 min.
 
 function toBase64Url(value) {
   return Buffer.from(value)
@@ -60,8 +64,8 @@ function generateJWT(appId, privateKey) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'RS256', typ: 'JWT' };
   const payload = {
-    iat: now - 60,
-    exp: now + (9 * 60),
+    iat: now - JWT_CLOCK_SKEW_SECONDS,
+    exp: now + JWT_TTL_SECONDS,
     iss: String(appId),
   };
 
@@ -90,15 +94,19 @@ async function getInstallationToken(installationId) {
   const { ready, appId, privateKey } = getGitHubAppConfig();
   if (!ready || !installationId) return null;
 
-  const cacheKey = String(installationId);
+  const cacheKey = String(installationId || '').trim();
+  if (!/^\d+$/.test(cacheKey)) {
+    throw new Error('Installation ID غير صالح.');
+  }
+
   const cached = tokenCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now() + 30_000) {
+  if (cached && cached.expiresAt > Date.now() + TOKEN_REUSE_BUFFER_MS) {
     return cached.token;
   }
 
   const jwt = generateJWT(appId, privateKey);
 
-  const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
+  const response = await fetch(`https://api.github.com/app/installations/${encodeURIComponent(cacheKey)}/access_tokens`, {
     method: 'POST',
     headers: {
       Accept: 'application/vnd.github+json',
@@ -116,7 +124,7 @@ async function getInstallationToken(installationId) {
   const payload = await response.json();
   const token = payload.token;
 
-  const expiresAt = Date.now() + (50 * 60 * 1000);
+  const expiresAt = Date.now() + INSTALLATION_TOKEN_CACHE_MS;
   tokenCache.set(cacheKey, { token, expiresAt });
 
   return token;
