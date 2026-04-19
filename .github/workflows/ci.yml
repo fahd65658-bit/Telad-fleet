@@ -46,6 +46,27 @@ jobs:
       - name: Run Python tests
         run: npm test
 
+
+  github-app-check:
+    name: GitHub App Syntax
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Syntax check GitHub App files
+        run: |
+          for f in github-app/index.js github-app/auth.js github-app/webhooks.js github-app/fleet-integration.js github-app/setup.js backend/routes/github.js; do
+            node --check "$f" && echo "✅ $f" || exit 1
+          done
+      - name: Validate app-manifest.json
+        run: node -e "const m=JSON.parse(require('fs').readFileSync('github-app/app-manifest.json','utf8'));console.log('✅ manifest OK:',m.name)"
+
 # Notes:
 # - This workflow pins all GitHub Actions to full commit SHAs to satisfy repository policy.
 # - It preserves the existing install, lint, and test flow.

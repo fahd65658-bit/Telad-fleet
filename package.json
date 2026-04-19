@@ -8,7 +8,9 @@
     "dev": "NODE_ENV=development node server.js",
     "lint": "node --check server.js && node --check lib/db.js && node --check backend/server.js",
     "build": "npm run lint",
-    "test": "python3 -m unittest discover -s . -p \"test*.py\" -v"
+    "test": "python3 -m unittest discover -s . -p \"test*.py\" -v",
+    "github-app:setup": "node github-app/setup.js",
+    "github-app:verify": "node github-app/setup.js --verify"
   },
   "keywords": [
     "fleet",
@@ -33,10 +35,13 @@
     "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
     "pg": "^8.20.0",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.2",
+    "@octokit/app": "^14.0.0",
+    "@octokit/rest": "^20.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
-    "socket.io-client": "^4.7.2"
+    "socket.io-client": "^4.7.2",
+    "smee-client": "^2.0.0"
   }
 }
