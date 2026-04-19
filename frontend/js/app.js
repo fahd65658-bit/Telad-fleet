@@ -40,6 +40,7 @@ let formsEmployeesCache = [];
 let formsVehiclesCache = [];
 const formsEmployeeLookup = new Map();
 const formsVehicleLookup = new Map();
+const MAX_AUTOCOMPLETE_RESULTS = 20;
 
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // _serverDeployId: the X-Deploy-Id value received from the first API response.
@@ -2366,9 +2367,14 @@ async function loadProjectStructure() {
         : cities.map(c => `
           <tr>
             <td>${escHtml(c.name || '—')}</td>
-            <td><button class="btn-sm btn-danger" onclick="deleteCity('${escHtml(String(c.id))}')">حذف</button></td>
+            <td><button class="btn-sm btn-danger" data-action="delete-city" data-id="${escHtml(String(c.id))}">حذف</button></td>
           </tr>
         `).join('');
+      citiesTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-city"]');
+        if (!button) return;
+        deleteCity(button.dataset.id);
+      };
     }
     if (projectsTbody) {
       projectsTbody.innerHTML = projects.length === 0
@@ -2377,9 +2383,14 @@ async function loadProjectStructure() {
           <tr>
             <td>${escHtml(p.name || '—')}</td>
             <td>${escHtml(p.cityName || cityById.get(p.cityId)?.name || '—')}</td>
-            <td><button class="btn-sm btn-danger" onclick="deleteProject('${escHtml(String(p.id))}')">حذف</button></td>
+            <td><button class="btn-sm btn-danger" data-action="delete-project" data-id="${escHtml(String(p.id))}">حذف</button></td>
           </tr>
         `).join('');
+      projectsTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-project"]');
+        if (!button) return;
+        deleteProject(button.dataset.id);
+      };
     }
     _fillSelect('project-city-id', cities.map(c => ({ value: c.id, label: c.name })), true);
     _fillSelect('project-fleet-select', projects.map(p => ({ value: p.id, label: p.name })), true);
@@ -2589,7 +2600,7 @@ function searchEmployees(query) {
     const name = String(e.name || '').toLowerCase();
     const nationalId = String(e.nationalId || '');
     return !q || name.includes(q) || nationalId.includes(q);
-  }).slice(0, 20);
+  }).slice(0, MAX_AUTOCOMPLETE_RESULTS);
   formsEmployeeLookup.clear();
   list.innerHTML = rows.map(e => {
     const label = `${e.name || '—'} — ${e.nationalId || '—'}`;
@@ -2606,7 +2617,7 @@ function searchVehicles(query) {
     const plate = String(v.plate || '').toLowerCase();
     const name = String(v.name || '').toLowerCase();
     return !q || plate.includes(q) || name.includes(q);
-  }).slice(0, 20);
+  }).slice(0, MAX_AUTOCOMPLETE_RESULTS);
   formsVehicleLookup.clear();
   list.innerHTML = rows.map(v => {
     const label = `${v.plate || '—'} — ${v.name || '—'}`;
