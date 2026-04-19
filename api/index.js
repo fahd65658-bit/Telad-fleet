@@ -25,7 +25,7 @@ const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
 const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
-const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
+const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (24 * 60 * 60 * 1000));
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -1476,13 +1476,37 @@ module.exports = async (req, res) => {
       city.name = nextName;
       return sendJson(res, 200, city);
     }
+    if (pmCity && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const city = (state.cities || []).find(c => c.id === pmCity.id);
+      if (!city) return sendJson(res, 404, { error: 'المدينة غير موجودة' });
+      state.cities = (state.cities || []).filter(c => c.id !== pmCity.id);
+      for (const project of (state.projects || []).filter(p => p.cityId === pmCity.id)) {
+        project.cityId = null;
+      }
+      for (const vehicle of (state.vehicles || []).filter(v => v.cityId === pmCity.id)) {
+        vehicle.cityId = null;
+        vehicle.city = '';
+        vehicle.location = '';
+      }
+      for (const employee of (state.employees || []).filter(e => e.cityId === pmCity.id)) {
+        employee.cityId = null;
+      }
+      return sendJson(res, 200, { ok: true });
+    }
   }
 
   // ── PROJECTS ──────────────────────────────────────────────────────
   if (method === 'GET' && path === '/projects') {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-    return sendJson(res, 200, state.projects || []);
+    const cityById = new Map((state.cities || []).map(c => [c.id, c]));
+    return sendJson(res, 200, (state.projects || []).map(project => ({
+      ...project,
+      cityName: cityById.get(project.cityId)?.name || null,
+    })));
   }
 
   if (method === 'POST' && path === '/projects') {
@@ -1516,6 +1540,21 @@ module.exports = async (req, res) => {
       if (body.cityId) project.cityId = body.cityId;
       return sendJson(res, 200, project);
     }
+    if (pmProject && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const project = (state.projects || []).find(p => p.id === pmProject.id);
+      if (!project) return sendJson(res, 404, { error: 'المشروع غير موجود' });
+      state.projects = (state.projects || []).filter(p => p.id !== pmProject.id);
+      for (const vehicle of (state.vehicles || []).filter(v => v.projectId === pmProject.id)) {
+        vehicle.projectId = null;
+      }
+      for (const employee of (state.employees || []).filter(e => e.projectId === pmProject.id)) {
+        employee.projectId = null;
+      }
+      return sendJson(res, 200, { ok: true });
+    }
   }
 
   {
@@ -1544,7 +1583,20 @@ module.exports = async (req, res) => {
             } : null,
           };
         });
-      return sendJson(res, 200, { project, city, vehicles });
+      const employees = (state.employees || [])
+        .filter(e => e.projectId === project.id)
+        .map(e => {
+          const vehicle = (state.vehicles || []).find(v => v.id === e.vehicleId) || null;
+          return {
+            id: e.id,
+            name: e.name,
+            nationalId: e.nationalId,
+            status: e.status || 'active',
+            vehicleId: e.vehicleId || null,
+            vehiclePlate: vehicle?.plate || null,
+          };
+        });
+      return sendJson(res, 200, { project, city, vehicles, employees });
     }
   }
 
@@ -1609,7 +1661,7 @@ module.exports = async (req, res) => {
       id: uid(),
       title,
       type: body.type || 'delivery_receipt',
-      status: body.status || 'approved',
+      status: body.status || 'draft',
       employeeId: body.employeeId || null,
       vehicleId: body.vehicleId || null,
       payload: body.payload || {},
@@ -1632,6 +1684,27 @@ module.exports = async (req, res) => {
   }
 
   {
+    const pformUpdate = matchPath('/forms/approved/:id', path);
+    if (pformUpdate && method === 'PUT') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const form = (state.approvedForms || []).find(f => f.id === pformUpdate.id);
+      if (!form) return sendJson(res, 404, { error: 'النموذج غير موجود' });
+      const body = await readBody(req);
+      const updates = pickAllowedFields(body, ['title', 'type', 'status', 'employeeId', 'vehicleId', 'payload', 'attachments']);
+      if (updates.employeeId && !(state.employees || []).some(e => e.id === updates.employeeId)) {
+        return sendJson(res, 400, { error: 'الموظف المحدد غير موجود' });
+      }
+      if (updates.vehicleId && !(state.vehicles || []).some(v => v.id === updates.vehicleId)) {
+        return sendJson(res, 400, { error: 'المركبة المحددة غير موجودة' });
+      }
+      if (updates.payload && typeof updates.payload === 'object') {
+        updates.payload = { ...(form.payload || {}), ...updates.payload };
+      }
+      Object.assign(form, updates, { updatedAt: nowIso(), lastWorkedBy: cu.username });
+      return sendJson(res, 200, form);
+    }
+
     const pform = matchPath('/forms/approved/:id/work', path);
     if (pform && method === 'POST') {
       const cu = currentUser(req);

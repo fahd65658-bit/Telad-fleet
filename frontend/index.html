@@ -921,6 +921,14 @@
         <button type="submit" class="btn-primary">➕ إضافة مدينة</button>
       </form>
 
+      <div class="data-form">
+        <h3>قائمة المدن</h3>
+        <table class="data-table">
+          <thead><tr><th>المدينة</th><th>إجراءات</th></tr></thead>
+          <tbody id="cities-tbody"><tr><td colspan="2" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+        </table>
+      </div>
+
       <form id="form-project" class="data-form" onsubmit="addProject(event)">
         <h3>إضافة مشروع مرتبط بمدينة</h3>
         <div class="form-row">
@@ -931,6 +939,14 @@
       </form>
 
       <div class="data-form">
+        <h3>قائمة المشاريع</h3>
+        <table class="data-table">
+          <thead><tr><th>المشروع</th><th>المدينة</th><th>إجراءات</th></tr></thead>
+          <tbody id="projects-tbody"><tr><td colspan="3" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="data-form">
         <h3>ملف مركبات المشروع</h3>
         <div class="form-row">
           <div class="form-group"><label>اختر المشروع</label><select id="project-fleet-select" onchange="loadProjectFleet()"></select></div>
@@ -938,6 +954,10 @@
         <table class="data-table">
           <thead><tr><th>المركبة</th><th>اللوحة</th><th>الحالة</th><th>المستخدم المعيّن</th></tr></thead>
           <tbody id="project-fleet-tbody"><tr><td colspan="4" class="tbl-empty">اختر مشروعاً للعرض</td></tr></tbody>
+        </table>
+        <table class="data-table" style="margin-top:12px">
+          <thead><tr><th>الموظف</th><th>الهوية</th><th>الحالة</th><th>المركبة المرتبطة</th></tr></thead>
+          <tbody id="project-employees-tbody"><tr><td colspan="4" class="tbl-empty">اختر مشروعاً للعرض</td></tr></tbody>
         </table>
       </div>
 
@@ -973,13 +993,24 @@
           <div class="form-group">
             <label>نوع النموذج</label>
             <select id="af-type">
-              <option value="delivery_receipt">نموذج استلام/تسليم</option>
-              <option value="work_order">أمر عمل</option>
+              <option value="handover_receipt">استلام</option>
+              <option value="delivery_receipt">تسليم</option>
+              <option value="maintenance">صيانة</option>
               <option value="other">أخرى</option>
             </select>
           </div>
-          <div class="form-group"><label>الموظف</label><select id="af-employee-id" onchange="loadFormAutofill()"></select></div>
-          <div class="form-group"><label>المركبة</label><select id="af-vehicle-id" onchange="loadFormAutofill()"></select></div>
+          <div class="form-group">
+            <label>بحث سريع عن الموظف</label>
+            <input id="af-employee-search" list="af-employees-list" oninput="searchEmployees(this.value)" onchange="autofillFromEmployee(this.value)" placeholder="الاسم أو رقم الهوية">
+            <datalist id="af-employees-list"></datalist>
+            <input id="af-employee-id" type="hidden">
+          </div>
+          <div class="form-group">
+            <label>بحث سريع عن المركبة</label>
+            <input id="af-vehicle-search" list="af-vehicles-list" oninput="searchVehicles(this.value)" onchange="autofillFromVehicle(this.value)" placeholder="رقم اللوحة">
+            <datalist id="af-vehicles-list"></datalist>
+            <input id="af-vehicle-id" type="hidden">
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>بيانات الموظف (تعبئة تلقائية)</label><input id="af-employee-preview" readonly></div>
@@ -993,8 +1024,8 @@
       </form>
 
       <table class="data-table">
-        <thead><tr><th>العنوان</th><th>النوع</th><th>الموظف</th><th>المركبة</th><th>الحالة</th><th>مرفقات</th><th>إجراءات</th></tr></thead>
-        <tbody id="approved-forms-tbody"><tr><td colspan="7" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+        <thead><tr><th>العنوان</th><th>النوع</th><th>الموظف</th><th>المركبة</th><th>الحالة</th><th>مرفقات</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
+        <tbody id="approved-forms-tbody"><tr><td colspan="8" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
       </table>
     </div>
 
