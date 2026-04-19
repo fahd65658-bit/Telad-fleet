@@ -1,0 +1,37 @@
+name: GitHub App Health Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Check GitHub App Status
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Check API Health
+        run: |
+          STATUS=$(curl -sf https://api.fna.sa/api/github/health | jq -r '.status' || echo "unreachable")
+          echo "GitHub App Status: $STATUS"
+          if [ "$STATUS" != "ok" ]; then
+            echo "::warning::GitHub App health check failed: $STATUS"
+          fi
+
+      - name: Check Main Site
+        run: |
+          HTTP_CODE=$(curl -so /dev/null -w "%{http_code}" https://fna.sa)
+          echo "fna.sa HTTP Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::fna.sa returned HTTP $HTTP_CODE"
+          fi
+
+      - name: Check API Health Endpoint
+        run: |
+          HTTP_CODE=$(curl -so /dev/null -w "%{http_code}" https://api.fna.sa/api/health)
+          echo "API Health HTTP Status: $HTTP_CODE"

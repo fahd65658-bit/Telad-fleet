@@ -242,6 +242,7 @@ const server = http.createServer(app);
 const io     = new Server(server, {
   cors: { origin: (origin, cb) => cb(null, isAllowedOrigin(origin)), methods: ['GET', 'POST'] },
 });
+app.set('io', io);
 
 app.set('trust proxy', 1);
 
@@ -1408,6 +1409,10 @@ app.delete('/dev-requests/:id', adminOnly, (req, res) => {
   audit('حذف طلب تطوير', req.user.username);
   res.json({ ok: true });
 });
+
+// GitHub App Routes
+const githubRoutes = require('./routes/github');
+app.use('/api/github', githubRoutes);
 
 // ─── 404 fallback ─────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'المسار غير موجود' }));

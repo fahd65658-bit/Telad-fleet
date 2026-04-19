@@ -35,6 +35,7 @@
     { "source": "/api/dashboard",              "destination": "/api/index.js" },
     { "source": "/api/alerts",                 "destination": "/api/index.js" },
     { "source": "/api/fleet",                  "destination": "/api/index.js" },
+    { "source": "/api/github/:path*",          "destination": "/api/index.js" },
     { "source": "/api/(.*)",                   "destination": "/api/index.js" },
     { "source": "/css/:path*",                 "destination": "/frontend/css/:path*" },
     { "source": "/js/:path*",                  "destination": "/frontend/js/:path*" },
@@ -71,4 +72,3 @@
     "NODE_ENV": "production"
   }
 }
-
