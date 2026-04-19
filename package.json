@@ -8,7 +8,9 @@
     "dev": "NODE_ENV=development node server.js",
     "lint": "node --check server.js && node --check lib/db.js && node --check backend/server.js",
     "build": "npm run lint",
-    "test": "python3 -m unittest discover -s . -p \"test*.py\" -v"
+    "test": "python3 -m unittest discover -s . -p \"test*.py\" -v",
+    "github-app:setup": "node github-app/setup.js",
+    "github-app:verify": "node github-app/setup.js --verify"
   },
   "keywords": [
     "fleet",
@@ -21,6 +23,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@octokit/app": "^14.0.0",
+    "@octokit/rest": "^20.0.0",
+    "@octokit/webhooks": "^13.0.0",
     "@ai-sdk/openai": "^3.0.53",
     "ai": "^6.0.168",
     "bcryptjs": "^2.4.3",
@@ -37,6 +42,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
+    "smee-client": "^2.0.0",
     "socket.io-client": "^4.7.2"
   }
 }

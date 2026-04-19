@@ -1,0 +1,35 @@
+name: 🏥 GitHub App & Site Health Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    name: Check fna.sa + GitHub App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check https://fna.sa
+        run: |
+          CODE=$(curl -so /dev/null -w "%{http_code}" --connect-timeout 10 https://fna.sa || echo "000")
+          echo "fna.sa → HTTP $CODE"
+          [ "$CODE" = "200" ] && echo "✅ fna.sa OK" || echo "::warning::fna.sa returned $CODE"
+
+      - name: Check https://api.fna.sa/api/health
+        run: |
+          CODE=$(curl -so /dev/null -w "%{http_code}" --connect-timeout 10 https://api.fna.sa/api/health || echo "000")
+          echo "api.fna.sa/api/health → HTTP $CODE"
+          [ "$CODE" = "200" ] && echo "✅ API OK" || echo "::warning::API returned $CODE"
+
+      - name: Check GitHub App health endpoint
+        run: |
+          CODE=$(curl -so /dev/null -w "%{http_code}" --connect-timeout 10 https://api.fna.sa/api/github/health || echo "000")
+          echo "GitHub App health → HTTP $CODE"
+          [ "$CODE" = "200" ] && echo "✅ GitHub App OK" || echo "::warning::GitHub App returned $CODE"
+
+      - name: Summary
+        run: echo "✅ Health check completed at $(date -u '+%Y-%m-%d %H:%M UTC')"
