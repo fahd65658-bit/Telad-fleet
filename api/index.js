@@ -28,7 +28,8 @@ const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
 const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
-const QUICK_ACCESS_TOKEN_SECRET = process.env.QUICK_ACCESS_JWT_SECRET || AUTH_FALLBACK_SECRET || FALLBACK_TOKEN_SECRET;
+const MIN_QUICK_ACCESS_TTL_SECONDS = 300;
+const QUICK_ACCESS_TOKEN_SECRET = process.env.QUICK_ACCESS_JWT_SECRET || AUTH_FALLBACK_SECRET || FALLBACK_TOKEN_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -52,6 +53,9 @@ if (IS_PROD && !HAS_ADMIN_PASSWORD) {
 }
 if (IS_PROD && !authModule && !FALLBACK_TOKEN_SECRET) {
   throw new Error('[CONFIG] lib/auth is unavailable and AUTH_SECRET (or JWT_SECRET) is required in production.');
+}
+if (IS_PROD && !QUICK_ACCESS_TOKEN_SECRET) {
+  throw new Error('[CONFIG] QUICK_ACCESS_JWT_SECRET (or AUTH_SECRET/JWT_SECRET) is required in production for quick access.');
 }
 
 const STATUS_LABELS = {
@@ -445,7 +449,9 @@ function issueToken(user) {
 }
 
 function issueQuickAccessToken(sessionPayload) {
-  if (jwtLib && QUICK_ACCESS_TOKEN_SECRET) {
+  if (!QUICK_ACCESS_TOKEN_SECRET) throw new Error('Quick access token secret is not configured');
+
+  if (jwtLib) {
     return jwtLib.sign(
       {
         role: 'quick',
@@ -454,7 +460,7 @@ function issueQuickAccessToken(sessionPayload) {
       },
       QUICK_ACCESS_TOKEN_SECRET,
       {
-        expiresIn: Math.max(60, Math.floor(QUICK_ACCESS_SESSION_TTL_MS / 1000)),
+        expiresIn: Math.max(MIN_QUICK_ACCESS_TTL_SECONDS, Math.floor(QUICK_ACCESS_SESSION_TTL_MS / 1000)),
         issuer: 'telad-fleet-quick',
       },
     );
@@ -464,10 +470,10 @@ function issueQuickAccessToken(sessionPayload) {
     role: 'quick',
     vehicleId: sessionPayload.vehicleId,
     employeeId: sessionPayload.employeeId,
-    exp: Date.now() + QUICK_ACCESS_SESSION_TTL_MS,
+    exp: Math.floor((Date.now() + QUICK_ACCESS_SESSION_TTL_MS) / 1000),
   })).toString('base64url');
   const signaturePart = crypto
-    .createHmac('sha256', QUICK_ACCESS_TOKEN_SECRET || FALLBACK_TOKEN_SECRET || 'telad-quick-dev')
+    .createHmac('sha256', QUICK_ACCESS_TOKEN_SECRET)
     .update(payloadPart)
     .digest('base64url');
   return `${payloadPart}.${signaturePart}`;
@@ -477,7 +483,9 @@ function verifyQuickAccessToken(token) {
   if (!token) return null;
   if (revokedQuickAccessTokens.has(token)) return null;
 
-  if (jwtLib && QUICK_ACCESS_TOKEN_SECRET) {
+  if (!QUICK_ACCESS_TOKEN_SECRET) return null;
+
+  if (jwtLib) {
     try {
       const payload = jwtLib.verify(token, QUICK_ACCESS_TOKEN_SECRET, { issuer: 'telad-fleet-quick' });
       if (!payload || payload.role !== 'quick' || !payload.vehicleId) return null;
@@ -490,7 +498,7 @@ function verifyQuickAccessToken(token) {
   const [payloadPart, signaturePart] = String(token || '').split('.');
   if (!payloadPart || !signaturePart) return null;
   const expected = crypto
-    .createHmac('sha256', QUICK_ACCESS_TOKEN_SECRET || FALLBACK_TOKEN_SECRET || 'telad-quick-dev')
+    .createHmac('sha256', QUICK_ACCESS_TOKEN_SECRET)
     .update(payloadPart)
     .digest('base64url');
   const signatureBuf = Buffer.from(signaturePart);
@@ -498,7 +506,7 @@ function verifyQuickAccessToken(token) {
   if (signatureBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(signatureBuf, expectedBuf)) return null;
   try {
     const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
-    if (payload.exp && Date.now() > payload.exp) return null;
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
     if (payload.role !== 'quick' || !payload.vehicleId) return null;
     return payload;
   } catch {
@@ -749,8 +757,10 @@ module.exports = async (req, res) => {
   if (method === 'POST' && path === '/auth/quick-logout') {
     const token = tokenFromRequest(req);
     if (token) revokedQuickAccessTokens.set(token, Date.now() + QUICK_ACCESS_SESSION_TTL_MS);
-    for (const [revokedToken, expiresAt] of revokedQuickAccessTokens) {
-      if (!expiresAt || expiresAt < Date.now()) revokedQuickAccessTokens.delete(revokedToken);
+    if (revokedQuickAccessTokens.size > 1000) {
+      for (const [revokedToken, expiresAt] of revokedQuickAccessTokens) {
+        if (!expiresAt || expiresAt < Date.now()) revokedQuickAccessTokens.delete(revokedToken);
+      }
     }
     return sendJson(res, 200, { ok: true });
   }
@@ -1672,7 +1682,9 @@ module.exports = async (req, res) => {
       const cu = currentUser(req);
       if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
       if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
-      if ((state.vehicles || []).some(v => v.projectId === pmProject.id) || (state.employees || []).some(e => e.projectId === pmProject.id)) {
+      const hasLinkedVehicles = (state.vehicles || []).some(v => v.projectId === pmProject.id);
+      const hasLinkedEmployees = (state.employees || []).some(e => e.projectId === pmProject.id);
+      if (hasLinkedVehicles || hasLinkedEmployees) {
         return sendJson(res, 409, { error: 'لا يمكن حذف المشروع لوجود مركبات أو موظفين مرتبطين به' });
       }
       state.projects = (state.projects || []).filter(p => p.id !== pmProject.id);
