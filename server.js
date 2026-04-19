@@ -219,6 +219,114 @@ app.post('/api/maintenance/:id/complete',   auth('supervisor'), (req, res) => { 
 app.delete('/api/maintenance/:id',          auth('supervisor'), (req, res) => { const ok=db.remove('maintenance',req.params.id); ok?res.json({message:'تم الحذف'}):res.status(404).json({error:'السجل غير موجود'}); });
 
 // ══════════════════════════════════════════════════════════════════════════
+// MAINTENANCE CARDS (Vehicle Profile)
+// ══════════════════════════════════════════════════════════════════════════
+const MAINTENANCE_CARD_STATUSES = new Set(['pending', 'in_progress', 'completed', 'cancelled']);
+
+function sortMaintenanceCards(cards) {
+  return [...cards].sort((a, b) => {
+    const aDate = new Date(a.maintenanceDate || a.createdAt || 0).getTime();
+    const bDate = new Date(b.maintenanceDate || b.createdAt || 0).getTime();
+    if (bDate !== aDate) return bDate - aDate;
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+  });
+}
+
+app.get('/api/vehicles/:vehicleId/maintenance-cards', auth(), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.vehicleId);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+  const cards = sortMaintenanceCards(db.find('maintenanceCards', x => x.vehicleId === vehicle.id));
+  res.json({ vehicle: { id: vehicle.id, name: vehicle.name || '', plate: vehicle.plate || '' }, cards });
+});
+
+app.post('/api/vehicles/:vehicleId/maintenance-cards', auth('supervisor'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.vehicleId);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+
+  const {
+    driverDuringMaintenance,
+    maintenanceDate,
+    maintenanceType,
+    description,
+    totalCost,
+    serviceProvider,
+    status,
+    notes,
+  } = req.body || {};
+
+  const driverName = String(driverDuringMaintenance || '').trim();
+  const date = String(maintenanceDate || '').trim();
+  const type = String(maintenanceType || '').trim();
+  const details = String(description || '').trim();
+  const provider = String(serviceProvider || '').trim();
+  const extraNotes = String(notes || '').trim();
+  const cardStatus = String(status || 'pending').trim() || 'pending';
+  const cost = Number(totalCost);
+
+  if (!driverName || !date || !type || !details || !Number.isFinite(cost) || cost < 0) {
+    return res.status(400).json({ error: 'بيانات كرت الصيانة غير مكتملة أو غير صالحة' });
+  }
+  if (!MAINTENANCE_CARD_STATUSES.has(cardStatus)) {
+    return res.status(400).json({ error: 'حالة الصيانة غير صالحة' });
+  }
+
+  const card = db.insert('maintenanceCards', {
+    vehicleId: vehicle.id,
+    plate: vehicle.plate || '',
+    driverDuringMaintenance: driverName,
+    maintenanceDate: date,
+    maintenanceType: type,
+    description: details,
+    totalCost: Number(cost.toFixed(2)),
+    serviceProvider: provider,
+    status: cardStatus,
+    notes: extraNotes,
+  });
+
+  res.status(201).json(card);
+});
+
+app.put('/api/vehicles/:vehicleId/maintenance-cards/:cardId', auth('supervisor'), (req, res) => {
+  const vehicle = db.findOne('vehicles', x => x.id === req.params.vehicleId);
+  if (!vehicle) return res.status(404).json({ error: 'المركبة غير موجودة' });
+
+  const card = db.findOne('maintenanceCards', x => x.id === req.params.cardId && x.vehicleId === vehicle.id);
+  if (!card) return res.status(404).json({ error: 'كرت الصيانة غير موجود' });
+
+  const body = req.body || {};
+  const patch = {};
+
+  if (Object.prototype.hasOwnProperty.call(body, 'driverDuringMaintenance')) patch.driverDuringMaintenance = String(body.driverDuringMaintenance || '').trim();
+  if (Object.prototype.hasOwnProperty.call(body, 'maintenanceDate')) patch.maintenanceDate = String(body.maintenanceDate || '').trim();
+  if (Object.prototype.hasOwnProperty.call(body, 'maintenanceType')) patch.maintenanceType = String(body.maintenanceType || '').trim();
+  if (Object.prototype.hasOwnProperty.call(body, 'description')) patch.description = String(body.description || '').trim();
+  if (Object.prototype.hasOwnProperty.call(body, 'serviceProvider')) patch.serviceProvider = String(body.serviceProvider || '').trim();
+  if (Object.prototype.hasOwnProperty.call(body, 'notes')) patch.notes = String(body.notes || '').trim();
+
+  if (Object.prototype.hasOwnProperty.call(body, 'status')) {
+    const nextStatus = String(body.status || '').trim();
+    if (!MAINTENANCE_CARD_STATUSES.has(nextStatus)) return res.status(400).json({ error: 'حالة الصيانة غير صالحة' });
+    patch.status = nextStatus;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, 'totalCost')) {
+    const nextCost = Number(body.totalCost);
+    if (!Number.isFinite(nextCost) || nextCost < 0) return res.status(400).json({ error: 'المبلغ الإجمالي غير صالح' });
+    patch.totalCost = Number(nextCost.toFixed(2));
+  }
+
+  const updated = db.update('maintenanceCards', card.id, patch);
+  res.json(updated);
+});
+
+app.delete('/api/vehicles/:vehicleId/maintenance-cards/:cardId', auth('supervisor'), (req, res) => {
+  const card = db.findOne('maintenanceCards', x => x.id === req.params.cardId && x.vehicleId === req.params.vehicleId);
+  if (!card) return res.status(404).json({ error: 'كرت الصيانة غير موجود' });
+  db.remove('maintenanceCards', card.id);
+  res.json({ message: 'تم حذف كرت الصيانة' });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // APPOINTMENTS
 // ══════════════════════════════════════════════════════════════════════════
 app.get('/api/appointments',                  auth(), (_req, res) => res.json(db.store.appointments));
@@ -346,12 +454,13 @@ app.get('/api/vehicles/:id/profile', auth(), (req, res) => {
   const viol      = db.find('violations',   x => x.vehicleId === v.id);
   const handovers = db.find('handovers',    x => x.vehicleId === v.id);
   const finItems  = db.find('financial',    x => x.vehicleId === v.id);
+  const maintenanceCards = sortMaintenanceCards(db.find('maintenanceCards', x => x.vehicleId === v.id));
 
   // Smart AI condition score
   const score = computeVehicleScore(v, maint, accidents, viol);
 
   res.json({ vehicle: v, driver, employee, maintenance: maint, appointments: appts,
-    accidents, violations: viol, handovers, financial: finItems, score });
+    accidents, violations: viol, handovers, financial: finItems, maintenanceCards, score });
 });
 
 // Update insurance/inspection on a vehicle
