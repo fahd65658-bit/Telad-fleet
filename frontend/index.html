@@ -1102,13 +1102,13 @@
           <div class="form-group">
             <label>الحالة</label>
             <select id="vmc-status">
-              <option value="pending">pending</option>
-              <option value="in_progress">in_progress</option>
-              <option value="completed">completed</option>
+              <option value="pending">قيد الانتظار</option>
+              <option value="in_progress">قيد التنفيذ</option>
+              <option value="completed">مكتمل</option>
             </select>
           </div>
         </div>
-        <div class="form-group"><label>ملاحظات</label><textarea id="vmc-notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--border-color);background:var(--surface);color:var(--text);border-radius:6px;resize:vertical"></textarea></div>
+        <div class="form-group"><label>ملاحظات</label><textarea id="vmc-notes" rows="2" class="maint-card-notes"></textarea></div>
         <button type="submit" class="btn-primary">💾 حفظ كرت الصيانة</button>
       </form>
       <div id="vp-maint-cards-grid" class="maint-cards-grid">

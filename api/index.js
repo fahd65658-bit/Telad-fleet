@@ -26,8 +26,9 @@ const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
 const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
-const QUICK_ACCESS_TOKEN_TTL_SEC = 24 * 60 * 60;
+const QUICK_ACCESS_TOKEN_TTL = '24h';
 const QUICK_ACCESS_JWT_SECRET = AUTH_FALLBACK_SECRET || FALLBACK_TOKEN_SECRET;
+const DEFAULT_MAINTENANCE_CARD_TYPE = 'صيانة';
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
 const STATIC_MIME_TYPES = {
@@ -145,13 +146,11 @@ function generateFallbackNationalId(existingEmployees = []) {
 function ensureStateStructure() {
   if (!Array.isArray(state.cities)) state.cities = [];
   if (!Array.isArray(state.projects)) state.projects = [];
-  if (!Array.isArray(state.formsApproved)) state.formsApproved = Array.isArray(state.approvedForms) ? state.approvedForms : [];
-  if (!Array.isArray(state.approvedForms)) state.approvedForms = state.formsApproved;
-  if (state.formsApproved !== state.approvedForms) state.formsApproved = state.approvedForms;
+  if (!Array.isArray(state.approvedForms)) state.approvedForms = Array.isArray(state.formsApproved) ? state.formsApproved : [];
+  state.formsApproved = state.approvedForms;
   if (!Array.isArray(state.maintenanceCards)) state.maintenanceCards = [];
   if (!Array.isArray(state.employees)) state.employees = [];
   if (!Array.isArray(state.handovers)) state.handovers = [];
-  if (!Array.isArray(state.approvedForms)) state.approvedForms = [];
   if (!Array.isArray(state.maintenance)) state.maintenance = [];
   if (!Array.isArray(state.appointments)) state.appointments = [];
 
@@ -454,7 +453,7 @@ function issueQuickAccessToken(employee, vehicle) {
       vehicleId: vehicle.id,
     },
     QUICK_ACCESS_JWT_SECRET,
-    { expiresIn: QUICK_ACCESS_TOKEN_TTL_SEC },
+    { expiresIn: QUICK_ACCESS_TOKEN_TTL },
   );
 }
 
@@ -487,6 +486,10 @@ function requireQuickAuth(req, res) {
     return null;
   }
   return { token, payload, employee, vehicle };
+}
+
+function isValidMaintenanceCardStatus(status) {
+  return ['pending', 'in_progress', 'completed'].includes(String(status || ''));
 }
 
 function addLog(action, user = 'system') {
@@ -1576,7 +1579,9 @@ module.exports = async (req, res) => {
       if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
       const project = (state.projects || []).find(p => p.id === pmProject.id);
       if (!project) return sendJson(res, 404, { error: 'المشروع غير موجود' });
-      if ((state.vehicles || []).some(v => v.projectId === project.id) || (state.employees || []).some(e => e.projectId === project.id)) {
+      const hasVehicles = (state.vehicles || []).some(v => v.projectId === project.id);
+      const hasEmployees = (state.employees || []).some(e => e.projectId === project.id);
+      if (hasVehicles || hasEmployees) {
         return sendJson(res, 409, { error: 'لا يمكن حذف المشروع لوجود بيانات مرتبطة' });
       }
       state.projects = (state.projects || []).filter(p => p.id !== project.id);
@@ -1712,14 +1717,18 @@ module.exports = async (req, res) => {
       const vehicle = (state.vehicles || []).find(v => v.id === pmc.id);
       if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
       const body = await readBody(req);
+      const status = body.status || 'pending';
+      if (!isValidMaintenanceCardStatus(status)) {
+        return sendJson(res, 400, { error: 'حالة كرت الصيانة غير صالحة' });
+      }
       const card = {
         id: uid(),
         vehicleId: vehicle.id,
-        type: String(body.type || '').trim() || 'صيانة',
+        type: String(body.type || '').trim() || DEFAULT_MAINTENANCE_CARD_TYPE,
         date: body.date || nowIso().slice(0, 10),
         workshop: body.workshop || '',
         amount: Number(body.amount || 0),
-        status: body.status || 'pending',
+        status,
         notes: body.notes || '',
         createdBy: cu.username,
         createdAt: nowIso(),
@@ -1741,6 +1750,9 @@ module.exports = async (req, res) => {
       const body = await readBody(req);
       const updates = pickAllowedFields(body, ['type', 'date', 'workshop', 'amount', 'status', 'notes']);
       if (updates.amount !== undefined) updates.amount = Number(updates.amount || 0);
+      if (updates.status !== undefined && !isValidMaintenanceCardStatus(updates.status)) {
+        return sendJson(res, 400, { error: 'حالة كرت الصيانة غير صالحة' });
+      }
       Object.assign(card, updates, { updatedAt: nowIso(), updatedBy: cu.username });
       return sendJson(res, 200, card);
     }
