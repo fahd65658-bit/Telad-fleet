@@ -3,6 +3,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const pathModule = require('path');
+const jwt = require('jsonwebtoken');
 const { isWithdrawalOperation } = require('../lib/financial');
 
 let generateFleetAnswer;
@@ -25,6 +26,7 @@ const DEPLOY_ID = process.env.DEPLOY_ID || String(Date.now());
 const GPS_API_KEY = process.env.GPS_API_KEY || '';
 const AUTH_FALLBACK_SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || '';
 const FALLBACK_TOKEN_SECRET = AUTH_FALLBACK_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('base64url') : '');
+const JWT_SECRET = process.env.JWT_SECRET || AUTH_FALLBACK_SECRET || FALLBACK_TOKEN_SECRET;
 const QUICK_ACCESS_SESSION_TTL_MS = Number(process.env.QUICK_ACCESS_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
 const STATIC_FILE_CACHE = new Map();
 const MAX_STATIC_CACHE_ENTRIES = 32;
@@ -107,6 +109,10 @@ function seedState() {
     ],
     reports: [],
     devRequests: [],
+    maintenanceCards: [],
+    formsApproved: [],
+    cities: [],
+    projects: [],
     alerts: [
       'المركبة TLD-204 بحاجة إلى فحص دوري خلال 24 ساعة.',
       'تم اكتمال شحن المركبة TLD-118 بنسبة 82٪.',
@@ -143,9 +149,11 @@ function generateFallbackNationalId(existingEmployees = []) {
 function ensureStateStructure() {
   if (!Array.isArray(state.cities)) state.cities = [];
   if (!Array.isArray(state.projects)) state.projects = [];
+  if (!Array.isArray(state.maintenanceCards)) state.maintenanceCards = [];
+  if (!Array.isArray(state.formsApproved)) state.formsApproved = Array.isArray(state.approvedForms) ? state.approvedForms : [];
+  state.approvedForms = state.formsApproved;
   if (!Array.isArray(state.employees)) state.employees = [];
   if (!Array.isArray(state.handovers)) state.handovers = [];
-  if (!Array.isArray(state.approvedForms)) state.approvedForms = [];
   if (!Array.isArray(state.maintenance)) state.maintenance = [];
   if (!Array.isArray(state.appointments)) state.appointments = [];
 
@@ -259,6 +267,22 @@ function isProjectInCity(projectId, cityId) {
 
 function latestMaintenanceForVehicle(vehicleId) {
   const rows = (state.maintenance || []).filter(m => m.vehicleId === vehicleId);
+  const cardsAsMaintenance = (state.maintenanceCards || [])
+    .filter(c => c.vehicleId === vehicleId)
+    .map(c => ({
+      id: c.id,
+      vehicleId: c.vehicleId,
+      type: c.maintenanceType || 'صيانة',
+      description: c.description || '',
+      scheduledDate: c.maintenanceDate || '',
+      cost: Number(c.totalCost) || 0,
+      status: 'completed',
+      serviceProvider: c.serviceProvider || '',
+      notes: c.notes || '',
+      createdAt: c.createdAt,
+      source: 'maintenance-card',
+    }));
+  rows.push(...cardsAsMaintenance);
   rows.sort((a, b) => new Date(b.completedAt || b.scheduledDate || b.createdAt || 0) - new Date(a.completedAt || a.scheduledDate || a.createdAt || 0));
   return rows[0] || null;
 }
@@ -438,6 +462,39 @@ function issueToken(user) {
   if (!token) token = issueFallbackToken(user);
   user.token = token;
   return token;
+}
+
+function requireQuickAuth(req, res) {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) {
+    sendJson(res, 401, { error: 'غير مصرح' });
+    return null;
+  }
+  const token = auth.slice(7);
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== 'quick') {
+      sendJson(res, 403, { error: 'صلاحية غير كافية' });
+      return null;
+    }
+    req.quickVehicleId = String(decoded.vehicleId || '');
+    req.quickEmployeeId = String(decoded.employeeId || '');
+    return decoded;
+  } catch {
+    const session = quickAccessSessions.get(token);
+    if (!session) {
+      sendJson(res, 401, { error: 'انتهت صلاحية الجلسة' });
+      return null;
+    }
+    if (session.expiresAt && Date.now() > session.expiresAt) {
+      quickAccessSessions.delete(token);
+      sendJson(res, 401, { error: 'انتهت صلاحية الجلسة' });
+      return null;
+    }
+    req.quickVehicleId = String(session.vehicleId || '');
+    req.quickEmployeeId = String(session.employeeId || '');
+    return session;
+  }
 }
 
 function addLog(action, user = 'system') {
@@ -655,11 +712,19 @@ module.exports = async (req, res) => {
     const vehicle = findVehicleByPlate(plate);
     if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مطابق' });
 
-    if (employee.vehicleId !== vehicle.id) {
+    const linkedByVehicleId = employee.vehicleId === vehicle.id;
+    const vehicleDriverName = String(vehicle.driver || '').trim();
+    const employeeName = String(employee.name || '').trim();
+    const linkedByDriverName = vehicleDriverName && vehicleDriverName === employeeName;
+    if (!linkedByVehicleId && !linkedByDriverName) {
       return sendJson(res, 403, { error: 'الدخول السريع متاح فقط لمستلم المركبة الحالي' });
     }
 
-    const quickToken = `qa.${uid()}.${uid()}`;
+    const quickToken = jwt.sign(
+      { role: 'quick', vehicleId: vehicle.id, employeeId: employee.id },
+      JWT_SECRET,
+      { expiresIn: '24h' },
+    );
     quickAccessSessions.set(quickToken, {
       token: quickToken,
       employeeId: employee.id,
@@ -672,6 +737,7 @@ module.exports = async (req, res) => {
     return sendJson(res, 200, {
       quickAccess: true,
       token: quickToken,
+      expiresIn: '24h',
       employee: { id: employee.id, name: employee.name, nationalId: employee.nationalId },
       vehicle: buildQuickVehicleProfile(vehicle, employee),
     });
@@ -684,20 +750,13 @@ module.exports = async (req, res) => {
   }
 
   if (path.startsWith('/quick-access/')) {
-    const token = tokenFromRequest(req);
-    const session = token ? quickAccessSessions.get(token) : null;
-    if (!session) return sendJson(res, 401, { error: 'جلسة الدخول السريع غير صالحة' });
-    if (session.expiresAt && Date.now() > session.expiresAt) {
-      quickAccessSessions.delete(token);
-      return sendJson(res, 401, { error: 'انتهت صلاحية جلسة الدخول السريع' });
-    }
-    const employee = (state.employees || []).find(e => e.id === session.employeeId);
-    const vehicle = (state.vehicles || []).find(v => v.id === session.vehicleId);
+    if (!requireQuickAuth(req, res)) return;
+    const employee = (state.employees || []).find(e => e.id === req.quickEmployeeId);
+    const vehicle = (state.vehicles || []).find(v => v.id === req.quickVehicleId);
     if (!employee || !vehicle) return sendJson(res, 404, { error: 'بيانات المركبة أو الموظف غير موجودة' });
 
     if (method === 'GET' && path === '/quick-access/vehicle-profile') {
       return sendJson(res, 200, {
-        employee: { name: employee.name, nationalId: employee.nationalId },
         vehicle: buildQuickVehicleProfile(vehicle, employee),
       });
     }
@@ -839,6 +898,7 @@ module.exports = async (req, res) => {
       if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
       const employee = (state.employees || []).find(e => e.vehicleId === vehicle.id) || null;
       const maintenance = (state.maintenance || []).filter(m => m.vehicleId === vehicle.id);
+      const maintenanceCards = (state.maintenanceCards || []).filter(c => c.vehicleId === vehicle.id);
       const appointments = (state.appointments || []).filter(a => a.vehicleId === vehicle.id);
       const accidents = (state.accidents || []).filter(a => a.vehicleId === vehicle.id);
       const violations = (state.violations || []).filter(v => v.vehicleId === vehicle.id);
@@ -847,6 +907,7 @@ module.exports = async (req, res) => {
         vehicle,
         employee,
         maintenance,
+        maintenanceCards,
         appointments,
         accidents,
         violations,
@@ -1476,6 +1537,20 @@ module.exports = async (req, res) => {
       city.name = nextName;
       return sendJson(res, 200, city);
     }
+    if (pmCity && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      if ((state.projects || []).some(p => p.cityId === pmCity.id)) {
+        return sendJson(res, 400, { error: 'لا يمكن حذف مدينة مرتبطة بمشاريع' });
+      }
+      if ((state.vehicles || []).some(v => v.cityId === pmCity.id) || (state.employees || []).some(e => e.cityId === pmCity.id)) {
+        return sendJson(res, 400, { error: 'لا يمكن حذف مدينة مرتبطة بمركبات أو موظفين' });
+      }
+      state.cities = (state.cities || []).filter(c => c.id !== pmCity.id);
+      addLog(`حذف مدينة ${pmCity.id}`, cu.username);
+      return sendJson(res, 200, { ok: true });
+    }
   }
 
   // ── PROJECTS ──────────────────────────────────────────────────────
@@ -1515,6 +1590,17 @@ module.exports = async (req, res) => {
       if (body.name) project.name = String(body.name).trim();
       if (body.cityId) project.cityId = body.cityId;
       return sendJson(res, 200, project);
+    }
+    if (pmProject && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      if ((state.vehicles || []).some(v => v.projectId === pmProject.id) || (state.employees || []).some(e => e.projectId === pmProject.id)) {
+        return sendJson(res, 400, { error: 'لا يمكن حذف مشروع مرتبط بمركبات أو موظفين' });
+      }
+      state.projects = (state.projects || []).filter(p => p.id !== pmProject.id);
+      addLog(`حذف مشروع ${pmProject.id}`, cu.username);
+      return sendJson(res, 200, { ok: true });
     }
   }
 
@@ -1596,7 +1682,7 @@ module.exports = async (req, res) => {
   if (method === 'GET' && path === '/forms/approved') {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-    return sendJson(res, 200, state.approvedForms || []);
+    return sendJson(res, 200, state.formsApproved || []);
   }
 
   if (method === 'POST' && path === '/forms/approved') {
@@ -1626,7 +1712,7 @@ module.exports = async (req, res) => {
       const veh = (state.vehicles || []).find(v => v.id === form.vehicleId);
       if (!veh) return sendJson(res, 400, { error: 'المركبة المحددة غير موجودة' });
     }
-    state.approvedForms.push(form);
+    state.formsApproved.push(form);
     addLog(`إضافة نموذج معتمد ${form.title}`, cu.username);
     return sendJson(res, 201, form);
   }
@@ -1636,7 +1722,7 @@ module.exports = async (req, res) => {
     if (pform && method === 'POST') {
       const cu = currentUser(req);
       if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-      const form = (state.approvedForms || []).find(f => f.id === pform.id);
+      const form = (state.formsApproved || []).find(f => f.id === pform.id);
       if (!form) return sendJson(res, 404, { error: 'النموذج غير موجود' });
       const body = await readBody(req);
       form.payload = { ...(form.payload || {}), ...(body.payload || {}) };
@@ -1681,6 +1767,88 @@ module.exports = async (req, res) => {
         projectId: resolvedVehicle.projectId || null,
       } : null,
     });
+  }
+
+  {
+    const cardsPath = matchPath('/vehicles/:id/maintenance-cards', path);
+    if (cardsPath && method === 'GET') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      const vehicle = (state.vehicles || []).find(v => v.id === cardsPath.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const cards = (state.maintenanceCards || [])
+        .filter(c => c.vehicleId === cardsPath.id)
+        .sort((a, b) => new Date(b.maintenanceDate || b.createdAt || 0) - new Date(a.maintenanceDate || a.createdAt || 0));
+      return sendJson(res, 200, cards);
+    }
+    if (cardsPath && method === 'POST') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor', 'operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = (state.vehicles || []).find(v => v.id === cardsPath.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const body = await readBody(req);
+      const maintenanceType = String(body.maintenanceType || '').trim();
+      if (!maintenanceType) return sendJson(res, 400, { error: 'نوع الصيانة مطلوب' });
+      const card = {
+        id: uid(),
+        vehicleId: vehicle.id,
+        plate: vehicle.plate || '',
+        maintenanceType,
+        driverDuringMaintenance: body.driverDuringMaintenance || '',
+        maintenanceDate: body.maintenanceDate || new Date().toISOString().slice(0, 10),
+        description: body.description || '',
+        totalCost: Number(body.totalCost) || 0,
+        serviceProvider: body.serviceProvider || '',
+        notes: body.notes || '',
+        createdBy: cu.username,
+        createdAt: nowIso(),
+      };
+      state.maintenanceCards.push(card);
+      addLog(`إضافة كرت صيانة ${vehicle.plate}`, cu.username);
+      return sendJson(res, 201, card);
+    }
+  }
+
+  {
+    const cardPath = matchPath('/vehicles/:id/maintenance-cards/:cardId', path);
+    if (cardPath && method === 'PUT') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor', 'operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const vehicle = (state.vehicles || []).find(v => v.id === cardPath.id);
+      if (!vehicle) return sendJson(res, 404, { error: 'المركبة غير موجودة' });
+      const card = (state.maintenanceCards || []).find(c => c.id === cardPath.cardId && c.vehicleId === cardPath.id);
+      if (!card) return sendJson(res, 404, { error: 'كرت الصيانة غير موجود' });
+      const body = await readBody(req);
+      const updates = pickAllowedFields(body, [
+        'maintenanceType',
+        'driverDuringMaintenance',
+        'maintenanceDate',
+        'description',
+        'totalCost',
+        'serviceProvider',
+        'notes',
+      ]);
+      if (Object.prototype.hasOwnProperty.call(updates, 'totalCost')) updates.totalCost = Number(updates.totalCost) || 0;
+      if (Object.prototype.hasOwnProperty.call(updates, 'maintenanceType')) {
+        updates.maintenanceType = String(updates.maintenanceType || '').trim();
+        if (!updates.maintenanceType) return sendJson(res, 400, { error: 'نوع الصيانة مطلوب' });
+      }
+      Object.assign(card, updates, { plate: vehicle.plate || '', updatedAt: nowIso(), updatedBy: cu.username });
+      addLog(`تحديث كرت صيانة ${vehicle.plate}`, cu.username);
+      return sendJson(res, 200, card);
+    }
+    if (cardPath && method === 'DELETE') {
+      const cu = currentUser(req);
+      if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
+      if (!['admin', 'supervisor'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
+      const before = (state.maintenanceCards || []).length;
+      state.maintenanceCards = (state.maintenanceCards || []).filter(c => !(c.id === cardPath.cardId && c.vehicleId === cardPath.id));
+      if (state.maintenanceCards.length === before) return sendJson(res, 404, { error: 'كرت الصيانة غير موجود' });
+      addLog(`حذف كرت صيانة ${cardPath.cardId}`, cu.username);
+      return sendJson(res, 200, { ok: true });
+    }
   }
 
   // ── GPS POSITIONS (REST, no WebSocket on Vercel) ───────────────────

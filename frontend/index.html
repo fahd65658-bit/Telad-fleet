@@ -920,6 +920,13 @@
         </div>
         <button type="submit" class="btn-primary">➕ إضافة مدينة</button>
       </form>
+      <div class="data-form">
+        <h3>المدن المضافة</h3>
+        <table class="data-table">
+          <thead><tr><th>اسم المدينة</th><th>الإجراءات</th></tr></thead>
+          <tbody id="cities-tbody"><tr><td colspan="2" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+        </table>
+      </div>
 
       <form id="form-project" class="data-form" onsubmit="addProject(event)">
         <h3>إضافة مشروع مرتبط بمدينة</h3>
@@ -929,6 +936,13 @@
         </div>
         <button type="submit" class="btn-primary">➕ إضافة مشروع</button>
       </form>
+      <div class="data-form">
+        <h3>المشاريع المضافة</h3>
+        <table class="data-table">
+          <thead><tr><th>المشروع</th><th>المدينة</th><th>الإجراءات</th></tr></thead>
+          <tbody id="projects-tbody"><tr><td colspan="3" class="tbl-empty">جارٍ التحميل…</td></tr></tbody>
+        </table>
+      </div>
 
       <div class="data-form">
         <h3>ملف مركبات المشروع</h3>
@@ -978,6 +992,8 @@
               <option value="other">أخرى</option>
             </select>
           </div>
+          <div class="form-group"><label>بحث الموظف</label><input id="af-employee-search"></div>
+          <div class="form-group"><label>بحث المركبة</label><input id="af-vehicle-search"></div>
           <div class="form-group"><label>الموظف</label><select id="af-employee-id" onchange="loadFormAutofill()"></select></div>
           <div class="form-group"><label>المركبة</label><select id="af-vehicle-id" onchange="loadFormAutofill()"></select></div>
         </div>
@@ -1022,6 +1038,7 @@
       <button class="ptab active" data-tab="basic"       onclick="switchProfileTab('basic')">📋 أساسي</button>
       <button class="ptab" data-tab="insurance"          onclick="switchProfileTab('insurance')">🛡️ التأمين</button>
       <button class="ptab" data-tab="maintenance"        onclick="switchProfileTab('maintenance')">🔧 الصيانة</button>
+      <button class="ptab" data-tab="maintenance-cards"  onclick="switchProfileTab('maintenance-cards')">🃏 كروت الصيانة</button>
       <button class="ptab" data-tab="violations"         onclick="switchProfileTab('violations')">🚦 المخالفات</button>
       <button class="ptab" data-tab="accidents"          onclick="switchProfileTab('accidents')">⚠️ الحوادث</button>
       <button class="ptab" data-tab="handovers-vp"       onclick="switchProfileTab('handovers-vp')">🔄 التسليم</button>
@@ -1087,6 +1104,25 @@
         <thead><tr><th>النوع</th><th>التاريخ</th><th>التكلفة</th><th>الحالة</th></tr></thead>
         <tbody><tr><td colspan="4">—</td></tr></tbody>
       </table>
+    </div>
+
+    <div class="ptab-pane" id="ptab-maintenance-cards" style="display:none">
+      <form class="data-form" onsubmit="submitMaintenanceCard(event)">
+        <h3>إضافة كرت صيانة</h3>
+        <div class="form-row">
+          <div class="form-group"><label>اسم السائق أثناء الصيانة</label><input id="mc-driver"></div>
+          <div class="form-group"><label>تاريخ الصيانة</label><input id="mc-date" type="date"></div>
+          <div class="form-group"><label>نوع الصيانة</label><input id="mc-type" required></div>
+          <div class="form-group"><label>بيانات الصيانة</label><input id="mc-description"></div>
+          <div class="form-group"><label>المبلغ</label><input id="mc-cost" type="number" step="0.01" min="0"></div>
+          <div class="form-group"><label>الجهة المنفذة</label><input id="mc-provider"></div>
+          <div class="form-group"><label>ملاحظات</label><input id="mc-notes"></div>
+        </div>
+        <button type="submit" class="btn-primary">💾 حفظ كرت الصيانة</button>
+      </form>
+      <div id="maint-cards-list" class="maint-cards-grid">
+        <div class="tbl-empty">جارٍ التحميل…</div>
+      </div>
     </div>
 
     <!-- Violations -->

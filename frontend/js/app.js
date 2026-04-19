@@ -286,6 +286,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
   document.getElementById('sidebar-toggle-btn')?.addEventListener('click', openSidebar);
   document.getElementById('cmd-input')?.addEventListener('input', e => renderCmdResults(e.target.value));
+  document.getElementById('af-employee-search')?.addEventListener('input', filterApprovedFormSelects);
+  document.getElementById('af-vehicle-search')?.addEventListener('input', filterApprovedFormSelects);
   document.getElementById('cmd-input')?.addEventListener('keydown', cmdKeyNav);
   document.getElementById('cmd-palette')?.addEventListener('click', e => { if (e.target === document.getElementById('cmd-palette')) closeCmdPalette(); });
   document.getElementById('skew-reload-btn')?.addEventListener('click', () => location.reload());
@@ -440,9 +442,8 @@ async function quickAccessLogin(e) {
   btn.disabled = true;
   btn.textContent = 'جارٍ التحقق…';
   try {
-    const res = await fetch(`${API_BASE}/auth/quick-access`, {
+    const res = await apiFetch('/auth/quick-access', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nationalId, plate }),
     });
     const data = await res.json();
@@ -2058,6 +2059,7 @@ async function openVehicleProfile(vehicleId) {
     const onHandover = () => openHandoverForm(vehicleId);
     document.getElementById('vp-handover-btn').onclick          = onHandover;
     document.getElementById('vp-handover-footer-btn').onclick   = onHandover;
+    await loadMaintenanceCards(vehicleId);
 
   } catch {
     document.getElementById('vp-title').textContent = 'تعذّر تحميل البيانات';
@@ -2069,6 +2071,86 @@ function switchProfileTab(tab) {
   document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
   const pane = document.getElementById('ptab-' + tab);
   if (pane) pane.style.display = '';
+}
+
+async function loadMaintenanceCards(vehicleId) {
+  const list = document.getElementById('maint-cards-list');
+  if (!list || !vehicleId) return;
+  list.innerHTML = '<div class="tbl-empty">جارٍ التحميل…</div>';
+  try {
+    const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards`);
+    if (!res.ok) throw new Error();
+    const cards = await res.json();
+    list.innerHTML = cards.length === 0
+      ? '<div class="tbl-empty">لا توجد كروت صيانة لهذه المركبة</div>'
+      : cards.map(card => `
+        <article class="maint-card">
+          <div class="maint-card-header">
+            <strong>${escHtml(card.maintenanceType || 'صيانة')}</strong>
+            <span>${escHtml(card.maintenanceDate || '—')}</span>
+          </div>
+          <div>🚗 اللوحة: ${escHtml(card.plate || '—')}</div>
+          <div>👤 السائق: ${escHtml(card.driverDuringMaintenance || '—')}</div>
+          <div>🏪 الجهة المنفذة: ${escHtml(card.serviceProvider || '—')}</div>
+          <div>📝 التفاصيل: ${escHtml(card.description || '—')}</div>
+          <div>💰 المبلغ: ${escHtml(String(card.totalCost || 0))}</div>
+          <div>📌 ملاحظات: ${escHtml(card.notes || '—')}</div>
+          <div style="margin-top:10px">
+            <button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(card.id))}">🗑️ حذف</button>
+          </div>
+        </article>
+      `).join('');
+    list.onclick = (event) => {
+      const button = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!button) return;
+      deleteMaintCard(button.dataset.vehicleId, button.dataset.cardId);
+    };
+  } catch {
+    list.innerHTML = '<div class="tbl-empty">تعذّر تحميل كروت الصيانة</div>';
+  }
+}
+
+async function deleteMaintCard(vehicleId, cardId) {
+  if (!confirm('هل تريد حذف كرت الصيانة؟')) return;
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(vehicleId)}/maintenance-cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف كرت الصيانة');
+    loadMaintenanceCards(vehicleId);
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حذف الكرت', 'error');
+  }
+}
+
+async function submitMaintenanceCard(event, vehicleId = null) {
+  event.preventDefault();
+  const targetVehicleId = vehicleId || _currentProfileVehicleId;
+  if (!targetVehicleId) return showToast('لا توجد مركبة محددة', 'error');
+  const payload = {
+    driverDuringMaintenance: document.getElementById('mc-driver')?.value?.trim() || '',
+    maintenanceDate: document.getElementById('mc-date')?.value || '',
+    maintenanceType: document.getElementById('mc-type')?.value?.trim() || '',
+    description: document.getElementById('mc-description')?.value?.trim() || '',
+    totalCost: document.getElementById('mc-cost')?.value || 0,
+    serviceProvider: document.getElementById('mc-provider')?.value?.trim() || '',
+    notes: document.getElementById('mc-notes')?.value?.trim() || '',
+  };
+  if (!payload.maintenanceType) return showToast('نوع الصيانة مطلوب', 'error');
+  const res = await apiFetch(`/vehicles/${encodeURIComponent(targetVehicleId)}/maintenance-cards`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    showToast('تم حفظ كرت الصيانة');
+    ['mc-driver', 'mc-date', 'mc-type', 'mc-description', 'mc-cost', 'mc-provider', 'mc-notes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    loadMaintenanceCards(targetVehicleId);
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حفظ كرت الصيانة', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2353,6 +2435,40 @@ async function loadProjectStructure() {
     const projects = projectsRes.ok ? await projectsRes.json() : [];
     const vehicles = vehiclesRes.ok ? await vehiclesRes.json() : [];
     const employees = employeesRes.ok ? await employeesRes.json() : [];
+    const citiesTbody = document.getElementById('cities-tbody');
+    if (citiesTbody) {
+      citiesTbody.innerHTML = cities.length === 0
+        ? '<tr><td colspan="2" class="tbl-empty">لا توجد مدن</td></tr>'
+        : cities.map(c => `
+          <tr>
+            <td>${escHtml(c.name || '—')}</td>
+            <td><button class="btn-sm btn-danger" data-action="delete-city" data-city-id="${escHtml(String(c.id))}">حذف</button></td>
+          </tr>
+        `).join('');
+      citiesTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-city"]');
+        if (!button) return;
+        deleteCity(button.dataset.cityId);
+      };
+    }
+    const cityById = new Map(cities.map(c => [c.id, c]));
+    const projectsTbody = document.getElementById('projects-tbody');
+    if (projectsTbody) {
+      projectsTbody.innerHTML = projects.length === 0
+        ? '<tr><td colspan="3" class="tbl-empty">لا توجد مشاريع</td></tr>'
+        : projects.map(p => `
+          <tr>
+            <td>${escHtml(p.name || '—')}</td>
+            <td>${escHtml(cityById.get(p.cityId)?.name || '—')}</td>
+            <td><button class="btn-sm btn-danger" data-action="delete-project" data-project-id="${escHtml(String(p.id))}">حذف</button></td>
+          </tr>
+        `).join('');
+      projectsTbody.onclick = (event) => {
+        const button = event.target.closest('button[data-action="delete-project"]');
+        if (!button) return;
+        deleteProject(button.dataset.projectId);
+      };
+    }
     _fillSelect('project-city-id', cities.map(c => ({ value: c.id, label: c.name })), true);
     _fillSelect('project-fleet-select', projects.map(p => ({ value: p.id, label: p.name })), true);
     _fillSelect('transfer-vehicle-id', vehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), true);
@@ -2365,6 +2481,30 @@ async function loadProjectStructure() {
   } catch {
     const tbody = document.getElementById('project-fleet-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">تعذّر تحميل البيانات</td></tr>';
+  }
+}
+
+async function deleteCity(cityId) {
+  if (!confirm('هل تريد حذف المدينة؟')) return;
+  const res = await apiFetch(`/cities/${encodeURIComponent(cityId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف المدينة');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حذف المدينة', 'error');
+  }
+}
+
+async function deleteProject(projectId) {
+  if (!confirm('هل تريد حذف المشروع؟')) return;
+  const res = await apiFetch(`/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('تم حذف المشروع');
+    loadProjectStructure();
+  } else {
+    const data = await res.json().catch(() => ({}));
+    showToast(data.error || 'فشل حذف المشروع', 'error');
   }
 }
 
@@ -2478,8 +2618,11 @@ async function loadApprovedForms() {
     const forms = formsRes.ok ? await formsRes.json() : [];
     const employees = employeesRes.ok ? await employeesRes.json() : [];
     const vehicles = vehiclesRes.ok ? await vehiclesRes.json() : [];
+    window._afEmployeesCache = employees;
+    window._afVehiclesCache = vehicles;
     _fillSelect('af-employee-id', employees.map(e => ({ value: e.id, label: `${e.name} – ${e.nationalId || '—'}` })), false);
     _fillSelect('af-vehicle-id', vehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), false);
+    filterApprovedFormSelects();
 
     const empById = new Map(employees.map(e => [e.id, e]));
     const vehById = new Map(vehicles.map(v => [v.id, v]));
@@ -2504,6 +2647,17 @@ async function loadApprovedForms() {
   } catch {
     tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">تعذّر التحميل</td></tr>';
   }
+}
+
+function filterApprovedFormSelects() {
+  const employees = window._afEmployeesCache || [];
+  const vehicles = window._afVehiclesCache || [];
+  const empSearch = (document.getElementById('af-employee-search')?.value || '').trim().toLowerCase();
+  const vehSearch = (document.getElementById('af-vehicle-search')?.value || '').trim().toLowerCase();
+  const filteredEmployees = employees.filter(e => `${e.name || ''} ${e.nationalId || ''}`.toLowerCase().includes(empSearch));
+  const filteredVehicles = vehicles.filter(v => `${v.name || ''} ${v.plate || ''}`.toLowerCase().includes(vehSearch));
+  _fillSelect('af-employee-id', filteredEmployees.map(e => ({ value: e.id, label: `${e.name} – ${e.nationalId || '—'}` })), false);
+  _fillSelect('af-vehicle-id', filteredVehicles.map(v => ({ value: v.id, label: `${v.name} – ${v.plate}` })), false);
 }
 
 async function loadFormAutofill() {
