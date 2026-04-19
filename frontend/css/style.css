@@ -748,6 +748,30 @@ body {
 .pinfo-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
 .pinfo-val   { font-size: 14px; font-weight: 600; color: var(--text); }
 
+.maint-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.maint-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.maint-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
 /* ── Mini Tables (in modals) ── */
 .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .mini-table thead th {
@@ -829,4 +853,3 @@ body {
   .ops-grid { grid-template-columns: 1fr; }
   .dash-grid-2 { grid-template-columns: 1fr; }
 }
-
