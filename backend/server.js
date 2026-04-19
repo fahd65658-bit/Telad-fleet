@@ -39,7 +39,7 @@ if (IS_PROD && !process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production';
 const QUICK_ACCESS_EXPIRES_IN = process.env.QUICK_ACCESS_EXPIRES_IN || '24h';
-const DEFAULT_QUICK_ACCESS_PIN = process.env.QUICK_ACCESS_DEFAULT_PIN || '0241';
+const QUICK_ACCESS_BOOTSTRAP_PIN = process.env.QUICK_ACCESS_BOOTSTRAP_PIN || '';
 let defaultAdminPasswordHash = null;
 
 function buildDefaultUsers() {
@@ -90,10 +90,10 @@ function buildDemoCollections() {
       { id: 'veh-221', name: 'TLD-221', plate: 'TLD-221', city: 'المدينة', driver: 'منى فهد', status: 'active', model: 'Hyundai H350', year: 2024, createdAt: nowIso },
     ],
     employees: [
-      { id: 'emp-ops-1', name: 'محمد راشد', department: 'العمليات', createdAt: nowIso },
-      { id: 'emp-ops-2', name: 'ليان فهد', department: 'الدعم', createdAt: nowIso },
-      { id: 'emp-fin-1', name: 'عبدالله خالد', department: 'المالية', createdAt: nowIso },
-      { id: 'emp-maint-1', name: 'ريم سعد', department: 'الصيانة', createdAt: nowIso },
+      { id: 'emp-ops-1', name: 'محمد راشد', department: 'العمليات', quickPin: '1357', createdAt: nowIso },
+      { id: 'emp-ops-2', name: 'ليان فهد', department: 'الدعم', quickPin: '2468', createdAt: nowIso },
+      { id: 'emp-fin-1', name: 'عبدالله خالد', department: 'المالية', quickPin: '1597', createdAt: nowIso },
+      { id: 'emp-maint-1', name: 'ريم سعد', department: 'الصيانة', quickPin: '2684', createdAt: nowIso },
     ],
     drivers: [
       { id: 'drv-1', name: 'أحمد سالم', phone: '0500000001', licenseNo: 'DL-1001', licenseExpiry: nextMonth, vehicleId: 'veh-102', status: 'active', createdAt: nowIso },
@@ -448,8 +448,16 @@ app.post('/quick-access/login', (req, res) => {
   if (!employeeId || !pin) return res.status(400).json({ error: 'employee_id و PIN مطلوبان' });
   const employee = employees.find(e => e.id === employeeId || e.nationalId === employeeId);
   if (!employee) return res.status(401).json({ error: 'الموظف غير موجود' });
-  const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4) || DEFAULT_QUICK_ACCESS_PIN;
-  if (!expectedPin || String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
+  let expectedPin = String(employee.quickPin || '').trim();
+  if (!expectedPin) {
+    if (QUICK_ACCESS_BOOTSTRAP_PIN && String(pin) === QUICK_ACCESS_BOOTSTRAP_PIN) {
+      employee.quickPin = String(pin);
+      expectedPin = employee.quickPin;
+    } else {
+      return res.status(403).json({ error: 'الحساب غير مهيأ للدخول السريع' });
+    }
+  }
+  if (String(pin) !== expectedPin) return res.status(401).json({ error: 'PIN غير صحيح' });
   const token = jwt.sign({ sub: employee.id, role: 'quick', employeeId: employee.id }, JWT_SECRET, { expiresIn: QUICK_ACCESS_EXPIRES_IN });
   if (!quickAccessUsers.find(u => u.employeeId === employee.id)) {
     quickAccessUsers.push({ id: newId(), employeeId: employee.id, active: true, createdAt: new Date().toISOString() });
@@ -1347,10 +1355,10 @@ app.get('/reports/analytics', authAll, (_req, res) => {
 
 // MERGED: approved-forms
 app.get('/approved-forms', authAll, (_req, res) => res.json(approvedForms));
-app.post('/approved-forms', supervisorUp, (req, res) => {
+function createApprovedForm(req) {
   const title = String(req.body?.title || '').trim();
-  if (!title) return res.status(400).json({ error: 'عنوان النموذج مطلوب' });
-  const form = {
+  if (!title) return { error: 'عنوان النموذج مطلوب' };
+  return {
     id: newId(),
     title,
     type: req.body?.type || 'general',
@@ -1363,26 +1371,17 @@ app.post('/approved-forms', supervisorUp, (req, res) => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+}
+app.post('/approved-forms', supervisorUp, (req, res) => {
+  const form = createApprovedForm(req);
+  if (form.error) return res.status(400).json({ error: form.error });
   approvedForms.push(form);
   res.status(201).json(form);
 });
 app.get('/forms/approved', authAll, (_req, res) => res.json(approvedForms));
 app.post('/forms/approved', supervisorUp, (req, res) => {
-  const title = String(req.body?.title || '').trim();
-  if (!title) return res.status(400).json({ error: 'عنوان النموذج مطلوب' });
-  const form = {
-    id: newId(),
-    title,
-    type: req.body?.type || 'general',
-    status: req.body?.status || 'approved',
-    employeeId: req.body?.employeeId || null,
-    vehicleId: req.body?.vehicleId || null,
-    payload: req.body?.payload || {},
-    attachments: Array.isArray(req.body?.attachments) ? req.body.attachments : [],
-    createdBy: req.user.username,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  const form = createApprovedForm(req);
+  if (form.error) return res.status(400).json({ error: form.error });
   approvedForms.push(form);
   res.status(201).json(form);
 });

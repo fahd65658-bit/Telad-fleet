@@ -200,6 +200,7 @@ function ensureStateStructure() {
         id: uid(),
         name: v.driver || `موظف ${v.id}`,
         nationalId: nat || generateFallbackNationalId([...state.employees, ...seeded]),
+        quickPin: crypto.createHash('sha256').update(`${v.id}:${DEPLOY_ID}`).digest('hex').slice(0, 6),
         phone: '',
         department: 'العمليات',
         jobTitle: 'مستخدم مركبة',
@@ -215,6 +216,9 @@ function ensureStateStructure() {
 
   for (const emp of state.employees) {
     emp.nationalId = normalizeNationalId(emp.nationalId);
+    if (!emp.quickPin) {
+      emp.quickPin = crypto.createHash('sha256').update(`${emp.id || ''}:${emp.nationalId || ''}:${DEPLOY_ID}`).digest('hex').slice(0, 6);
+    }
     if (emp.vehicleId) {
       const v = state.vehicles.find(x => x.id === emp.vehicleId);
       if (v) {
@@ -654,8 +658,9 @@ module.exports = async (req, res) => {
       const pin = String(body.pin || '').trim();
       employee = (state.employees || []).find(e => e.id === employeeId || e.nationalId === employeeId) || null;
       if (!employee) return sendJson(res, 403, { error: 'لا يوجد موظف مطابق في النظام' });
-      const expectedPin = String(employee.quickPin || '').trim() || String(employee.nationalId || '').slice(-4);
-      if (!expectedPin || pin !== expectedPin) return sendJson(res, 401, { error: 'PIN غير صحيح' });
+      const expectedPin = String(employee.quickPin || '').trim();
+      if (!expectedPin) return sendJson(res, 403, { error: 'الحساب غير مهيأ للدخول السريع' });
+      if (pin !== expectedPin) return sendJson(res, 401, { error: 'PIN غير صحيح' });
       vehicle = employee.vehicleId ? (state.vehicles || []).find(v => v.id === employee.vehicleId) || null : null;
       if (!vehicle) return sendJson(res, 403, { error: 'لا يوجد ملف مركبة مرتبط بالموظف' });
     } else {
