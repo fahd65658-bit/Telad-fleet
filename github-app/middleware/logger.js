@@ -1,7 +1,12 @@
 'use strict';
 
 function logEvent(eventType, deliveryId, data) {
-  console.log(`[${new Date().toISOString()}] [github-app] event=${eventType} delivery=${deliveryId || 'n/a'}`, data || {});
+  console.log('[github-app:event]', {
+    timestamp: new Date().toISOString(),
+    eventType: eventType || 'unknown',
+    deliveryId: deliveryId || 'n/a',
+    data: data || {},
+  });
 }
 
 function logError(error, context) {

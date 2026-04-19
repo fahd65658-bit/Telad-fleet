@@ -4,13 +4,10 @@ const express = require('express');
 const requireGitHubAppAdmin = require('../../github-app/middleware/auth-middleware');
 const { webhookRateLimit, apiRateLimit } = require('../../github-app/middleware/rate-limit');
 const { getActivityLog } = require('../../github-app/fleet-integration');
+const packageJson = require('../../package.json');
 
 let githubApp;
-try {
-  githubApp = require('../github-app/index');
-} catch (_error) {
-  githubApp = require('../../github-app/index');
-}
+githubApp = require('../github-app/index');
 
 const router = express.Router();
 
@@ -30,7 +27,7 @@ router.get('/status', (_req, res) => {
   res.json({
     status: 'ok',
     app: 'TELAD Fleet Manager',
-    version: '2.0.1',
+    version: packageJson.version,
     enabled: process.env.GITHUB_APP_ENABLED,
   });
 });

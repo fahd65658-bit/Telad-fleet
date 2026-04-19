@@ -31,10 +31,13 @@ function createMaintenanceFromIssue(issue) {
   };
 
   return new Promise((resolve) => {
+    const host = process.env.FLEET_API_HOST || 'localhost';
+    const port = Number(process.env.FLEET_API_PORT || 5000);
+
     const req = http.request(
       {
-        hostname: 'localhost',
-        port: 5000,
+        hostname: host,
+        port,
         path: '/api/maintenance',
         method: 'POST',
         headers: {

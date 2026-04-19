@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const https = require('https');
+const packageJson = require('../package.json');
 
 const tokenCache = new Map();
 
@@ -43,7 +44,7 @@ function postAccessTokenRequest(installationId, appJwt) {
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${appJwt}`,
-          'User-Agent': 'TELAD-FLEET-GitHubApp/2.0.1',
+          'User-Agent': `TELAD-FLEET-GitHubApp/${packageJson.version}`,
           'X-GitHub-Api-Version': '2022-11-28',
         },
       },

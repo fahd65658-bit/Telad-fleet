@@ -3,6 +3,11 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = function requireGitHubAppAdmin(req, res, next) {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    return res.status(500).json({ error: 'JWT secret is not configured' });
+  }
+
   const header = req.get('authorization') || '';
   if (!header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing bearer token' });
@@ -11,7 +16,7 @@ module.exports = function requireGitHubAppAdmin(req, res, next) {
   const token = header.slice(7);
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'telad-fleet-dev-only-not-for-production');
+    const payload = jwt.verify(token, jwtSecret);
     if (payload?.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
