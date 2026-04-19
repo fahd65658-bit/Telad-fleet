@@ -747,6 +747,10 @@ body {
 .pinfo-full  { grid-column: 1 / -1; }
 .pinfo-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
 .pinfo-val   { font-size: 14px; font-weight: 600; color: var(--text); }
+.maint-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.maint-card { background: var(--surface-2, #1e293b); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.08); transition: transform .2s; }
+.maint-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+.maint-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
 /* ── Mini Tables (in modals) ── */
 .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -829,4 +833,3 @@ body {
   .ops-grid { grid-template-columns: 1fr; }
   .dash-grid-2 { grid-template-columns: 1fr; }
 }
-
