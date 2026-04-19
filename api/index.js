@@ -147,10 +147,8 @@ function ensureStateStructure() {
   if (!Array.isArray(state.projects)) state.projects = [];
   if (!Array.isArray(state.employees)) state.employees = [];
   if (!Array.isArray(state.handovers)) state.handovers = [];
-  if (!Array.isArray(state.formsApproved) && Array.isArray(state.approvedForms)) state.formsApproved = state.approvedForms;
-  if (!Array.isArray(state.approvedForms) && Array.isArray(state.formsApproved)) state.approvedForms = state.formsApproved;
-  if (!Array.isArray(state.approvedForms)) state.approvedForms = [];
-  if (!Array.isArray(state.formsApproved)) state.formsApproved = state.approvedForms;
+  if (!Array.isArray(state.formsApproved)) state.formsApproved = Array.isArray(state.approvedForms) ? state.approvedForms : [];
+  state.approvedForms = state.formsApproved;
   if (!Array.isArray(state.maintenanceCards)) state.maintenanceCards = [];
   if (!Array.isArray(state.maintenance)) state.maintenance = [];
   if (!Array.isArray(state.appointments)) state.appointments = [];
@@ -763,7 +761,7 @@ module.exports = async (req, res) => {
       const scheduledAt = body.scheduledAt;
       if (!scheduledAt) return sendJson(res, 400, { error: 'التاريخ مطلوب' });
       const appointment = {
-        id: Date.now(),
+        id: uid(),
         vehicleId: vehicle.id,
         type: 'صيانة شهرية',
         scheduledAt,
@@ -904,10 +902,9 @@ module.exports = async (req, res) => {
     if (!['admin','supervisor','operator'].includes(cu.role)) return sendJson(res, 403, { error: 'صلاحيات غير كافية' });
     const body = await readBody(req);
     if (!body.name || !body.plate) return sendJson(res, 400, { error: 'اسم المركبة ورقم اللوحة مطلوبان' });
-    if ((state.vehicles || []).find(v => String(v.plate || '').trim() === String(body.plate || '').trim())) {
+    if ((state.vehicles || []).find(v => String(v.plate || '') === String(body.plate || ''))) {
       return sendJson(res, 409, { error: 'رقم اللوحة مستخدم مسبقاً' });
     }
-    if (!isVehiclePlateUnique(body.plate)) return sendJson(res, 409, { error: 'رقم اللوحة مستخدم مسبقاً' });
     if (body.projectId && !isProjectInCity(body.projectId, body.cityId || null)) {
       return sendJson(res, 400, { error: 'المشروع المحدد غير مرتبط بالمدينة المحددة' });
     }
@@ -1413,10 +1410,9 @@ module.exports = async (req, res) => {
     if (!state.employees) state.employees = [];
     const nationalId = normalizeNationalId(body.nationalId);
     if (!nationalId) return sendJson(res, 400, { error: 'رقم الهوية مطلوب لمنع التكرار' });
-    if ((state.employees || []).find(e => e.nationalId && normalizeNationalId(e.nationalId) === nationalId)) {
+    if ((state.employees || []).find(e => e.nationalId && String(e.nationalId) === String(body.nationalId))) {
       return sendJson(res, 409, { error: 'الموظف موجود مسبقاً بنفس رقم الهوية' });
     }
-    if (!isEmployeeUnique(nationalId)) return sendJson(res, 409, { error: 'الموظف موجود مسبقاً بنفس رقم الهوية' });
     if (body.vehicleId && !state.vehicles.some(v => v.id === body.vehicleId)) {
       return sendJson(res, 400, { error: 'المركبة المرتبطة غير موجودة' });
     }
@@ -1662,19 +1658,17 @@ module.exports = async (req, res) => {
   if (method === 'GET' && path === '/forms/approved') {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-    state.formsApproved = state.approvedForms = state.formsApproved || state.approvedForms || [];
     return sendJson(res, 200, state.formsApproved);
   }
 
   if (method === 'POST' && path === '/forms/approved') {
     const cu = currentUser(req);
     if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-    state.formsApproved = state.approvedForms = state.formsApproved || state.approvedForms || [];
     const body = await readBody(req);
     const title = String(body.title || '').trim();
     if (!title) return sendJson(res, 400, { error: 'عنوان النموذج مطلوب' });
-    const form = {
-      id: Date.now(),
+      const form = {
+      id: uid(),
       title,
       type: body.type || 'other',
       status: 'draft',
@@ -1703,7 +1697,6 @@ module.exports = async (req, res) => {
     if (pform && method === 'POST') {
       const cu = currentUser(req);
       if (!cu) return sendJson(res, 401, { error: 'غير مصرح' });
-      state.formsApproved = state.approvedForms = state.formsApproved || state.approvedForms || [];
       const form = (state.formsApproved || []).find(f => String(f.id) === pform.id);
       if (!form) return sendJson(res, 404, { error: 'النموذج غير موجود' });
       const body = await readBody(req);
@@ -1731,7 +1724,7 @@ module.exports = async (req, res) => {
       const body = await readBody(req);
       if (!body.maintenanceType) return sendJson(res, 400, { error: 'نوع الصيانة مطلوب' });
       const card = {
-        id: Date.now(),
+        id: uid(),
         vehicleId: pmc.id,
         plate: vehicle.plate,
         driverDuringMaintenance: body.driverDuringMaintenance,

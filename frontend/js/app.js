@@ -2071,7 +2071,10 @@ function switchProfileTab(tab) {
   document.querySelectorAll('.ptab-pane').forEach(p => p.style.display = 'none');
   const pane = document.getElementById('ptab-' + tab);
   if (pane) pane.style.display = '';
-  if (tab === 'maint-cards' && _currentProfileVehicleId) loadMaintenanceCards(_currentProfileVehicleId);
+  if (tab === 'maint-cards' && _currentProfileVehicleId) {
+    const list = document.getElementById('ptab-maint-cards-list');
+    if (list && !list.dataset.loadedForVehicle) loadMaintenanceCards(_currentProfileVehicleId);
+  }
 }
 
 async function loadMaintenanceCards(vehicleId) {
@@ -2084,6 +2087,7 @@ async function loadMaintenanceCards(vehicleId) {
     const canEdit = ['admin', 'supervisor'].includes(currentUser?.role);
     const statusLabel = { pending: 'معلّق', in_progress: 'جارٍ', completed: 'مكتمل', cancelled: 'ملغى' };
     const typeColors = { زيت: '#f59e0b', فرامل: '#ef4444', إطارات: '#8b5cf6', كهرباء: '#3b82f6', هيكل: '#64748b', دورية: '#22c55e', أخرى: '#94a3b8' };
+    container.dataset.loadedForVehicle = String(vehicleId);
     if (!cards.length) {
       container.innerHTML = '<div class="tbl-empty">لا توجد كروت صيانة بعد</div>';
       return;
@@ -2103,10 +2107,16 @@ async function loadMaintenanceCards(vehicleId) {
           <div>💰 <strong>المبلغ:</strong> ${(Number(c.totalCost) || 0).toFixed(2)} ر.س</div>
           ${c.notes ? `<div>📌 ${escHtml(c.notes)}</div>` : ''}
         </div>
-        ${canEdit ? `<div style="margin-top:12px;text-align:left"><button class="btn-sm btn-danger" onclick="deleteMaintCard('${escHtml(String(vehicleId))}','${escHtml(String(c.id))}')">🗑️ حذف</button></div>` : ''}
+        ${canEdit ? `<div style="margin-top:12px;text-align:left"><button class="btn-sm btn-danger" data-action="delete-maint-card" data-vehicle-id="${escHtml(String(vehicleId))}" data-card-id="${escHtml(String(c.id))}">🗑️ حذف</button></div>` : ''}
       </div>`).join('')}</div>`;
+    container.onclick = (event) => {
+      const button = event.target.closest('button[data-action="delete-maint-card"]');
+      if (!button) return;
+      deleteMaintCard(button.dataset.vehicleId, button.dataset.cardId);
+    };
   } catch {
     container.innerHTML = '<div class="tbl-empty">تعذّر تحميل الكروت</div>';
+    delete container.dataset.loadedForVehicle;
   }
 }
 
@@ -2115,6 +2125,8 @@ async function deleteMaintCard(vehicleId, cardId) {
   const res = await apiFetch('/vehicles/' + vehicleId + '/maintenance-cards/' + cardId, { method: 'DELETE' });
   if (res.ok) {
     showToast('تم الحذف');
+    const list = document.getElementById('ptab-maint-cards-list');
+    if (list) delete list.dataset.loadedForVehicle;
     loadMaintenanceCards(vehicleId);
   } else {
     showToast('فشل الحذف', 'error');
@@ -2135,6 +2147,8 @@ async function submitMaintenanceCard(event, vehicleId) {
   const res = await apiFetch('/vehicles/' + vehicleId + '/maintenance-cards', { method: 'POST', body: JSON.stringify(body) });
   if (res.ok) {
     showToast('✅ تم إضافة كرت الصيانة');
+    const list = document.getElementById('ptab-maint-cards-list');
+    if (list) delete list.dataset.loadedForVehicle;
     loadMaintenanceCards(vehicleId);
     document.getElementById('form-maint-card').reset();
   } else {
