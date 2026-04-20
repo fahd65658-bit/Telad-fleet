@@ -53,10 +53,14 @@ cp .env.example .env
 npm start
 ```
 
-ثم افتح:
 
-- `http://localhost:5000` إذا ضبطت `PORT=5000`
-- أو `http://localhost:3000` إذا استخدمت الإعداد الافتراضي
+ثم افتح:
+- في وضع التطوير فقط:
+  - `http://localhost:5000` إذا ضبطت `PORT=5000`
+  - أو `http://localhost:3000` إذا استخدمت الإعداد الافتراضي
+- في الإنتاج:
+  - `https://fna.sa` (واجهة المستخدم)
+  - `https://api.fna.sa` (واجهة API)
 
 ## أوامر التحقق
 

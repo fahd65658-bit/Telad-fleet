@@ -49,8 +49,12 @@ sudo bash deployment/deploy.sh
 
 ## Health checks
 
+
 ```bash
-curl http://127.0.0.1:5000/api/health
+# في وضع التطوير:
+curl http://localhost:3000/api/health
+# في الإنتاج:
+curl https://api.fna.sa/api/health
 pm2 status
 pm2 logs telad-fleet --lines 100
 ```
@@ -89,8 +93,12 @@ pm2 start telad-fleet
 
 ## Post-restore verification
 
+
 ```bash
-curl http://127.0.0.1:5000/api/health
+# في وضع التطوير:
+curl http://localhost:3000/api/health
+# في الإنتاج:
+curl https://api.fna.sa/api/health
 pm2 logs telad-fleet --lines 50
 ```
 

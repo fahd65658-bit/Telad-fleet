@@ -26,6 +26,7 @@ const { analyzeVehicleDamage, formatReportText } = require('./lib/ai-vision');
 // ── Config ─────────────────────────────────────────────────────────────────
 const PORT           = parseInt(process.env.PORT || '3000', 10);
 const IS_PROD        = process.env.NODE_ENV === 'production';
+const IS_PROD        = process.env.NODE_ENV === 'production';
 const JWT_SECRET     = process.env.JWT_SECRET || 'telad-fleet-super-secret-jwt-2024!';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
 const ADMIN_PASS     = process.env.ADMIN_PASSWORD || 'telad2024';
@@ -586,7 +587,8 @@ async function start() {
   // Force initial write of data
   const _s = db.store;
   httpServer.listen(PORT, () => {
-    console.log(`\n✅ TELAD FLEET v3.1 → http://localhost:${PORT}`);
+    const baseUrl = IS_PROD ? 'https://fna.sa' : `http://localhost:${PORT}`;
+    console.log(`\n✅ TELAD FLEET v3.1 → ${baseUrl}`);
     console.log(`   Deploy ID : ${DEPLOY_ID}`);
     console.log(`   Admin     : admin / ${ADMIN_PASS}`);
     console.log(`   Data Dir  : ${db.getPersistenceStatus().dataDir}`);

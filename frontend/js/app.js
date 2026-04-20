@@ -13,7 +13,9 @@ const API_BASE = (() => {
   if (override) return override.replace(/\/$/, '');
   // Local dev: backend runs on port 3000
   if (host === 'localhost' || host === '127.0.0.1' || host === '') return 'http://localhost:3000/api';
-  // Vercel / any other host: API is same-origin under /api
+  // Production: always use api.fna.sa
+  if (host.endsWith('fna.sa')) return 'https://api.fna.sa/api';
+  // Default fallback
   return window.location.origin + '/api';
 })();
 
@@ -1564,7 +1566,7 @@ function connectRealtimeSocket() {
   // Socket.IO server is at the root, not under /api
   const socketUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000'
-    : window.location.origin;
+    : (window.location.hostname.endsWith('fna.sa') ? 'https://api.fna.sa' : window.location.origin);
 
   _rtConnecting = true;
   try {

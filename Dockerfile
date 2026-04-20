@@ -21,7 +21,7 @@ USER telad
 EXPOSE 3000
 ENV NODE_ENV=production
 HEALTHCHECK --interval=15s --timeout=5s --retries=5 \
-  CMD curl -sf http://localhost:3000/api/health || exit 1
+  CMD curl -sf https://api.fna.sa/api/health || exit 1
 CMD ["node", "server.js"]
 
 # ── Stage 3: React – install ──────────────────────────
@@ -50,5 +50,5 @@ COPY . /app
 ENV PYTHONUNBUFFERED=1 PORT=3000
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/healthz', timeout=3)"
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('https://api.fna.sa/healthz', timeout=3)"
 CMD ["python3", "server.py"]

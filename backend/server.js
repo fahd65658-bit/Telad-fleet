@@ -26,6 +26,7 @@ const { isWithdrawalOperation, FINANCIAL_TRANSACTION_TYPES } = require('../lib/f
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PORT     = process.env.PORT || 5000;
 const IS_PROD  = process.env.NODE_ENV === 'production';
+const IS_PROD  = process.env.NODE_ENV === 'production';
 // ─── Skew Protection ─────────────────────────────────────────────────────────
 // Set DEPLOY_ID at deploy time (e.g. git commit SHA) for a stable, per-deployment
 // value.  Falls back to a random hex string so every cold start gets its own ID
@@ -217,9 +218,13 @@ const CORS_ORIGINS = [
   'https://fna.sa',
   'https://www.fna.sa',
   'https://fleet.fna.sa',
-  'http://localhost:3000',
-  'http://localhost:5000',
-  'http://127.0.0.1:5500',  // VS Code Live Server (dev)
+  'https://fna.sa',
+  'https://api.fna.sa',
+  ...(IS_PROD ? [] : [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:5500', // dev
+  ]),
   'null',                    // file:// open in dev
 ];
 
@@ -1446,7 +1451,8 @@ function startServer(port = PORT) {
     console.log('╚═══════════════════════════════════════╝');
     console.log('');
     console.log(`  Data dir:    ${DATA_DIR}`);
-    console.log(`  Health:      http://localhost:${port}/health`);
+    const baseUrl = IS_PROD ? 'https://api.fna.sa' : `http://localhost:${PORT}`;
+    console.log(`  Health:      ${baseUrl}/health`);
     console.log('');
   });
 }
