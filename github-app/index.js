@@ -94,14 +94,36 @@ router.get('/status', apiRateLimit, (req, res) => {
   }
 });
 
+// Enhanced health endpoint: include version, uptime, and basic services
 router.get('/health', apiRateLimit, (req, res) => {
   if (!isEnabled()) {
     return res.json({ status: 'ok', enabled: false, timestamp: new Date().toISOString() });
   }
 
+  // determine version: env APP_VERSION or package.json
+  let version = process.env.APP_VERSION || process.env.npm_package_version || 'unknown';
+  try {
+    /* eslint-disable global-require, import/no-dynamic-require */
+    const pkg = require('../package.json');
+    if (pkg && pkg.version) version = pkg.version;
+    /* eslint-enable global-require, import/no-dynamic-require */
+  } catch (_err) {
+    // ignore if package.json not available
+  }
+
+  const uptime_seconds = Math.floor(process.uptime());
+
+  const services = {
+    octokitApp: octokitAppAvailable ? 'ok' : 'unavailable',
+    setup: getSetupStatus(),
+  };
+
   return res.json({
     status: 'ok',
     enabled: true,
+    version,
+    uptime_seconds,
+    services,
     timestamp: new Date().toISOString(),
   });
 });
