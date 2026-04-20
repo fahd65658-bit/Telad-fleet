@@ -11,6 +11,7 @@ import sqlite3
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "fleet.db"
 PORT = int(os.getenv("PORT", "3000"))
+IS_PROD = os.getenv("NODE_ENV", "development") == "production"
 CITIES = ["الرياض", "جدة", "الدمام", "المدينة", "مكة", "أبها"]
 STATUS_LABELS = {
     "active": "نشطة",
@@ -282,7 +283,8 @@ if __name__ == "__main__":
         print("Set a different PORT value if this port is already in use.")
         raise SystemExit(1) from error
 
-    print(f"Telad Fleet is running on http://localhost:{PORT}")
+    base_url = f"https://fna.sa" if IS_PROD else f"http://localhost:{PORT}"
+    print(f"Telad Fleet is running on {base_url}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

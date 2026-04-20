@@ -56,7 +56,7 @@ services:
       OPENAI_VISION_MODEL: ${OPENAI_VISION_MODEL:-gpt-4o}
       GPS_SIMULATE:        ${GPS_SIMULATE:-false}
       GPS_PUSH_TOKEN:      ${GPS_PUSH_TOKEN:-}
-      CORS_ORIGIN:         ${CORS_ORIGIN:-*}
+      CORS_ORIGIN:         ${CORS_ORIGIN:-https://fna.sa,https://api.fna.sa}
     depends_on:
       db:
         condition: service_healthy
@@ -67,7 +67,7 @@ services:
     volumes:
       - fleet_data:/app/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf https://api.fna.sa/api/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
