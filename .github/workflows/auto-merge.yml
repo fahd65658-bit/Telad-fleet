@@ -8,6 +8,7 @@ jobs:
   auto-merge:
     name: Merge PR automatically
     runs-on: ubuntu-latest
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'auto-merge') }}
     permissions:
       contents: write
       pull-requests: write
@@ -19,5 +20,4 @@ jobs:
         run: |
           gh pr merge "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
-            --merge \
-            --admin
+            --squash

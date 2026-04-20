@@ -12,6 +12,7 @@
     "github-app:setup": "node github-app/setup.js",
     "github-app:verify": "node github-app/setup.js --verify",
     "github-app:dev": "npx smee -u $SMEE_URL -t http://localhost:5000/api/github/webhook"
+    "github-app:setup": "node github-app/setup.js"
   },
   "keywords": [
     "fleet",
@@ -28,6 +29,8 @@
     "@octokit/rest": "^20.0.0",
     "@octokit/webhooks": "^13.0.0",
     "@ai-sdk/openai": "^3.0.53",
+    "@octokit/app": "^14.0.0",
+    "@octokit/rest": "^20.0.0",
     "ai": "^6.0.168",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
