@@ -17,15 +17,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Node.js 18
+      - name: Set up Node.js 20
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install backend dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm install
 
       - name: Validate server syntax
         run: cd backend && node --check server.js
@@ -33,7 +32,7 @@ jobs:
           DEPLOY_ID: ${{ github.sha }}
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Lint all server files
         run: npm run lint
@@ -51,23 +50,30 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - name: Check GitHub App file syntax
+          node-version: '18'
+
+      - name: Validate GitHub App JavaScript syntax
         run: |
-          node --check github-app/index.js
           node --check github-app/auth.js
           node --check github-app/webhooks.js
           node --check github-app/fleet-integration.js
+          node --check github-app/index.js
           node --check github-app/setup.js
+          node --check github-app/middleware/auth-middleware.js
+          node --check github-app/middleware/rate-limit.js
+          node --check github-app/middleware/logger.js
           node --check backend/routes/github.js
+
       - name: Validate app-manifest.json
-        run: node -e "const m=JSON.parse(require('fs').readFileSync('github-app/app-manifest.json','utf8')); console.log('✅ manifest valid:', m.name)"
+        run: node -e "const fs=require('fs');JSON.parse(fs.readFileSync('github-app/app-manifest.json','utf8'));"
 
 # Notes:
 # - This workflow pins all GitHub Actions to full commit SHAs to satisfy repository policy.

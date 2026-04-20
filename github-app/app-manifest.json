@@ -1,6 +1,6 @@
 {
   "name": "TELAD Fleet Manager",
-  "description": "نظام إدارة أسطول المركبات والخدمات اللوجستية — مملكة العربية السعودية",
+  "description": "نظام إدارة أسطول المركبات والخدمات اللوجستية",
   "url": "https://fna.sa",
   "hook_attributes": {
     "url": "https://api.fna.sa/api/github/webhook",

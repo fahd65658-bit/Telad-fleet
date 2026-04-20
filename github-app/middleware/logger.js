@@ -1,28 +1,28 @@
 'use strict';
 
-function pm2Line(level, message, meta = {}) {
-  const timestamp = new Date().toISOString();
-  const eventType = meta.eventType || '-';
-  const deliveryId = meta.deliveryId || '-';
-  return `[${timestamp}] [GitHubApp] [${level}] event=${eventType} delivery=${deliveryId} ${message}`;
+function logEvent(type, deliveryId, data = {}) {
+  const payload = {
+    type,
+    deliveryId,
+    timestamp: new Date().toISOString(),
+    data,
+  };
+
+  console.log('[GITHUB_APP_EVENT]', JSON.stringify(payload));
 }
 
-function githubEventLogger(req, _res, next) {
-  const eventType = req.headers['x-github-event'] || 'unknown';
-  const deliveryId = req.headers['x-github-delivery'] || 'unknown';
-  console.log(pm2Line('INFO', 'Incoming webhook event', { eventType, deliveryId }));
-  next();
-}
+function logError(error, context = {}) {
+  const payload = {
+    message: error?.message || 'Unknown error',
+    stack: error?.stack || null,
+    timestamp: new Date().toISOString(),
+    context,
+  };
 
-function logError(error, meta = {}) {
-  console.error(pm2Line('ERROR', error.message || 'Unknown error', meta));
-  if (error.stack) {
-    console.error(error.stack);
-  }
+  console.error('[GITHUB_APP_ERROR]', JSON.stringify(payload));
 }
 
 module.exports = {
-  githubEventLogger,
+  logEvent,
   logError,
-  pm2Line,
 };

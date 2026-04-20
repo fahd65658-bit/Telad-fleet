@@ -1,128 +1,137 @@
 'use strict';
 
 const express = require('express');
-const { verifyWebhookSignature, getGitHubAppConfig } = require('./auth');
-const { handleWebhookEvent } = require('./webhooks');
-const { initFleetIntegration, getActivityLog, logActivity } = require('./fleet-integration');
-const { githubEventLogger, logError } = require('./middleware/logger');
+const { verifyWebhookSignature } = require('./auth');
+const handlers = require('./webhooks');
+const { getActivityLog } = require('./fleet-integration');
+const { logEvent, logError } = require('./middleware/logger');
 const { webhookRateLimit, apiRateLimit } = require('./middleware/rate-limit');
+const { getSetupStatus } = require('./setup');
 
-function isGitHubAppEnabled() {
+let octokitAppAvailable = true;
+try {
+  require('@octokit/app');
+} catch (_error) {
+  octokitAppAvailable = false;
+}
+
+function isEnabled() {
   return process.env.GITHUB_APP_ENABLED === 'true';
 }
 
-function isGitHubAppReady() {
-  const cfg = getGitHubAppConfig();
-  return cfg.ready && Boolean(process.env.GITHUB_APP_WEBHOOK_SECRET);
-}
-
-function getGitHubAppStatus() {
-  const cfg = getGitHubAppConfig();
-  return {
-    enabled: cfg.enabled,
-    configured: cfg.ready,
-    webhookSecretConfigured: Boolean(process.env.GITHUB_APP_WEBHOOK_SECRET),
-    installationIdConfigured: Boolean(process.env.GITHUB_APP_INSTALLATION_ID),
-    mode: cfg.ready ? 'active' : 'graceful-degradation',
-    messageAr: cfg.ready
-      ? 'تكامل GitHub App جاهز.'
-      : 'GitHub App غير مكتمل الإعداد. النظام يعمل بشكل طبيعي بدون التكامل.',
-    messageEn: cfg.ready
-      ? 'GitHub App integration is ready.'
-      : 'GitHub App is not fully configured. System continues normally without integration.',
-  };
-}
-
-async function processWebhook(req, res, io) {
-  const status = getGitHubAppStatus();
-  if (!isGitHubAppEnabled() || !isGitHubAppReady()) {
+function disabledResponse(req, res) {
+  if (req.method === 'POST') {
     return res.status(202).json({
-      ok: true,
+      enabled: false,
       skipped: true,
-      message: 'تم تجاوز معالجة Webhook لأن GitHub App غير مفعّل أو غير مكتمل.',
-      status,
+      message: 'GitHub App integration is disabled',
     });
   }
 
-  const signature = req.headers['x-hub-signature-256'];
-  const eventName = req.headers['x-github-event'];
-  const deliveryId = req.headers['x-github-delivery'];
-  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from('{}');
+  return res.json({
+    enabled: false,
+    status: 'disabled',
+    octokitAppAvailable,
+    timestamp: new Date().toISOString(),
+  });
+}
 
-  const valid = verifyWebhookSignature(rawBody, signature, process.env.GITHUB_APP_WEBHOOK_SECRET);
-  if (!valid) {
-    return res.status(401).json({
-      ok: false,
-      error: 'فشل التحقق من توقيع GitHub Webhook.',
-      deliveryId,
-    });
-  }
+const router = express.Router();
 
-  let payload;
+router.post('/webhook', webhookRateLimit, express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    payload = JSON.parse(rawBody.toString('utf8') || '{}');
-  } catch {
-    return res.status(400).json({
-      ok: false,
-      error: 'صيغة JSON غير صالحة في payload.',
+    if (!isEnabled()) return disabledResponse(req, res);
+
+    const signature = req.headers['x-hub-signature-256'];
+    const deliveryId = req.headers['x-github-delivery'] || null;
+    const eventType = req.headers['x-github-event'];
+
+    if (!verifyWebhookSignature(req.body, signature)) {
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(req.body.toString('utf8'));
+    } catch (_error) {
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
+    const handler = handlers[eventType];
+    if (!handler) {
+      logEvent('unhandled_event', deliveryId, { eventType });
+      return res.status(202).json({ received: true, handled: false, event: eventType });
+    }
+
+    await handler(payload, {
       deliveryId,
+      eventType,
+      io: req.app.get('io') || null,
+      req,
     });
+
+    return res.status(200).json({ received: true, handled: true, event: eventType });
+  } catch (error) {
+    logError(error, { route: '/webhook' });
+    return res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+router.get('/status', apiRateLimit, (req, res) => {
+  try {
+    if (!isEnabled()) return disabledResponse(req, res);
+
+    return res.json({
+      enabled: true,
+      status: 'active',
+      octokitAppAvailable,
+      setup: getSetupStatus(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    logError(error, { route: '/status' });
+    return res.status(500).json({ error: 'Failed to fetch status' });
+  }
+});
+
+// Enhanced health endpoint: include version, uptime, and basic services
+router.get('/health', apiRateLimit, (req, res) => {
+  if (!isEnabled()) {
+    return res.json({ status: 'ok', enabled: false, timestamp: new Date().toISOString() });
   }
 
-  await handleWebhookEvent(eventName, payload, { io, logger: console });
-  logActivity('webhook_processed', { event: eventName, deliveryId });
+  // determine version: env APP_VERSION or package.json
+  let version = process.env.APP_VERSION || process.env.npm_package_version || 'unknown';
+  try {
+    /* eslint-disable global-require, import/no-dynamic-require */
+    const pkg = require('../package.json');
+    if (pkg && pkg.version) version = pkg.version;
+    /* eslint-enable global-require, import/no-dynamic-require */
+  } catch (_err) {
+    // ignore if package.json not available
+  }
 
-  return res.status(200).json({ ok: true, event: eventName, deliveryId });
-}
+  const uptime_seconds = Math.floor(process.uptime());
 
-function createGitHubAppRouter({ io } = {}) {
-  const router = express.Router();
-  initFleetIntegration({ io, logger: console });
+  const services = {
+    octokitApp: octokitAppAvailable ? 'ok' : 'unavailable',
+    setup: getSetupStatus(),
+  };
 
-  router.post('/webhook', webhookRateLimit, express.raw({ type: 'application/json' }), githubEventLogger, async (req, res) => {
-    try {
-      await processWebhook(req, res, io);
-    } catch (error) {
-      logError(error, {
-        eventType: req.headers['x-github-event'],
-        deliveryId: req.headers['x-github-delivery'],
-      });
-      res.status(500).json({
-        ok: false,
-        error: 'حدث خطأ داخلي أثناء معالجة Webhook.',
-        details: error.message,
-      });
-    }
+  return res.json({
+    status: 'ok',
+    enabled: true,
+    version,
+    uptime_seconds,
+    services,
+    timestamp: new Date().toISOString(),
   });
-
-  router.use(apiRateLimit);
-
-  router.get('/status', (_req, res) => {
-    res.json({ ok: true, status: getGitHubAppStatus() });
-  });
-
-  router.get('/health', (_req, res) => {
-    const status = getGitHubAppStatus();
-    const healthy = !status.enabled || (status.configured && status.webhookSecretConfigured);
-    res.status(healthy ? 200 : 503).json({
-      ok: healthy,
-      service: 'github-app',
-      status,
-      time: new Date().toISOString(),
-    });
-  });
-
-  router.get('/activity', (_req, res) => {
-    res.json({ ok: true, items: getActivityLog() });
-  });
-
-  return router;
-}
+});
 
 module.exports = {
-  createGitHubAppRouter,
-  getGitHubAppStatus,
-  isGitHubAppEnabled,
-  isGitHubAppReady,
-  processWebhook,
+  router,
+  isEnabled,
+  getActivityLog,
+  getSetupStatus,
+  octokitAppAvailable,
 };

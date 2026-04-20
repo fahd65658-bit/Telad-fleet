@@ -1,155 +1,69 @@
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+const MAX_ACTIVITY_ENTRIES = 100;
+const activityLog = [];
 
-const activityLogPath = path.join(__dirname, 'activity-log.json');
-const MAX_ACTIVITY_LOG_ENTRIES = 3000; // Keep bounded history and prevent unbounded disk growth.
-const integrationState = {
-  io: null,
-  logger: console,
-};
-
-function initFleetIntegration({ io, logger } = {}) {
-  integrationState.io = io || null;
-  integrationState.logger = logger || console;
-}
-
-function readActivities() {
-  if (!fs.existsSync(activityLogPath)) return [];
-  try {
-    const raw = fs.readFileSync(activityLogPath, 'utf8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
+function trimActivityLog() {
+  if (activityLog.length > MAX_ACTIVITY_ENTRIES) {
+    activityLog.splice(0, activityLog.length - MAX_ACTIVITY_ENTRIES);
   }
 }
 
-function writeActivities(items) {
-  fs.writeFileSync(activityLogPath, JSON.stringify(items, null, 2), 'utf8');
-}
-
-function getApiBase() {
-  return process.env.INTERNAL_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:5000';
-}
-
-async function createMaintenanceFromIssue(issue) {
-  const enabled = process.env.GITHUB_APP_AUTO_MAINTENANCE !== 'false';
-  if (!enabled) return { skipped: true, reason: 'auto-maintenance-disabled' };
-
-  const body = {
-    type: `GitHub Issue #${issue.number}`,
-    description: issue.title,
-    notes: issue.body || '',
-    source: 'github-app',
-    issueNumber: issue.number,
-    issueUrl: issue.html_url,
-    status: 'pending',
-  };
-
-  try {
-    const response = await fetch(`${getApiBase()}/api/maintenance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return {
-      ok: response.ok,
-      status: response.status,
-    };
-  } catch (error) {
-    integrationState.logger.error('⚠️ [GitHubApp] فشل إنشاء طلب الصيانة تلقائياً:', error.message);
-    return {
-      ok: false,
-      error: error.message,
-    };
-  }
-}
-
-function notifyAllManagers(eventType, data = {}) {
-  const message = `تنبيه إداري: حدث جديد من GitHub (${eventType})`;
-  const payload = {
-    eventType,
+function logActivity(type, message, data = {}) {
+  const entry = {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    type,
     message,
     data,
-    createdAt: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
   };
 
-  if (integrationState.io) {
-    integrationState.io.emit('github:managers', payload);
-  }
-
-  return payload;
-}
-
-function updateSystemVersion(tag) {
-  return logActivity('system_version_updated', {
-    tag,
-    message: `تم تحديث إصدار النظام إلى ${tag}`,
-  });
-}
-
-function logActivity(type, data = {}) {
-  const entry = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    type,
-    data,
-    createdAt: new Date().toISOString(),
-  };
-
-  const activities = readActivities();
-  activities.push(entry);
-  if (activities.length > MAX_ACTIVITY_LOG_ENTRIES) {
-    activities.splice(0, activities.length - MAX_ACTIVITY_LOG_ENTRIES);
-  }
-  writeActivities(activities);
-
+  activityLog.push(entry);
+  trimActivityLog();
   return entry;
 }
 
-function createEmergencyAlert(message) {
-  const payload = {
-    level: 'critical',
-    message,
-    createdAt: new Date().toISOString(),
-  };
-
-  if (integrationState.io && process.env.GITHUB_APP_EMERGENCY_ALERTS !== 'false') {
-    integrationState.io.emit('github:emergency', payload);
-  }
-
-  logActivity('emergency_alert', payload);
-  return payload;
-}
-
-function syncDeploymentStatus(status, deployUrl) {
-  const payload = {
-    status,
-    deployUrl: deployUrl || null,
-    notifyOnDeploy: process.env.GITHUB_APP_NOTIFY_ON_DEPLOY !== 'false',
-    createdAt: new Date().toISOString(),
-  };
-
-  if (integrationState.io && payload.notifyOnDeploy) {
-    integrationState.io.emit('github:deployment', payload);
-  }
-
-  logActivity('deployment_sync', payload);
-  return payload;
-}
-
 function getActivityLog() {
-  return readActivities().slice().reverse();
+  return [...activityLog].reverse();
+}
+
+function notifyAllManagers(message, data = {}) {
+  return logActivity('manager_notification', message, data);
+}
+
+function createMaintenanceFromIssue(issue = {}) {
+  const maintenanceRequest = {
+    issueNumber: issue.number,
+    title: issue.title,
+    description: issue.body || '',
+    author: issue.user?.login || 'unknown',
+    status: 'pending',
+    source: 'github_issue',
+    createdAt: new Date().toISOString(),
+    url: issue.html_url || null,
+  };
+
+  logActivity('maintenance_request', 'تم إنشاء طلب صيانة من GitHub Issue', maintenanceRequest);
+  return maintenanceRequest;
+}
+
+function createEmergencyAlert(alertData = {}) {
+  const alert = {
+    severity: 'high',
+    source: 'github_deployment',
+    message: alertData.message || 'تنبيه طارئ: فشل في النشر',
+    details: alertData,
+    createdAt: new Date().toISOString(),
+  };
+
+  logActivity('emergency_alert', alert.message, alert);
+  return alert;
 }
 
 module.exports = {
-  initFleetIntegration,
   createMaintenanceFromIssue,
   notifyAllManagers,
-  updateSystemVersion,
   logActivity,
-  createEmergencyAlert,
-  syncDeploymentStatus,
   getActivityLog,
+  createEmergencyAlert,
 };

@@ -73,6 +73,31 @@ class TestTeladFleet(unittest.TestCase):
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 
+    def test_fetch_alerts_applies_limit_and_latest_first_order(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "fleet.db"
+            original_db_path = getattr(server, "DB_PATH", None)
+            try:
+                server.DB_PATH = db_path
+                server.init_db()
+                with sqlite3.connect(db_path) as connection:
+                    connection.execute("DELETE FROM alerts")
+                    connection.executemany(
+                        "INSERT INTO alerts (message, created_at) VALUES (?, ?)",
+                        [
+                            ("alert-1", "2024-01-01T10:00:00"),
+                            ("alert-2", "2024-01-01T10:00:00"),
+                            ("alert-3", "2024-01-01T11:00:00"),
+                        ],
+                    )
+                    connection.commit()
+
+                alerts = server.fetch_alerts(limit=2)
+                self.assertEqual(alerts, ["alert-3", "alert-2"])
+            finally:
+                if original_db_path is not None:
+                    server.DB_PATH = original_db_path
+
     def test_refresh_fleet_data_updates_rows_and_trims_alert_history(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "fleet.db"
@@ -105,6 +130,27 @@ class TestTeladFleet(unittest.TestCase):
                 self.assertEqual(updated_statuses, {"maintenance"})
                 self.assertEqual(alert_count, 12)
                 self.assertIn("تم تحديث البيانات تلقائياً", latest_alert)
+            finally:
+                if original_db_path is not None:
+                    server.DB_PATH = original_db_path
+
+    def test_refresh_fleet_data_returns_early_when_no_vehicles(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "fleet.db"
+            original_db_path = getattr(server, "DB_PATH", None)
+            try:
+                server.DB_PATH = db_path
+                server.init_db()
+                with sqlite3.connect(db_path) as connection:
+                    connection.execute("DELETE FROM vehicles")
+                    alert_count_before = connection.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+                    connection.commit()
+
+                server.refresh_fleet_data()
+
+                with sqlite3.connect(db_path) as connection:
+                    alert_count_after = connection.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+                self.assertEqual(alert_count_after, alert_count_before)
             finally:
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
@@ -155,6 +201,28 @@ class TestTeladFleet(unittest.TestCase):
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 
+    def test_healthz_and_fleet_alias_endpoints(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "fleet.db"
+            original_db_path = getattr(server, "DB_PATH", None)
+            try:
+                server.DB_PATH = db_path
+                server.init_db()
+                httpd = self._start_test_server()
+                port = httpd.server_address[1]
+
+                health = json.loads(urlopen(f"http://127.0.0.1:{port}/healthz").read().decode("utf-8"))
+                fleet = json.loads(urlopen(f"http://127.0.0.1:{port}/api/fleet").read().decode("utf-8"))
+
+                self.assertEqual(health["status"], "ok")
+                self.assertIn("vehicles", fleet)
+                self.assertIn("alerts", fleet)
+            finally:
+                if "httpd" in locals():
+                    self._stop_test_server(httpd)
+                if original_db_path is not None:
+                    server.DB_PATH = original_db_path
+
     def test_dashboard_refresh_query_invokes_refresh_logic(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "fleet.db"
@@ -172,6 +240,29 @@ class TestTeladFleet(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 self.assertIn("stats", payload)
                 refresh_mock.assert_called_once()
+            finally:
+                if "httpd" in locals():
+                    self._stop_test_server(httpd)
+                if original_db_path is not None:
+                    server.DB_PATH = original_db_path
+
+    def test_dashboard_without_refresh_does_not_call_refresh_logic(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "fleet.db"
+            original_db_path = getattr(server, "DB_PATH", None)
+            try:
+                server.DB_PATH = db_path
+                server.init_db()
+                httpd = self._start_test_server()
+                port = httpd.server_address[1]
+
+                with patch("server.refresh_fleet_data") as refresh_mock:
+                    response = urlopen(f"http://127.0.0.1:{port}/api/dashboard")
+                    payload = json.loads(response.read().decode("utf-8"))
+
+                self.assertEqual(response.status, 200)
+                self.assertIn("stats", payload)
+                refresh_mock.assert_not_called()
             finally:
                 if "httpd" in locals():
                     self._stop_test_server(httpd)
@@ -202,6 +293,33 @@ class TestTeladFleet(unittest.TestCase):
             finally:
                 if "httpd" in locals():
                     self._stop_test_server(httpd)
+                if original_db_path is not None:
+                    server.DB_PATH = original_db_path
+
+    def test_missing_static_file_returns_not_found_payload(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "fleet.db"
+            original_db_path = getattr(server, "DB_PATH", None)
+            original_static_files = dict(server.STATIC_FILES)
+            try:
+                server.DB_PATH = db_path
+                server.STATIC_FILES["/missing-test-file.js"] = "missing-test-file.js"
+                server.init_db()
+                httpd = self._start_test_server()
+                port = httpd.server_address[1]
+
+                with self.assertRaises(HTTPError) as error_context:
+                    urlopen(f"http://127.0.0.1:{port}/missing-test-file.js")
+                error_payload = json.loads(error_context.exception.read().decode("utf-8"))
+
+                self.assertEqual(error_context.exception.code, 404)
+                self.assertEqual(error_payload["error"], "File not found")
+                self.assertEqual(error_payload["path"], "missing-test-file.js")
+            finally:
+                if "httpd" in locals():
+                    self._stop_test_server(httpd)
+                server.STATIC_FILES.clear()
+                server.STATIC_FILES.update(original_static_files)
                 if original_db_path is not None:
                     server.DB_PATH = original_db_path
 

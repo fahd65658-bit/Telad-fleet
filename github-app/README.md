@@ -1,50 +1,27 @@
-# GitHub App — TELAD FLEET
+# GitHub App Integration (TELAD FLEET)
 
-## Architecture
+## Overview
+This module integrates GitHub App events with TELAD FLEET workflows for fna.sa.
 
-```text
-GitHub Events
-   │
-   ▼
-/api/github/webhook (express.raw)
-   │
-   ▼
-github-app/index.js
-   ├─ auth.js (JWT + installation token cache)
-   ├─ webhooks.js (event handlers)
-   ├─ fleet-integration.js (maintenance/logs/socket bridge)
-   └─ middleware/* (auth, rate limit, logger)
-```
+## Files
+- `app-manifest.json`: GitHub App registration manifest.
+- `auth.js`: GitHub App JWT, installation token cache (50 min), webhook signature verification.
+- `webhooks.js`: Event handlers for push, pull_request, issues, deployment, deployment_status, release, workflow_run, installation.
+- `fleet-integration.js`: Fleet integration utilities and in-memory activity log (max 100 entries).
+- `index.js`: Express router (`/webhook`, `/status`, `/health`) with graceful fallback.
+- `setup.js`: Bilingual setup checker (Arabic + English).
+- `middleware/*`: auth, rate-limit, and logging utilities.
 
-## Supported events
-- push
-- pull_request
-- issues
-- deployment
-- deployment_status
-- check_run
-- release
-- workflow_run
-- installation
+## Environment Variables
+- `GITHUB_APP_ENABLED=true`
+- `GITHUB_APP_ID=`
+- `GITHUB_APP_PRIVATE_KEY=`
+- `GITHUB_APP_WEBHOOK_SECRET=`
+- `GITHUB_APP_INSTALLATION_ID=`
+- `GITHUB_APP_CLIENT_ID=`
+- `GITHUB_APP_CLIENT_SECRET=`
 
-## Environment variables
-See root `.env.example` and `backend/.env.example` for full list.
-
-## API endpoints
-- POST `/api/github/webhook`
-- GET `/api/github/status`
-- GET `/api/github/health`
-- GET `/api/github/installations` (admin)
-- GET `/api/github/activity` (admin)
-- POST `/api/github/app/setup` (admin)
-- POST `/api/github/test-webhook` (admin + dev only)
-
-## Local test
-1. Set env vars.
-2. Run `npm run github-app:verify`.
-3. Send webhook payload to local endpoint.
-
-## Add new webhook handler
-- Edit `github-app/webhooks.js`.
-- Add `case '<event>'` in `handleWebhookEvent`.
-- Add any fleet side-effects in `fleet-integration.js`.
+## Notes
+- No secrets are hardcoded.
+- If `GITHUB_APP_ENABLED` is not `true`, routes return safe no-op responses.
+- Webhook signature verification uses `x-hub-signature-256` and HMAC SHA-256.

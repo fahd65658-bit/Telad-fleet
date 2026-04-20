@@ -1,165 +1,162 @@
-/**
- * GitHub App Authentication Module
- * يدير مصادقة GitHub App لنظام TELAD FLEET
- */
 'use strict';
 
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-const { Octokit } = require('@octokit/rest');
+const jwt = require('jsonwebtoken');
 
-// Token cache to avoid hitting rate limits
-const tokenCache = new Map();
-const JWT_CLOCK_SKEW_SECONDS = 60;
-const JWT_TTL_SECONDS = 9 * 60; // GitHub App JWT max is 10 minutes; keep 1-minute buffer.
-const TOKEN_REUSE_BUFFER_MS = 30_000; // Refresh slightly early to avoid edge-expiry race conditions.
-const INSTALLATION_TOKEN_CACHE_MS = 50 * 60 * 1000; // GitHub installation token lifetime is ~60 min.
+// GitHub installation tokens typically expire after ~1 hour; cache for 50 minutes.
+const INSTALLATION_TOKEN_CACHE_TTL_MS = Number(process.env.GITHUB_APP_TOKEN_CACHE_MS || (50 * 60 * 1000));
+const installationTokenCache = new Map();
 
-function toBase64Url(value) {
-  return Buffer.from(value)
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
+let appClient = null;
+let octokitRestCtor = null;
+
+function getPrivateKey() {
+  const key = process.env.GITHUB_APP_PRIVATE_KEY || '';
+  return key.includes('\\n') ? key.replace(/\\n/g, '\n') : key;
 }
 
-function readPrivateKey() {
-  if (process.env.GITHUB_APP_PRIVATE_KEY) {
-    return process.env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n');
+function getAppClient() {
+  if (appClient) return appClient;
+
+  const appId = process.env.GITHUB_APP_ID;
+  const privateKey = getPrivateKey();
+
+  if (!appId || !privateKey) {
+    throw new Error('GitHub App is not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY.');
   }
 
-  const keyPath = process.env.GITHUB_APP_PRIVATE_KEY_PATH;
-  if (!keyPath) return null;
+  let App;
+  try {
+    ({ App } = require('@octokit/app'));
+  } catch (error) {
+    throw new Error(`@octokit/app is not available: ${error.message}`);
+  }
 
-  const resolvedPath = path.isAbsolute(keyPath) ? keyPath : path.resolve(process.cwd(), keyPath);
-  if (!fs.existsSync(resolvedPath)) return null;
-
-  return fs.readFileSync(resolvedPath, 'utf8');
+  appClient = new App({ appId, privateKey });
+  return appClient;
 }
 
-function getGitHubAppConfig() {
-  const appId = process.env.GITHUB_APP_ID;
-  const privateKey = readPrivateKey();
-  const enabled = process.env.GITHUB_APP_ENABLED === 'true';
-  return {
-    enabled,
-    appId,
-    privateKey,
-    ready: Boolean(enabled && appId && privateKey),
-  };
+function getOctokitCtor() {
+  if (octokitRestCtor) return octokitRestCtor;
+
+  try {
+    ({ Octokit: octokitRestCtor } = require('@octokit/rest'));
+  } catch (error) {
+    throw new Error(`@octokit/rest is not available: ${error.message}`);
+  }
+
+  return octokitRestCtor;
 }
 
 /**
- * يولد JWT للمصادقة مع GitHub App
- * @param {string} appId - معرف التطبيق
- * @param {string} privateKey - المفتاح الخاص
- * @returns {string} JWT token صالح لمدة 10 دقائق
+ * Generate a signed GitHub App JWT using environment configuration.
+ *
+ * @returns {string} Signed JWT valid for up to 10 minutes.
+ * @throws {Error} If required environment variables are missing.
  */
-function generateJWT(appId, privateKey) {
+function generateJWT() {
+  const appId = process.env.GITHUB_APP_ID;
+  const privateKey = getPrivateKey();
+
   if (!appId || !privateKey) {
-    throw new Error('بيانات GitHub App غير مكتملة (App ID أو Private Key مفقود).');
+    throw new Error('GitHub App is not configured. Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY.');
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const payload = {
-    iat: now - JWT_CLOCK_SKEW_SECONDS,
-    exp: now + JWT_TTL_SECONDS,
-    iss: String(appId),
-  };
 
-  const encodedHeader = toBase64Url(JSON.stringify(header));
-  const encodedPayload = toBase64Url(JSON.stringify(payload));
-  const unsigned = `${encodedHeader}.${encodedPayload}`;
-
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(unsigned);
-  signer.end();
-  const signature = signer.sign(privateKey)
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-
-  return `${unsigned}.${signature}`;
+  return jwt.sign(
+    {
+      iat: now - 60,
+      exp: now + (10 * 60),
+      iss: appId,
+    },
+    privateKey,
+    { algorithm: 'RS256' },
+  );
 }
 
 /**
- * يحصل على Installation Access Token مع cache
- * @param {string} installationId
- * @returns {Promise<string|null>} token
+ * Get a GitHub App installation access token with in-memory caching.
+ *
+ * @param {number|string} installationId - The GitHub App installation ID.
+ * @returns {Promise<string>} Installation access token.
+ * @throws {Error} If installation ID is missing or token cannot be created.
  */
 async function getInstallationToken(installationId) {
-  const { ready, appId, privateKey } = getGitHubAppConfig();
-  if (!ready || !installationId) return null;
-
-  const cacheKey = String(installationId || '').trim();
-  if (!/^\d+$/.test(cacheKey)) {
-    throw new Error('Installation ID غير صالح.');
+  if (!installationId) {
+    throw new Error('installationId is required to get an installation token.');
   }
 
-  const cached = tokenCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now() + TOKEN_REUSE_BUFFER_MS) {
+  const cacheKey = String(installationId);
+  const cached = installationTokenCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
     return cached.token;
   }
 
-  const jwt = generateJWT(appId, privateKey);
+  const app = getAppClient();
 
-  const response = await fetch(`https://api.github.com/app/installations/${encodeURIComponent(cacheKey)}/access_tokens`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${jwt}`,
-      'User-Agent': 'TELAD-FLEET-GitHub-App',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
+  const tokenResponse = await app.getInstallationAccessToken({
+    installationId: Number(installationId),
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`تعذر إنشاء Installation Token: ${response.status} ${errText}`);
+  let token = tokenResponse;
+  let expiresAtMs = Date.now() + INSTALLATION_TOKEN_CACHE_TTL_MS;
+
+  if (tokenResponse && typeof tokenResponse === 'object') {
+    token = tokenResponse.token;
+    if (tokenResponse.expiresAt) {
+      expiresAtMs = Math.min(
+        Date.parse(tokenResponse.expiresAt) - 30 * 1000,
+        Date.now() + INSTALLATION_TOKEN_CACHE_TTL_MS,
+      );
+    }
   }
 
-  const payload = await response.json();
-  const token = payload.token;
-
-  const expiresAt = Date.now() + INSTALLATION_TOKEN_CACHE_MS;
-  tokenCache.set(cacheKey, { token, expiresAt });
+  installationTokenCache.set(cacheKey, {
+    token,
+    expiresAt: expiresAtMs,
+  });
 
   return token;
 }
 
 /**
- * يتحقق من صحة Webhook signature
- * @param {Buffer} rawBody - الـ body الخام
- * @param {string} signature - X-Hub-Signature-256 header
- * @param {string} secret - GITHUB_APP_WEBHOOK_SECRET
- * @returns {boolean}
+ * Verify GitHub webhook signature using HMAC SHA-256.
+ *
+ * @param {Buffer|string} rawBody - Raw request body as Buffer or string.
+ * @param {string} signatureHeader - The value from x-hub-signature-256 header.
+ * @returns {boolean} True when signature matches configured webhook secret.
  */
-function verifyWebhookSignature(rawBody, signature, secret) {
-  if (!secret || !signature || !Buffer.isBuffer(rawBody)) return false;
-  if (!signature.startsWith('sha256=')) return false;
+function verifyWebhookSignature(rawBody, signatureHeader) {
+  const secret = process.env.GITHUB_APP_WEBHOOK_SECRET;
 
-  const expected = `sha256=${crypto.createHmac('sha256', secret).update(rawBody).digest('hex')}`;
-  const provided = signature.trim();
+  if (!secret || !signatureHeader) {
+    return false;
+  }
 
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(provided);
-  if (expectedBuffer.length !== providedBuffer.length) return false;
+  const payloadBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody || ''), 'utf8');
+  const expected = `sha256=${crypto.createHmac('sha256', secret).update(payloadBuffer).digest('hex')}`;
 
-  return crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+  const signatureBuffer = Buffer.from(String(signatureHeader), 'utf8');
+
+  if (expectedBuffer.length !== signatureBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
 }
 
 /**
- * ينشئ Octokit instance مصادق عليه
- * @param {string} installationId
- * @returns {Promise<Object|null>} Octokit instance
+ * Build an authenticated Octokit client for an installation.
+ *
+ * @param {number|string} installationId - The GitHub App installation ID.
+ * @returns {Promise<object>} Authenticated Octokit REST client.
  */
 async function getAuthenticatedOctokit(installationId) {
-  const token = await getInstallationToken(installationId || process.env.GITHUB_APP_INSTALLATION_ID);
-  if (!token) return null;
-
+  const token = await getInstallationToken(installationId);
+  const Octokit = getOctokitCtor();
   return new Octokit({ auth: token });
 }
 
@@ -168,6 +165,4 @@ module.exports = {
   getInstallationToken,
   verifyWebhookSignature,
   getAuthenticatedOctokit,
-  getGitHubAppConfig,
-  readPrivateKey,
 };
